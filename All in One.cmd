@@ -253,6 +253,9 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "S
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "DontPrettyPath" /t reg_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "DesktopLivePreviewHoverTime" /t reg_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ExtendedUIHoverTime" /t reg_DWORD /d 0 /f >nul 2>&1
+
+:: Optimiser le gestionnaire de tâches Windows
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\TimeBrokerSvc" /v "Start" /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[+]%COLOR_RESET% Interface utilisateur configuree.
 
 :: 1.6 - Configuration des effets visuels
@@ -450,12 +453,15 @@ echo %COLOR_GREEN%[+]%COLOR_RESET% Windows Error Reporting desactive.
 :: 1.9 - Optimisations supplementaires du systeme
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations supplementaires...
 
-:: Desactivation du Mode Jeu
-reg add "HKCU\SOFTWARE\Microsoft\GameBar" /v "AutoGameModeEnabled" /t reg_DWORD /d 0 /f >nul 2>&1
+:: Activation du Mode Jeu
+reg add "HKCU\SOFTWARE\Microsoft\GameBar" /v "AutoGameModeEnabled" /t reg_DWORD /d 1 /f >nul 2>&1
 
 :: Optimisations systeme avancees
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v "StartupDelayInMSec" /t reg_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform" /v "InactivityShutdownDelay" /t reg_DWORD /d 4294967295 /f >nul 2>&1
+
+:: Autoriser apps UWP à tourner librement en arrière-plan pour augmenter la réactivité
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v GlobalUserDisabled /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: Parametres de compatibilite des applications
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des parametres de compatibilite des applications...
@@ -513,9 +519,11 @@ if "%~1"=="call" (
 :OPTIMISATIONS_MEMOIRE
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %COLOR_WHITE%                    SECTION 2: OPTIMISATIONS MEMOIRE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                SECTION 2: OPTIMISATIONS MEMOIRE%COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
+:: Optimiser le cache de fichiers système
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "SystemCacheDirtyPageThreshold" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Debut de la section d'optimisations memoire.
 echo %COLOR_WHITE%[*]%COLOR_RESET% Application des optimisations memoire haute performance...
 
@@ -542,11 +550,10 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 
 :: 2.4 - Desactivation Prefetch/Superfetch/BootTrace
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Prefetch/Superfetch/BootTrace...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableSuperfetch /t reg_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t reg_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableSuperfetch /t reg_DWORD /d 3 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t reg_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableBoottrace /t reg_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v SfTracingState /t reg_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnablePrefetcher /t reg_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[+]%COLOR_RESET% Prefetch/Superfetch/BootTrace: desactives.
 
 :: 2.5 - Kernel Mitigations - Desactivation complete pour performance
@@ -670,6 +677,16 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v DisabledeleteNotif
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t reg_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v Win31FileSystem /t reg_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[+]%COLOR_RESET% Parametres de base du systeme de fichiers optimises.
+
+:: Exécuter TRIM manuellement pour optimiser les performances SSD
+echo %COLOR_YELLOW%[~]%COLOR_RESET% Exécution de TRIM sur les disques SSD...
+powershell -Command "Get-PhysicalDisk | Where MediaType -eq SSD | Get-StorageDiagnosticInfo -IncludePerfLog | Out-Null" >nul 2>&1
+powershell -Command "Optimize-Volume -DriveLetter C -ReTrim -Verbose" >nul 2>&1
+
+:: Optimiser les paramètres de stockage pour SSD
+echo %COLOR_YELLOW%[~]%COLOR_RESET% Optimisation des paramètres de stockage SSD...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v "IoLatencyCap" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v "NtfsMemoryUsage" /t REG_DWORD /d 2 /f >nul 2>&1
 
 :: Optimisations NTFS performance maximale
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations NTFS avancees...
@@ -881,123 +898,110 @@ if "%~1"=="call" (
 :OPTIMISATIONS_RESEAU
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %COLOR_WHITE%                    SECTION 5: OPTIMISATIONS RESEAU ET INTERNET%COLOR_RESET%
+echo %COLOR_WHITE%                    SECTION 5 : OPTIMISATIONS RESEAU ET INTERNET%COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%[*]%COLOR_RESET% Application des optimisations reseau...
 
-:: 5.1 - Desactiver la limitation du reseau
-echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation de la limitation reseau...
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v "NetworkThrottlingIndex" /t reg_DWORD /d "4294967295" /f >nul 2>&1
+:: 5.1 — Désactiver la limitation MMCSS
+echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation de la limitation reseau (MMCSS)...
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 
-:: 5.2 - Configurations TCP/IP globales
-echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration TCP/IP globale...
-netsh int tcp set global chimneyheuristics=disabled >nul 2>&1
+:: 5.2 — Pile TCP moderne (alignée sur les captures)
+echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration TCP moderne...
+netsh int tcp set heuristics disabled >nul 2>&1
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
-netsh int tcp set global ecncapability=enabled >nul 2>&1
-netsh int tcp set global dca=enabled >nul 2>&1
-netsh int tcp set global rsc=enabled >nul 2>&1
+netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
 netsh int tcp set global rss=enabled >nul 2>&1
+netsh int tcp set global rsc=disabled >nul 2>&1
+netsh int tcp set global ecncapability=enabled >nul 2>&1
+netsh int tcp set global chimney=disabled >nul 2>&1
+netsh int tcp set global dca=enabled >nul 2>&1
 netsh int tcp set global fastopen=enabled >nul 2>&1
 netsh int tcp set global timestamps=enabled >nul 2>&1
-netsh int tcp set global initialRto=3000 >nul 2>&1
 netsh int tcp set global maxsynretransmissions=2 >nul 2>&1
-netsh int tcp set heuristics disabled >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-NetTCPSetting -SettingName Internet -InitialRtoMs 2000" >nul 2>&1
 
-:: 5.3 - Configuration IP globale
+:: 5.3 — IP global
 echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration IP globale...
-netsh int ip set global neighborcachelimit=4096 >nul 2>&1
 netsh int ip set global taskoffload=enabled >nul 2>&1
 netsh int ip set global sourceroutingbehavior=drop >nul 2>&1
 netsh int ip set global dhcpmediasense=disabled >nul 2>&1
 netsh int ip set global mediasenseeventlog=disabled >nul 2>&1
 netsh int ip set global icmpredirects=disabled >nul 2>&1
+netsh int ipv6 set global neighborcachelimit=4096 >nul 2>&1
 
-:: 5.4 - Configuration des interfaces reseau
-echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration MTU des interfaces...
-netsh interface ipv4 set subinterface "Ethernet" mtu=1500 store=persistent >nul 2>&1 
+:: 5.4 — Delivery Optimization (P2P off)
+echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation du partage P2P de Windows Update...
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 5.5 - Desactivation des protocoles de transition IPv6
-echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation des protocoles de transition IPv6...
+:: 5.5 — DNS : flush + DoH Cloudflare/Google
+echo %COLOR_GREEN%[+]%COLOR_RESET% DNS : flush + DoH Cloudflare/Google...
+ipconfig /flushdns >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$if=(Get-NetAdapter|? Status -eq 'Up'|Select-Object -Expand InterfaceAlias); Add-DnsClientDohServerAddress -ServerAddress 1.1.1.1 -DohTemplate 'https://cloudflare-dns.com/dns-query' -AllowFallbackToUdp $true; Add-DnsClientDohServerAddress -ServerAddress 8.8.8.8 -DohTemplate 'https://dns.google/dns-query' -AllowFallbackToUdp $true; foreach($a in $if){ Set-DnsClientServerAddress -InterfaceAlias $a -ServerAddresses 1.1.1.1,8.8.8.8; Set-DnsClientDohServerAddress -InterfaceAlias $a -ServerAddress 1.1.1.1 -AutoUpgrade $true; Set-DnsClientDohServerAddress -InterfaceAlias $a -ServerAddress 8.8.8.8 -AutoUpgrade $true }" >nul 2>&1
+
+:: 5.6 — MTU 1500 (interfaces actives)
+echo %COLOR_GREEN%[+]%COLOR_RESET% MTU 1500 sur toutes les interfaces actives...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetIPInterface -AddressFamily IPv4 | ? {$_.InterfaceOperationalStatus -eq 'Up' -and $_.NlMtu -ne 1500} | % { netsh interface ipv4 set subinterface `"$($_.InterfaceAlias)`" mtu=1500 store=persistent }" >nul 2>&1
+
+:: 5.7 — IPv6 natif (désactive ISATAP/Teredo)
+echo %COLOR_GREEN%[+]%COLOR_RESET% IPv6 natif conserve ; ISATAP/Teredo desactives...
 netsh int isatap set state disabled >nul 2>&1
 netsh int teredo set state disabled >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip6\Parameters" /v "DisabledComponents" /t reg_DWORD /d 255 /f >nul 2>&1
 
-:: 5.6 - Configuration TCP avancee
-echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration TCP avancee...
-netsh int tcp set security mpp=disabled >nul 2>&1
-netsh int tcp set security profiles=disabled >nul 2>&1
-netsh int tcp set supplemental Internet congestionprovider=cubic >nul 2>&1
-echo %COLOR_YELLOW%[!]%COLOR_RESET% Template Internet avec CUBIC configure
+:: 5.8 — Legacy utiles (RFC1323/SACK/DupACKs/TTL/Ports)
+echo %COLOR_GREEN%[+]%COLOR_RESET% Legacy utiles (RFC1323/SACK/DupACKs/TTL)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /t REG_DWORD /d 3 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpMaxDupAcks /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 64 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 65534 /f >nul 2>&1
 
-:: 5.7 - registre - Configuration RSS
-echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration RSS...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Ndis\Parameters" /v "RssBaseCpu" /t reg_DWORD /d "1" /f >nul 2>&1
+:: 5.9 — Priorités de résolution (Hosts > DNS)
+echo %COLOR_GREEN%[+]%COLOR_RESET% Priorites de resolution (Hosts > DNS)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v LocalPriority /t REG_DWORD /d 4 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v HostsPriority /t REG_DWORD /d 5 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v DnsPriority /t REG_DWORD /d 6 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v NetbtPriority /t REG_DWORD /d 7 /f >nul 2>&1
 
-:: 5.8 - Configuration TTL et optimisations TCP
-echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration TTL et parametres TCP...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "DefaultTTL" /t reg_DWORD /d "64" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "Tcp1323Opts" /t reg_DWORD /d "1" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpMaxDupAcks" /t reg_DWORD /d "2" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "SackOpts" /t reg_DWORD /d "1" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "MaxUserPort" /t reg_DWORD /d "65534" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpTimedWaitDelay" /t reg_DWORD /d "30" /f >nul 2>&1
-
-:: 5.9 - Definir les priorites reseau
-echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration des priorites reseau...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "LocalPriority" /t reg_DWORD /d "4" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "HostsPriority" /t reg_DWORD /d "5" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /t reg_DWORD /d "6" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "NetbtPriority" /t reg_DWORD /d "7" /f >nul 2>&1
-
-:: 5.10 - Desactiver l'algorithme de Nagle
-echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation algorithme de Nagle...
-:: Application sur toutes les interfaces
-for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" /s /f "DhcpIPAddress" 2^>nul ^| findstr "HKEY"') do (
-    reg add "%%i" /v "TcpAckFrequency" /t reg_DWORD /d "1" /f >nul 2>&1
-    reg add "%%i" /v "TCPNoDelay" /t reg_DWORD /d "1" /f >nul 2>&1
-    reg add "%%i" /v "TcpDelAckTicks" /t reg_DWORD /d "0" /f >nul 2>&1
+:: 5.10 — Nagle / DelACK OFF (facultatif, gaming)
+echo %COLOR_GREEN%[+]%COLOR_RESET% (Facultatif) Desactivation Nagle/DelACK (gaming)...
+for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" /s /f "DhcpIPAddress" 2^>nul ^| findstr /i "HKEY"') do (
+  reg add "%%i" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
+  reg add "%%i" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
+  reg add "%%i" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-:: 5.11 - Desactiver Delivery Optimization
-echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation Delivery Optimization...
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" /v "DODownloadMode" /t reg_DWORD /d "0" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" /v "DownloadMode" /t reg_DWORD /d "0" /f >nul 2>&1
+:: 5.11 — QoS Psched (comme tes réglages)
+echo %COLOR_GREEN%[+]%COLOR_RESET% QoS (Psched) perf...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v TimerResolution /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v MaxOutstandingSends /t REG_DWORD /d 8 /f >nul 2>&1
 
-:: 5.12 - Optimiser les QoS (Quality of Service)
-echo %COLOR_GREEN%[+]%COLOR_RESET% Optimisation QoS...
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v "NonBestEffortLimit" /t reg_DWORD /d "0" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v "TimerResolution" /t reg_DWORD /d "1" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v "MaxOutstandingSends" /t reg_DWORD /d "8" /f >nul 2>&1
+:: 5.12 — Configuration RSS
+echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration RSS...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Ndis\Parameters" /v RssBaseCpu /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 5.13 - Optimisations SMB
-echo %COLOR_GREEN%[+]%COLOR_RESET% Optimisation SMB...
-reg add "HKLM\SYSTEM\CurrentControlSet\services\LanmanServer\Parameters" /v "autodisconnect" /t reg_DWORD /d "4294967295" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\services\LanmanServer\Parameters" /v "Size" /t reg_DWORD /d "3" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\services\LanmanServer\Parameters" /v "EnableOplocks" /t reg_DWORD /d "0" /f >nul 2>&1
-
-:: 5.14 - Desactiver les composants reseau non essentiels (AMeLIORe)
+:: 5.13 — Désactiver les composants réseau non essentiels
 echo %COLOR_GREEN%[+]%COLOR_RESET% Desactivation des composants reseau non essentiels...
-:: Methode alternative plus fiable
-powershell -ExecutionPolicy Bypass -Command "& {try { Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { try { Disable-NetAdapterBinding -Name $_.Name -ComponentID ms_lldp -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID ms_lltdio -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID ms_implat -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID ms_rspndr -ErrorAction SilentlyContinue } catch {} } } catch {}}" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetAdapter | ? Status -eq 'Up' | % { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lldp' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lltdio' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_implat' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_rspndr' -ErrorAction SilentlyContinue }" >nul 2>&1
 
-:: 5.15 - Activer WeakHost Send et Receive
+:: 5.14 — WeakHost Send/Receive
 echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration WeakHost...
-powershell -ExecutionPolicy Bypass -Command "& {try { Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Get-NetIPInterface | Set-NetIPInterface -WeakHostSend Enabled -WeakHostReceive Enabled -ErrorAction SilentlyContinue } catch {}}" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetAdapter | ? Status -eq 'Up' | Get-NetIPInterface | Set-NetIPInterface -WeakHostSend Enabled -WeakHostReceive Enabled -ErrorAction SilentlyContinue" >nul 2>&1
 
-:: 5.16 - Configuration PowerShell TCP
+:: 5.15 — TCP PowerShell (désactive ForceWS)
 echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration TCP PowerShell...
-powershell -ExecutionPolicy Bypass -Command "& {try { Get-NetTCPSetting | Set-NetTCPSetting -ForceWS Disabled -ErrorAction SilentlyContinue } catch {}}" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-NetTCPSetting | Set-NetTCPSetting -ForceWS Disabled -ErrorAction SilentlyContinue" >nul 2>&1
 
-:: 5.17 - Cache DNS optimise
-echo %COLOR_GREEN%[+]%COLOR_RESET% Cache DNS optimise...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v "CacheHashTableBucketSize" /t reg_DWORD /d "1" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v "CacheHashTableSize" /t reg_DWORD /d "384" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v "MaxCacheEntryTtlLimit" /t reg_DWORD /d "64000" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v "MaxSOACacheEntryTtlLimit" /t reg_DWORD /d "301" /f >nul 2>&1
+:: 5.16 — Sécurité TCP (désactive profils/MPP)
+echo %COLOR_GREEN%[+]%COLOR_RESET% Configuration securite TCP...
+netsh int tcp set security mpp=disabled >nul 2>&1
+netsh int tcp set security profiles=disabled >nul 2>&1
 
-:: 5.18 - Redemarrage des services reseau necessaires
-echo %COLOR_GREEN%[+]%COLOR_RESET% Redemarrage des services reseau...
+:: 5.17 — Redémarrage DNS
+echo %COLOR_GREEN%[+]%COLOR_RESET% Redemarrage du service DNS Client...
 net stop "DNS Client" >nul 2>&1
 net start "DNS Client" >nul 2>&1
 
@@ -1006,11 +1010,12 @@ echo %COLOR_CYAN%===============================================================
 echo.
 echo %COLOR_GREEN%[+]%COLOR_RESET% Optimisations reseau appliquees avec succes.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour appliquer toutes les modifications.
+
 if "%~1"=="call" (
-    exit /b
+  exit /b
 ) else (
-    pause
-    goto :MENU_PRINCIPAL
+  pause
+  goto :MENU_PRINCIPAL
 )
 
 :OPTIMISATIONS_PERIPHERIQUES
@@ -1729,9 +1734,10 @@ if errorlevel 1 goto :ACTIVER_UAC_SECTION
 cls
 echo %COLOR_GREEN%[+]%COLOR_RESET% Activation de l'UAC (Controle de Compte Utilisateur)...
 echo.
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t reg_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t reg_DWORD /d 5 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t reg_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f >nul 2>&1
+reg delete "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /f >nul 2>&1
 echo %COLOR_GREEN%[+]%COLOR_RESET% UAC active. Un redemarrage est requis pour appliquer les changements.
 pause
 goto :MENU_PRINCIPAL
@@ -1741,7 +1747,10 @@ cls
 echo %COLOR_RED%[+]%COLOR_RESET% %STYLE_BOLD%Desactivation de l'UAC (Controle de Compte Utilisateur)...%COLOR_RESET%
 echo %COLOR_YELLOW%ATTENTION: Desactiver l'UAC reduit la securite de votre systeme.%COLOR_RESET%
 echo.
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t reg_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Off" /f >nul 2>&1
 echo %COLOR_RED%[+]%COLOR_RESET% %STYLE_BOLD%UAC desactive. Un redemarrage est requis pour appliquer les changements.%COLOR_RESET%
 pause
 goto :MENU_PRINCIPAL
