@@ -27,7 +27,7 @@ NetbtPriority=7
 [SOFTWARE\Policies\Microsoft\Windows\Psched]
 NonBestEffortLimit=0
 [System\CurrentControlSet\Services\Tcpip\QoS]
-Do not use NLA=-2
+Do not use NLA=-1
 Do not use NLA_SEL=0
 [SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile]
 NetworkThrottlingIndex=-1
@@ -42,8 +42,8 @@ LargeSystemCache=0
 LargeSystemCache_SEL=0
 [SYSTEM\CurrentControlSet\Services\Tcpip\Parameters]
 MaxUserPort=65534
-TcpTimedWaitDelay=30
-DefaultTTL=64
+TcpTimedWaitDelay=32
+DefaultTTL=128
 [SOFTWARE\Microsoft\MSMQ\Parameters]
 TCPNoDelay=1
 TCPNoDelay_SEL=1
