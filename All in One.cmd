@@ -180,6 +180,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming configure
 
 :: 1.3 - Interface Windows (Barre des taches, Explorateur)
@@ -212,13 +213,15 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Interface Windows optimisee
 
 :: 1.4 - Telemetrie et vie privee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie et des traceurs...
-
 :: Services de telemetrie
 sc stop DiagTrack >nul 2>&1 & sc config DiagTrack start= disabled >nul 2>&1
 sc stop dmwappushservice >nul 2>&1 & sc config dmwappushservice start= disabled >nul 2>&1
 sc stop diagnosticshub.standardcollector.service >nul 2>&1 & sc config diagnosticshub.standardcollector.service start= disabled >nul 2>&1
 sc config RetailDemo start= disabled >nul 2>&1
 sc stop WerSvc >nul 2>&1 & sc config WerSvc start= disabled >nul 2>&1
+sc config AJRouter start= disabled >nul 2>&1
+sc config RemoteRegistry start= disabled >nul 2>&1
+sc config RemoteAccess start= disabled >nul 2>&1
 
 :: Registre : telemetrie et publicites
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
@@ -261,12 +264,77 @@ for %%L in (AppModel Cellcore DiagLog SQMLogger Diagtrack-Listener) do (
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\ReadyBoot" /v Start /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Taches de telemetrie desactivees
 
+:: Blocage telemetrie via fichier hosts (domaines de telemetrie pure uniquement)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Ajout des blocages telemetrie dans le fichier hosts...
+set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
+set "MARKER=# --- Telemetry Block (Optimizer Script) ---"
+
+:: Verifier si deja ajoute
+findstr /c:"%MARKER%" "%HOSTS%" >nul 2>&1
+if %errorlevel%==0 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Blocages telemetrie deja presents dans hosts
+    goto :HOSTS_DONE
+)
+
+:: Ajouter les blocages
+(
+echo.
+echo %MARKER%
+echo 0.0.0.0 vortex.data.microsoft.com
+echo 0.0.0.0 vortex-win.data.microsoft.com
+echo 0.0.0.0 telecommand.telemetry.microsoft.com
+echo 0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net
+echo 0.0.0.0 oca.telemetry.microsoft.com
+echo 0.0.0.0 oca.telemetry.microsoft.com.nsatc.net
+echo 0.0.0.0 sqm.telemetry.microsoft.com
+echo 0.0.0.0 sqm.telemetry.microsoft.com.nsatc.net
+echo 0.0.0.0 watson.telemetry.microsoft.com
+echo 0.0.0.0 watson.telemetry.microsoft.com.nsatc.net
+echo 0.0.0.0 redir.metaservices.microsoft.com
+echo 0.0.0.0 choice.microsoft.com
+echo 0.0.0.0 choice.microsoft.com.nsatc.net
+echo 0.0.0.0 df.telemetry.microsoft.com
+echo 0.0.0.0 reports.wes.df.telemetry.microsoft.com
+echo 0.0.0.0 services.wes.df.telemetry.microsoft.com
+echo 0.0.0.0 sqm.df.telemetry.microsoft.com
+echo 0.0.0.0 telemetry.microsoft.com
+echo 0.0.0.0 watson.ppe.telemetry.microsoft.com
+echo 0.0.0.0 telemetry.appex.bing.net
+echo 0.0.0.0 telemetry.urs.microsoft.com
+echo 0.0.0.0 settings-sandbox.data.microsoft.com
+echo 0.0.0.0 survey.watson.microsoft.com
+echo 0.0.0.0 watson.live.com
+echo 0.0.0.0 statsfe2.ws.microsoft.com
+echo 0.0.0.0 corpext.msitadfs.glbdns2.microsoft.com
+echo 0.0.0.0 compatexchange.cloudapp.net
+echo 0.0.0.0 statsfe1.ws.microsoft.com
+echo 0.0.0.0 feedback.microsoft-hohm.com
+echo 0.0.0.0 feedback.windows.com
+echo 0.0.0.0 feedback.search.microsoft.com
+echo # --- End Telemetry Block ---
+) >> "%HOSTS%"
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines de telemetrie bloques via hosts
+
+:HOSTS_DONE
+
+:: Services en mode Manual
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des services en mode Manuel...
+for %%S in (CDPSvc MapsBroker PcaSvc StorSvc WpnService StateRepository TextInputManagementService UsoSvc cbdhsvc lfsvc WalletService PhoneSvc icssvc WMPNetworkSvc) do (
+  sc config %%S start= demand >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services configures en mode Manuel
+
 :: 1.5 - Optimisations demarrage et systeme
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations de demarrage...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v StartupDelayInMSec /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableInventory /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableUAR /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v AITEnable /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: Desactivation de l'animation de demarrage Windows
+bcdedit /set bootuxdisabled on >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Animation de demarrage desactivee
 
 :: Assistant Stockage (nettoyage automatique)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de l'Assistant Stockage...
@@ -322,7 +390,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du fichier d'echange (PageFile)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v ClearPageFileAtShutdown /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v SystemPages /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagefileEncryption /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichier d'echange optimise
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagingExecutive /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichier d'echange optimise (kernel en RAM)
 
 :: 2.2 - Prefetch/SysMain
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du Prefetch et SuperFetch pour le gaming...
@@ -439,9 +508,23 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX optimise avec VRR et Flip Model acti
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie NVIDIA (collecte de donnees)...
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOutPreference" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" /v "SendTelemetryData" /t REG_DWORD /d 0 /f >nul 2>&1
+:: Désactiver services NVIDIA télémétrie
+sc config NvTelemetryContainer start= disabled
+sc stop NvTelemetryContainer
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie NVIDIA desactivee
 
-:: 4.4 - NVIDIA driver tweak (Low Latency + Frame Latency)
+:: 4.4 - Desactivation AMD telemetry et ULPS
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie AMD et ULPS...
+reg add "HKLM\SOFTWARE\AMD\CN" /v "CollectGIData" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\ATI ACE\AUEPLauncher" /v "ReportProcessedEvents" /t REG_DWORD /d 0 /f >nul 2>&1
+:: Desactivation ULPS (Ultra Low Power State) sur tous les GPU AMD detectes
+for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+  reg add "%%K" /v EnableUlps /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "%%K" /v EnableUlps_NA /t REG_SZ /d 0 /f >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie AMD et ULPS desactives
+
+:: 4.5 - NVIDIA driver tweak (Low Latency + Frame Latency)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations Low Latency NVIDIA...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
@@ -450,7 +533,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag
 
-:: 4.5 - PowerMizer
+:: 4.6 - PowerMizer
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du gestionnaire d'energie GPU (PowerMizer)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PowerMizerEnable /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PowerMizerLevel /t REG_DWORD /d 1 /f >nul 2>&1
@@ -460,17 +543,17 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v RmDisableRegistryCaching /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% PowerMizer configure pour performances maximales
 
-:: 4.6 - WriteCombining
+:: 4.7 - WriteCombining
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la stabilite GPU (WriteCombining)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm" /v DisableWriteCombining /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Stabilite GPU amelioree
 
-:: 4.7 - HAGS Enable
+:: 4.8 - HAGS Enable
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree (HAGS)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.8 - NVIDIA Profile Inspector (profil gaming optimise)
+:: 4.9 - NVIDIA Profile Inspector (profil gaming optimise)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NVIDIA Profile Inspector...
 set "NPI_DIR=%TEMP%\NvidiaProfileInspector"
 set "NPI_EXE=%NPI_DIR%\nvidiaProfileInspector.exe"
@@ -782,7 +865,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisabl
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.1b - Desactivation des Timer Coalescing et DPC (augmente la conso, pour PC de bureau)
+:: 8.2 - Desactivation des Timer Coalescing et DPC (augmente la conso, pour PC de bureau)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Timer Coalescing et optimisation DPC...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /t REG_DWORD /d 1 /f >nul 2>&1
@@ -800,7 +883,7 @@ reg add "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /t RE
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
-:: 8.1c - Installation SetTimerResolution (0.5ms)
+:: 8.3 - Installation SetTimerResolution (0.5ms)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
 set "STR_EXE=C:\Windows\SetTimerResolution.exe"
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
@@ -838,23 +921,23 @@ if exist "%STR_STARTUP%" (
 
 :STR_DONE
 
-:: 8.2 - Desactivation du PDC et Power Throttling
+:: 8.4 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.3 - Gestion processeur (equilibree, pas de forcage 100%)
+:: 8.5 - Gestion processeur (equilibree, pas de forcage 100%)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil processeur (performances maximales)...
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 
-:: 8.4 - Desactivation ASPM
+:: 8.6 - Desactivation ASPM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.5 - Optimisations stockage et disques
+:: 8.7 - Optimisations stockage et disques
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des disques...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /t REG_DWORD /d 0 /f >nul 2>&1
@@ -865,36 +948,63 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
   )
 )
 
-:: 8.6 - Optimisations avancees des services
+:: 8.8 - Optimisations avancees des services
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des limites de latence I/O...
 for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg add "%%a" /v IoLatencyCap /t REG_DWORD /d 0 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence stockage supprimees
 
-:: 8.7 - GPU (PowerMizer)
+:: 8.9 - GPU (PowerMizer)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.8 - PCI & peripheriques reseau
+:: 8.10 - PCI & peripheriques reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des peripheriques PCI...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}\*" /v D3ColdSupported /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\*" /v "*WakeOnPattern" /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 8.9 - Cartes reseau (instances detectees)
+:: 8.11 - Cartes reseau (instances detectees)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des fonctions d'economie d'energie reseau...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
   if not errorlevel 1 (
+    :: Economies d'energie
     reg add "%%K" /v "*EEE" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "*SelectiveSuspend" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "*WakeOnMagicPacket" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "EnableGreenEthernet" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "ULPMode" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "*WakeOnPattern" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "*PMARPOffload" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "*PMNSOffload" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "*PMWiFiRekeyOffload" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "EnablePME" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "PowerSavingMode" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "ReduceSpeedOnPowerDown" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "EnableDynamicPowerGating" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "AutoPowerSaveModeEnabled" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "AdvancedEEE" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "EEELinkAdvertisement" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "GigaLite" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "S5WakeOnLan" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "WakeOnLink" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "WolShutdownLinkSpeed" /t REG_SZ /d 2 /f >nul 2>&1
+    :: Optimisations latence (Intel, Realtek, Killer)
+    reg add "%%K" /v "*FlowControl" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "*InterruptModeration" /t REG_SZ /d 1 /f >nul 2>&1
+    reg add "%%K" /v "*InterruptModerationRate" /t REG_SZ /d 1 /f >nul 2>&1
+    reg add "%%K" /v "ITR" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "EnableLLI" /t REG_SZ /d 1 /f >nul 2>&1
+    reg add "%%K" /v "EnableDownShift" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "WaitAutoNegComplete" /t REG_SZ /d 0 /f >nul 2>&1
+    :: Desactiver "Allow computer to turn off this device" via PnPCapabilities
+    reg add "%%K" /v PnPCapabilities /t REG_DWORD /d 24 /f >nul 2>&1
   )
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie et optimisations reseau appliquees sur toutes les cartes
 
-:: 8.10 - Energie PCIe
+:: 8.12 - Energie PCIe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
