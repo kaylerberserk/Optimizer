@@ -108,7 +108,7 @@ Optimizer/
 
 - ✅ Désactivation de la télémétrie Windows
 - ✅ Optimisation des services système
-- ✅ Configuration Timer Resolution (0.5ms)
+- ✅ Configuration Timer Resolution (0.507ms)
 - ✅ Optimisation du stack réseau TCP/IP
 - ✅ Configuration GPU NVIDIA optimale
 - ✅ Désactivation des effets visuels superflus
