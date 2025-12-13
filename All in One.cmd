@@ -800,6 +800,44 @@ reg add "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /t RE
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
+:: 8.1c - Installation SetTimerResolution (0.5ms)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
+set "STR_EXE=C:\Windows\SetTimerResolution.exe"
+set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
+
+:: Verifier si deja installe
+if exist "%STR_EXE%" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution deja installe dans C:\Windows
+    goto :STR_SHORTCUT
+)
+
+:: Telecharger SetTimerResolution.exe
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de SetTimerResolution.exe...
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+if not exist "%STR_EXE%" (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de SetTimerResolution
+    goto :STR_DONE
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution installe dans C:\Windows
+
+:STR_SHORTCUT
+:: Verifier si raccourci existe deja
+if exist "%STR_STARTUP%" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci de demarrage deja present
+    goto :STR_DONE
+)
+
+:: Telecharger le raccourci
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Creation du raccourci de demarrage...
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe%%20-%%20Raccourci.lnk' -OutFile '%STR_STARTUP%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+if exist "%STR_STARTUP%" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci ajoute au demarrage automatique
+) else (
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% Impossible de creer le raccourci - creation manuelle recommandee
+)
+
+:STR_DONE
+
 :: 8.2 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /t REG_DWORD /d 0 /f >nul 2>&1
