@@ -267,52 +267,49 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Taches de telemetrie desactivees
 :: Blocage telemetrie via fichier hosts (domaines de telemetrie pure uniquement)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Ajout des blocages telemetrie dans le fichier hosts...
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
-set "MARKER=# --- Telemetry Block (Optimizer Script) ---"
 
 :: Verifier si deja ajoute
-findstr /c:"%MARKER%" "%HOSTS%" >nul 2>&1
-if %errorlevel%==0 (
+findstr /c:"Telemetry Block" "%HOSTS%" >nul 2>&1
+if not errorlevel 1 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Blocages telemetrie deja presents dans hosts
     goto :HOSTS_DONE
 )
 
 :: Ajouter les blocages
-(
-echo.
-echo %MARKER%
-echo 0.0.0.0 vortex.data.microsoft.com
-echo 0.0.0.0 vortex-win.data.microsoft.com
-echo 0.0.0.0 telecommand.telemetry.microsoft.com
-echo 0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net
-echo 0.0.0.0 oca.telemetry.microsoft.com
-echo 0.0.0.0 oca.telemetry.microsoft.com.nsatc.net
-echo 0.0.0.0 sqm.telemetry.microsoft.com
-echo 0.0.0.0 sqm.telemetry.microsoft.com.nsatc.net
-echo 0.0.0.0 watson.telemetry.microsoft.com
-echo 0.0.0.0 watson.telemetry.microsoft.com.nsatc.net
-echo 0.0.0.0 redir.metaservices.microsoft.com
-echo 0.0.0.0 choice.microsoft.com
-echo 0.0.0.0 choice.microsoft.com.nsatc.net
-echo 0.0.0.0 df.telemetry.microsoft.com
-echo 0.0.0.0 reports.wes.df.telemetry.microsoft.com
-echo 0.0.0.0 services.wes.df.telemetry.microsoft.com
-echo 0.0.0.0 sqm.df.telemetry.microsoft.com
-echo 0.0.0.0 telemetry.microsoft.com
-echo 0.0.0.0 watson.ppe.telemetry.microsoft.com
-echo 0.0.0.0 telemetry.appex.bing.net
-echo 0.0.0.0 telemetry.urs.microsoft.com
-echo 0.0.0.0 settings-sandbox.data.microsoft.com
-echo 0.0.0.0 survey.watson.microsoft.com
-echo 0.0.0.0 watson.live.com
-echo 0.0.0.0 statsfe2.ws.microsoft.com
-echo 0.0.0.0 corpext.msitadfs.glbdns2.microsoft.com
-echo 0.0.0.0 compatexchange.cloudapp.net
-echo 0.0.0.0 statsfe1.ws.microsoft.com
-echo 0.0.0.0 feedback.microsoft-hohm.com
-echo 0.0.0.0 feedback.windows.com
-echo 0.0.0.0 feedback.search.microsoft.com
-echo # --- End Telemetry Block ---
-) >> "%HOSTS%"
+echo.>> "%HOSTS%"
+echo # --- Telemetry Block (Optimizer Script) --->> "%HOSTS%"
+echo 0.0.0.0 vortex.data.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 vortex-win.data.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 telecommand.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 telecommand.telemetry.microsoft.com.nsatc.net>> "%HOSTS%"
+echo 0.0.0.0 oca.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 oca.telemetry.microsoft.com.nsatc.net>> "%HOSTS%"
+echo 0.0.0.0 sqm.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 sqm.telemetry.microsoft.com.nsatc.net>> "%HOSTS%"
+echo 0.0.0.0 watson.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 watson.telemetry.microsoft.com.nsatc.net>> "%HOSTS%"
+echo 0.0.0.0 redir.metaservices.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 choice.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 choice.microsoft.com.nsatc.net>> "%HOSTS%"
+echo 0.0.0.0 df.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 reports.wes.df.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 services.wes.df.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 sqm.df.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 watson.ppe.telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 telemetry.appex.bing.net>> "%HOSTS%"
+echo 0.0.0.0 telemetry.urs.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 settings-sandbox.data.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 survey.watson.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 watson.live.com>> "%HOSTS%"
+echo 0.0.0.0 statsfe2.ws.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 corpext.msitadfs.glbdns2.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 compatexchange.cloudapp.net>> "%HOSTS%"
+echo 0.0.0.0 statsfe1.ws.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 feedback.microsoft-hohm.com>> "%HOSTS%"
+echo 0.0.0.0 feedback.windows.com>> "%HOSTS%"
+echo 0.0.0.0 feedback.search.microsoft.com>> "%HOSTS%"
+echo # --- End Telemetry Block --->> "%HOSTS%"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines de telemetrie bloques via hosts
 
 :HOSTS_DONE
