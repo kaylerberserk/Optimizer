@@ -481,7 +481,7 @@ if not exist "%NPI_DIR%" mkdir "%NPI_DIR%"
 
 :: Telecharger NVIDIA Profile Inspector
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de NVIDIA Profile Inspector...
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/fff32d738cdadfa631a8e3811ae54462b09404d9/nvidiaProfileInspector.exe' -OutFile '%NPI_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '%NPI_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
 if not exist "%NPI_EXE%" (
     echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
     goto :NPI_SKIP
@@ -489,7 +489,7 @@ if not exist "%NPI_EXE%" (
 
 :: Telecharger le profil optimise
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/fff32d738cdadfa631a8e3811ae54462b09404d9/Kaylers_profile.nip' -OutFile '%NPI_PROFILE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '%NPI_PROFILE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
 if not exist "%NPI_PROFILE%" (
     echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
     goto :NPI_SKIP
