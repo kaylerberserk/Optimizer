@@ -41,7 +41,7 @@ Optimizer/
 │   │   └── ooshutup10_kayler.cfg      # Config anti-télémétrie
 │   └── 📁 Timer & Interrupt/          # Latence système
 │       ├── GoInterruptPolicy.exe      # MSI Mode
-│       ├── SetTimerResolution.exe     # Timer 0.5ms
+│       ├── SetTimerResolution.exe     # Timer 0.507ms
 │       ├── SetTimerResolution.exe - Raccourci.lnk  # Raccourci démarrage
 │       └── MeasureSleep.exe           # Mesure timer
 └── 📁 Game Configs/
