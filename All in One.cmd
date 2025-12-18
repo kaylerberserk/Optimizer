@@ -505,9 +505,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX optimise avec VRR et Flip Model acti
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie NVIDIA (collecte de donnees)...
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOutPreference" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" /v "SendTelemetryData" /t REG_DWORD /d 0 /f >nul 2>&1
-:: Désactiver services NVIDIA télémétrie
-sc config NvTelemetryContainer start= disabled
-sc stop NvTelemetryContainer
+sc config NvTelemetryContainer start= disabled >nul 2>&1
+sc stop NvTelemetryContainer >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie NVIDIA desactivee
 
 :: 4.4 - Desactivation AMD telemetry et ULPS
@@ -550,54 +549,55 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.9 - NVIDIA Profile Inspector (profil gaming optimise)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NVIDIA Profile Inspector...
-set "NPI_DIR=%TEMP%\NvidiaProfileInspector"
-set "NPI_EXE=%NPI_DIR%\nvidiaProfileInspector.exe"
-set "NPI_PROFILE=%NPI_DIR%\Kaylers_profile.nip"
+:: 4.9 - NVIDIA Profile Inspector (profil gaming optimise) - uniquement si NVIDIA detecte
+:: Detection GPU NVIDIA pour Profile Inspector via PowerShell
+set "HAS_NVIDIA=0"
+for /f %%i in ('powershell -NoProfile -Command "if((Get-WmiObject Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
 
-:: Creer le dossier temporaire
-if not exist "%NPI_DIR%" mkdir "%NPI_DIR%"
-
-:: Telecharger NVIDIA Profile Inspector
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de NVIDIA Profile Inspector...
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '%NPI_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-if not exist "%NPI_EXE%" (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
-    goto :NPI_SKIP
+if "%HAS_NVIDIA%"=="1" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
+    set "NPI_DIR=%TEMP%\NvidiaProfileInspector"
+    
+    :: Creer le dossier temporaire
+    if not exist "%TEMP%\NvidiaProfileInspector" mkdir "%TEMP%\NvidiaProfileInspector"
+    
+    :: Telecharger NVIDIA Profile Inspector
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de NVIDIA Profile Inspector...
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '%TEMP%\NvidiaProfileInspector\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    if not exist "%TEMP%\NvidiaProfileInspector\nvidiaProfileInspector.exe" (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
+        goto :NPI_DONE
+    )
+    
+    :: Telecharger le profil optimise
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    if not exist "%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip" (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
+        goto :NPI_DONE
+    )
+    
+    :: Appliquer le profil
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
+    start "" "%TEMP%\NvidiaProfileInspector\nvidiaProfileInspector.exe" "%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip"
+    ping -n 3 127.0.0.1 >nul 2>&1
+    taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
+    
+    :: Nettoyage
+    del "%TEMP%\NvidiaProfileInspector\nvidiaProfileInspector.exe" >nul 2>&1
+    del "%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip" >nul 2>&1
+    rmdir "%TEMP%\NvidiaProfileInspector" >nul 2>&1
+) else (
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
 )
-
-:: Telecharger le profil optimise
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '%NPI_PROFILE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-if not exist "%NPI_PROFILE%" (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
-    goto :NPI_SKIP
-)
-
-:: Appliquer le profil (lancer en background et fermer apres import)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
-start "" "%NPI_EXE%" "%NPI_PROFILE%"
-:: Attendre que l'import se fasse (2 secondes)
-ping -n 2 127.0.0.1 >nul 2>&1
-:: Fermer la fenetre NVIDIA Profile Inspector (ferme aussi la popup)
-taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
-
-:: Nettoyage
-del "%NPI_EXE%" >nul 2>&1
-del "%NPI_PROFILE%" >nul 2>&1
-rmdir "%NPI_DIR%" >nul 2>&1
-goto :NPI_DONE
-
-:NPI_SKIP
-echo %COLOR_YELLOW%[!]%COLOR_RESET% NVIDIA Profile Inspector ignore (telechargement echoue ou GPU non NVIDIA)
 
 :NPI_DONE
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Toutes les optimisations GPU ont ete appliquees.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
 if "%~1"=="call" (
   exit /b
 ) else (
@@ -720,6 +720,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations reseau appliquees avec succes.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est recommande pour appliquer les modifications.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
 if "%~1"=="call" (
   exit /b
 ) else (
@@ -838,6 +839,12 @@ if not exist "%DevManView%" (
 %DevManView% /disable "SteelSeries Sonar Virtual Audio Device"
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Peripheriques inutiles desactives
+
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Peripheriques inutiles desactives avec succes.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
 if "%~1"=="call" (
   exit /b
 ) else (
@@ -1012,6 +1019,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Economies d'energie desactivees - Performances maximales actives.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est recommande pour appliquer les modifications.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
 if "%~1"=="call" (
   exit /b
 ) else (
@@ -1072,6 +1080,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Protections de securite desactivees (HVCI conserve).
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
 if "%~1"=="call" (
   exit /b
 ) else (
@@ -1769,10 +1778,11 @@ del /q /f "C:\Windows\System32\FNTCACHE.DAT" >nul 2>&1
 net start FontCache >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache de polices nettoye
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Reset du Cache Windows Store...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reset du Cache Windows Store (Edge preserve)...
 wsreset.exe -i >nul 2>&1
-powershell -Command "Get-AppxPackage | ForEach-Object {Remove-Item -Path \"$env:LOCALAPPDATA\Packages\$($_.PackageFamilyName)\AC\*\" -Recurse -Force -ErrorAction SilentlyContinue}" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Store vide
+:: Nettoyage des caches Store SAUF Edge pour eviter la deconnexion
+powershell -Command "Get-AppxPackage | Where-Object { $_.Name -notlike '*Edge*' -and $_.Name -notlike '*WebExperience*' } | ForEach-Object { Remove-Item -Path \"$env:LOCALAPPDATA\Packages\$($_.PackageFamilyName)\AC\*\" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Store vide (Edge preserve)
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage Cache DNS...
 ipconfig /flushdns >nul 2>&1
