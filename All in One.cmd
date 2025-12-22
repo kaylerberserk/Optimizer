@@ -103,21 +103,11 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Optimiser tout (PC de Bureau)%COLOR_RESET%
 echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Optimiser tout (PC Portable)%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS SYSTEME ---%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[N]%COLOR_RESET% %COLOR_CYAN%Nettoyage Avance de Windows%COLOR_RESET%
 echo %COLOR_YELLOW%[R]%COLOR_RESET% %COLOR_CYAN%Creer un Point de Restauration%COLOR_RESET%
-echo.
-echo %STYLE_BOLD%%COLOR_BLUE%--- PARAMETRES SYSTEME ---%COLOR_RESET%
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[A]%COLOR_RESET% %COLOR_GREEN%Gerer Windows Defender%COLOR_RESET%
-echo %COLOR_YELLOW%[B]%COLOR_RESET% %COLOR_GREEN%Gerer UAC (Controle de Compte Utilisateur)%COLOR_RESET%
-echo %COLOR_YELLOW%[C]%COLOR_RESET% %COLOR_GREEN%Gerer les Animations Windows%COLOR_RESET%
-echo.
-echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS SUPPLEMENTAIRES ---%COLOR_RESET%
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[O]%COLOR_RESET% %COLOR_MAGENTA%Desinstaller OneDrive Completement%COLOR_RESET%
-echo %COLOR_YELLOW%[E]%COLOR_RESET% %COLOR_MAGENTA%Desinstaller Edge Completement%COLOR_RESET%
+echo %COLOR_YELLOW%[G]%COLOR_RESET% %COLOR_MAGENTA%Gestion Windows (Defender, UAC, Edge, OneDrive...)%COLOR_RESET%
 echo %COLOR_YELLOW%[W]%COLOR_RESET% %COLOR_MAGENTA%Outil activation Windows / Office (MAS)%COLOR_RESET%
 echo %COLOR_YELLOW%[T]%COLOR_RESET% %COLOR_MAGENTA%Outil Chris Titus Tech (WinUtil)%COLOR_RESET%
 echo.
@@ -125,17 +115,13 @@ echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COL
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 123456789DLNRQABCOEWT /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-9, D, L, N, R, Q, A, B, C, O, E, W, T]: %COLOR_RESET%"
+choice /C 123456789DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-9, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
 
 :: Gestion des choix (du plus grand au plus petit pour errorlevel)
-if errorlevel 21 goto :OUTIL_CHRIS_TITUS
-if errorlevel 20 goto :OUTIL_ACTIVATION
-if errorlevel 19 goto :DESINSTALLER_EDGE
-if errorlevel 18 goto :DESINSTALLER_ONEDRIVE
-if errorlevel 17 goto :TOGGLE_ANIMATIONS
-if errorlevel 16 goto :TOGGLE_UAC
-if errorlevel 15 goto :TOGGLE_DEFENDER
-if errorlevel 14 goto :END_SCRIPT
+if errorlevel 17 goto :END_SCRIPT
+if errorlevel 16 goto :OUTIL_CHRIS_TITUS
+if errorlevel 15 goto :OUTIL_ACTIVATION
+if errorlevel 14 goto :MENU_GESTION_WINDOWS
 if errorlevel 13 goto :CREER_POINT_RESTAURATION
 if errorlevel 12 goto :NETTOYAGE_AVANCE_WINDOWS
 if errorlevel 11 goto :TOUT_OPTIMISER_LAPTOP
@@ -150,6 +136,43 @@ if errorlevel 3 goto :OPTIMISATIONS_DISQUES
 if errorlevel 2 goto :OPTIMISATIONS_MEMOIRE
 if errorlevel 1 goto :OPTIMISATIONS_SYSTEME
 goto :MENU_PRINCIPAL
+
+:MENU_GESTION_WINDOWS
+cls
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                    GESTION WINDOWS                    %COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Ce menu regroupe toutes les options pour gerer les fonctionnalites%COLOR_RESET%
+echo %COLOR_WHITE%  et composants Windows (securite, interface, applications Microsoft).%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- SECURITE ---%COLOR_RESET%
+echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Gerer Windows Defender%COLOR_RESET%
+echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Gerer UAC (Controle de Compte Utilisateur)%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- INTERFACE ---%COLOR_RESET%
+echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Gerer les Animations Windows%COLOR_RESET%
+echo %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Gerer Copilot / Widgets / Recall (Windows 11)%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- APPLICATIONS MICROSOFT ---%COLOR_RESET%
+echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
+echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+choice /C 123456M /N /M "%COLOR_YELLOW%Choisissez une option [1-6, M]: %COLOR_RESET%"
+if errorlevel 7 goto :MENU_PRINCIPAL
+if errorlevel 6 goto :DESINSTALLER_EDGE
+if errorlevel 5 goto :DESINSTALLER_ONEDRIVE
+if errorlevel 4 goto :TOGGLE_COPILOT
+if errorlevel 3 goto :TOGGLE_ANIMATIONS
+if errorlevel 2 goto :TOGGLE_UAC
+if errorlevel 1 goto :TOGGLE_DEFENDER
+goto :MENU_GESTION_WINDOWS
 
 :OPTIMISATIONS_SYSTEME
 cls
@@ -244,6 +267,27 @@ for %%V in (ContentDeliveryAllowed FeatureManagementEnabled OemPreInstalledAppsE
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v BingSearchEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v CortanaConsent /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie et publicites desactivees
+
+:: Desactivation Copilot (Windows 11)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Copilot (Windows 11)...
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot desactive
+
+:: Desactivation Widgets (Windows 11)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Widgets (Windows 11)...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
+winget uninstall "Windows web experience Pack" --silent --accept-source-agreements >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Widgets desactives
+
+:: Desactivation Recall (Windows 11 24H2)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Recall (Windows 11 24H2)...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSnapshots /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive
 
 :: Taches planifiees de telemetrie
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees de telemetrie...
@@ -1097,10 +1141,10 @@ echo.
 
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer Windows Defender (Recommande)%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver Windows Defender (Non recommande)%COLOR_RESET%
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
 choice /C 12M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-if errorlevel 3 goto :MENU_PRINCIPAL
+if errorlevel 3 goto :MENU_GESTION_WINDOWS
 if errorlevel 2 goto :DESACTIVER_DEFENDER_SECTION
 if errorlevel 1 goto :ACTIVER_DEFENDER_SECTION
 
@@ -1122,7 +1166,7 @@ echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Windows Defender a ete reactive.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :DESACTIVER_DEFENDER_SECTION
 cls
@@ -1144,7 +1188,7 @@ echo.
 echo %COLOR_RED%[-]%COLOR_RESET% Windows Defender a ete desactive.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :TOGGLE_UAC
 cls
@@ -1155,10 +1199,10 @@ echo.
 
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer UAC (Recommande)%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver UAC + Avertissements (Pour LAB)%COLOR_RESET%
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
 choice /C 12M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-if errorlevel 3 goto :MENU_PRINCIPAL
+if errorlevel 3 goto :MENU_GESTION_WINDOWS
 if errorlevel 2 goto :DESACTIVER_UAC_SECTION
 if errorlevel 1 goto :ACTIVER_UAC_SECTION
 
@@ -1179,7 +1223,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreen
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% UAC active. Un redemarrage est requis.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :DESACTIVER_UAC_SECTION
 cls
@@ -1200,7 +1244,7 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v
 echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%UAC + tous les avertissements desactives.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Redemarrage requis.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :TOGGLE_ANIMATIONS
 cls
@@ -1211,10 +1255,10 @@ echo.
 
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer les animations Windows (experience utilisateur standard)%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver les animations Windows (pour optimiser les performances)%COLOR_RESET%
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
 choice /C 12M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-if errorlevel 3 goto :MENU_PRINCIPAL
+if errorlevel 3 goto :MENU_GESTION_WINDOWS
 if errorlevel 2 goto :DESACTIVER_ANIMATIONS_SECTION
 if errorlevel 1 goto :ACTIVER_ANIMATIONS_SECTION
 
@@ -1250,7 +1294,7 @@ taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows activees.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :DESACTIVER_ANIMATIONS_SECTION
 cls
@@ -1290,7 +1334,138 @@ taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows desactivees.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
+
+:TOGGLE_COPILOT
+cls
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% GERER COPILOT / WIDGETS / RECALL (WINDOWS 11)%COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Ces fonctionnalites sont specifiques a Windows 11.%COLOR_RESET%
+echo %COLOR_WHITE%  Si vous etes sur Windows 10, ces options n'auront pas d'effet.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- COPILOT ---%COLOR_RESET%
+echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer Copilot%COLOR_RESET%
+echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver Copilot%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- WIDGETS ---%COLOR_RESET%
+echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Activer les Widgets%COLOR_RESET%
+echo %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_RED%Desactiver les Widgets%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- RECALL (Windows 11 24H2) ---%COLOR_RESET%
+echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Activer Recall%COLOR_RESET%
+echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desactiver Recall%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall)%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
+echo.
+choice /C 123456DM /N /M "%COLOR_YELLOW%Choisissez une option [1-6, D, M]: %COLOR_RESET%"
+if errorlevel 8 goto :MENU_GESTION_WINDOWS
+if errorlevel 7 goto :DESACTIVER_TOUT_COPILOT
+if errorlevel 6 goto :DESACTIVER_RECALL
+if errorlevel 5 goto :ACTIVER_RECALL
+if errorlevel 4 goto :DESACTIVER_WIDGETS
+if errorlevel 3 goto :ACTIVER_WIDGETS
+if errorlevel 2 goto :DESACTIVER_COPILOT
+if errorlevel 1 goto :ACTIVER_COPILOT
+
+:ACTIVER_COPILOT
+cls
+echo %COLOR_GREEN%[+]%COLOR_RESET% %STYLE_BOLD%Activation de Copilot...%COLOR_RESET%
+echo.
+reg delete "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot active.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Redemarrez l'Explorateur ou le PC pour voir le bouton Copilot.
+pause
+goto :TOGGLE_COPILOT
+
+:DESACTIVER_COPILOT
+cls
+echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%Desactivation de Copilot...%COLOR_RESET%
+echo.
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot desactive.
+pause
+goto :TOGGLE_COPILOT
+
+:ACTIVER_WIDGETS
+cls
+echo %COLOR_GREEN%[+]%COLOR_RESET% %STYLE_BOLD%Activation des Widgets...%COLOR_RESET%
+echo.
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Widgets actives.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Redemarrez l'Explorateur ou le PC pour voir les Widgets.
+pause
+goto :TOGGLE_COPILOT
+
+:DESACTIVER_WIDGETS
+cls
+echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%Desactivation des Widgets...%COLOR_RESET%
+echo.
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
+winget uninstall "Windows web experience Pack" --silent --accept-source-agreements >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Widgets desactives.
+pause
+goto :TOGGLE_COPILOT
+
+:ACTIVER_RECALL
+cls
+echo %COLOR_GREEN%[+]%COLOR_RESET% %STYLE_BOLD%Activation de Recall...%COLOR_RESET%
+echo.
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /f >nul 2>&1
+reg delete "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSnapshots /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall active.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Recall necessite un PC compatible NPU et Windows 11 24H2.
+pause
+goto :TOGGLE_COPILOT
+
+:DESACTIVER_RECALL
+cls
+echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%Desactivation de Recall...%COLOR_RESET%
+echo.
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSnapshots /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive.
+pause
+goto :TOGGLE_COPILOT
+
+:DESACTIVER_TOUT_COPILOT
+cls
+echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%Desactivation de Copilot + Widgets + Recall...%COLOR_RESET%
+echo.
+:: Copilot
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Copilot...
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot desactive
+:: Widgets
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Widgets...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
+winget uninstall "Windows web experience Pack" --silent --accept-source-agreements >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Widgets desactives
+:: Recall
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Recall...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSnapshots /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive
+echo.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les fonctionnalites IA ont ete desactivees.
+pause
+goto :MENU_GESTION_WINDOWS
 
 :DESINSTALLER_ONEDRIVE
 cls
@@ -1302,7 +1477,7 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Tentative de desinstallation de OneDrive...
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre quelques instants.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de vouloir continuer (O/N) ? %COLOR_RESET%"
-if errorlevel 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_GESTION_WINDOWS
 
 :: Arreter les processus OneDrive
 taskkill /f /im OneDrive.exe >nul 2>&1
@@ -1379,7 +1554,7 @@ del "%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /f /q
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Nettoyage complet de OneDrive termine.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :DESINSTALLER_EDGE
 cls
@@ -1392,7 +1567,7 @@ echo %COLOR_RED%ATTENTION: La desinstallation de Microsoft Edge peut entrainer d
 echo %COLOR_RED%de compatibilite avec certaines applications Windows.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de vouloir continuer (O/N) ? %COLOR_RESET%"
-if errorlevel 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_GESTION_WINDOWS
 echo.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo %COLOR_WHITE% SUPPRESSION DES DONNEES UTILISATEUR%COLOR_RESET%
@@ -1539,7 +1714,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Si des elements persistent, redemarrez Wi
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 pause
-goto :MENU_PRINCIPAL
+goto :MENU_GESTION_WINDOWS
 
 :OUTIL_ACTIVATION
 cls
@@ -1778,11 +1953,31 @@ del /q /f "C:\Windows\System32\FNTCACHE.DAT" >nul 2>&1
 net start FontCache >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache de polices nettoye
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Reset du Cache Windows Store (Edge preserve)...
-wsreset.exe -i >nul 2>&1
-:: Nettoyage des caches Store SAUF Edge pour eviter la deconnexion
-powershell -Command "Get-AppxPackage | Where-Object { $_.Name -notlike '*Edge*' -and $_.Name -notlike '*WebExperience*' } | ForEach-Object { Remove-Item -Path \"$env:LOCALAPPDATA\Packages\$($_.PackageFamilyName)\AC\*\" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Store vide (Edge preserve)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reset du Cache Windows Store (Edge completement preserve)...
+:: NE PAS utiliser wsreset car ca peut affecter Edge
+:: Nettoyage selectif : exclure Edge, WebView2, et tout ce qui contient Microsoft.Windows
+powershell -NoProfile -Command "Get-ChildItem -Path \"$env:LOCALAPPDATA\Packages\" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'Edge|WebView|Microsoft\.Windows' } | ForEach-Object { Remove-Item -Path \"$($_.FullName)\AC\INetCache\*\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path \"$($_.FullName)\AC\Temp\*\" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Store vide (Edge completement preserve)
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage cache des miniatures...
+del /f /s /q "%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache*.db" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache des miniatures nettoye
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage cache des navigateurs (hors Edge)...
+:: Chrome (cache seulement, pas les cookies/sessions)
+if exist "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" (
+    rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" >nul 2>&1
+    rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache" >nul 2>&1
+)
+:: Firefox (cache seulement)
+for /d %%p in ("%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*") do (
+    rd /s /q "%%p\cache2" >nul 2>&1
+)
+:: Brave (cache seulement)
+if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" (
+    rd /s /q "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache des navigateurs nettoye (sessions preservees)
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage Cache DNS...
 ipconfig /flushdns >nul 2>&1
