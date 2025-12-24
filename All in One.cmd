@@ -457,7 +457,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du Prefetch et SuperFetch pour
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableBoottrace /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v SfTracingState /t REG_DWORD /d 0 /f >nul 2>&1
 sc stop SysMain >nul 2>&1
-sc config SysMain start=auto >nul 2>&1
+sc config SysMain start= auto >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetch actif, SuperFetch optimise pour les jeux
 
 :: 2.3 - FTH OFF
@@ -744,7 +744,7 @@ powershell -NoProfile -NoLogo -Command "$adp=Get-NetAdapter|? Status -eq 'Up'; f
 powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lltdio' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_implat' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_rspndr' -ErrorAction SilentlyContinue }" >nul 2>&1
 
 :: 5.12 - NIC latence faible
-powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { try{Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $_.Name -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $_.Name -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; 'Energy-Efficient Ethernet','Advanced EEE','Green Ethernet','Power Saving Mode','Gigabit Lite' | % { try{Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} }; 'Large Send Offload v2 (IPv4)','Large Send Offload v2 (IPv6)','Large Receive Offload (IPv4)','Large Receive Offload (IPv6)' | % { try{Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} } }" >nul 2>&1
+powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { $adapter=$_; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; 'Energy-Efficient Ethernet','Advanced EEE','Green Ethernet','Power Saving Mode','Gigabit Lite' | % { try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} }; 'Large Send Offload v2 (IPv4)','Large Send Offload v2 (IPv6)','Large Receive Offload (IPv4)','Large Receive Offload (IPv6)' | % { try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} } }" >nul 2>&1
 
 :: 5.13 - DNS cache + DoH auto
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v NegativeCacheTime /t REG_DWORD /d 0 /f >nul 2>&1
