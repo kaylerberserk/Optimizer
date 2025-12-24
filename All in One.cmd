@@ -927,21 +927,38 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 
 :: 8.1 - Activation du plan Ultimate Performance (si non present)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan Ultimate Performance...
-powercfg -list | findstr /i "Ultimate Performance" >nul 2>&1
-if errorlevel 1 (
+set "ULTIMATE_GUID="
+
+:: Chercher si Ultimate Performance existe deja
+for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "Ultimate"') do (
+    set "ULTIMATE_GUID=%%G"
+)
+
+:: Supprimer les espaces du GUID
+if defined ULTIMATE_GUID set "ULTIMATE_GUID=%ULTIMATE_GUID: =%"
+
+if not defined ULTIMATE_GUID (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate Performance non trouve - Creation en cours...
-    powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 >nul 2>&1
-    if not errorlevel 1 (
+    
+    :: Dupliquer le schema Ultimate Performance cache de Windows
+    for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do (
+        set "ULTIMATE_GUID=%%G"
+    )
+    if defined ULTIMATE_GUID set "ULTIMATE_GUID=!ULTIMATE_GUID: =!"
+    
+    if defined ULTIMATE_GUID (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance cree avec succes
     ) else (
-        echo %COLOR_YELLOW%[!]%COLOR_RESET% Impossible de creer le plan Ultimate Performance
+        echo %COLOR_RED%[!]%COLOR_RESET% Impossible de creer le plan Ultimate Performance
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Essayez: powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
     )
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance deja present
 )
+
 :: Activer le plan Ultimate Performance
-for /f "tokens=4" %%G in ('powercfg -list ^| findstr /i "Ultimate Performance"') do (
-    powercfg -setactive %%G >nul 2>&1
+if defined ULTIMATE_GUID (
+    powercfg -setactive %ULTIMATE_GUID% >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
 )
 
