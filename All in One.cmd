@@ -925,42 +925,67 @@ echo %COLOR_WHITE%  pour maintenir les performances maximales en permanence.%COL
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 8.1 - Activation du plan Ultimate Performance (si non present)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan Ultimate Performance...
-set "ULTIMATE_GUID="
+:: 8.1 - Activation du plan Ultimate Performance (methode universelle par GUID)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan d'alimentation actif...
 
-:: Chercher si Ultimate Performance existe deja
-for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "Ultimate"') do (
+:: GUIDs des plans Windows par defaut (universels, toutes langues)
+:: Equilibre : 381b4222-f694-41f0-9685-ff5bb260df2e
+:: Economies d'energie : a1841308-3541-4fab-bc81-f71556f20b4a
+:: Performances elevees : 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+:: Ultimate Performance (source) : e9a42b02-d5df-448d-aa00-03f14749eb61
+
+set "ACTIVE_GUID="
+set "NEED_ULTIMATE=0"
+
+:: Obtenir le GUID du plan actif (methode universelle)
+for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^>nul') do (
+    set "ACTIVE_GUID=%%G"
+)
+set "ACTIVE_GUID=%ACTIVE_GUID: =%"
+
+:: Verifier si le plan actif est un des 3 plans par defaut
+if "%ACTIVE_GUID%"=="381b4222-f694-41f0-9685-ff5bb260df2e" set "NEED_ULTIMATE=1"
+if "%ACTIVE_GUID%"=="a1841308-3541-4fab-bc81-f71556f20b4a" set "NEED_ULTIMATE=1"
+if "%ACTIVE_GUID%"=="8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" set "NEED_ULTIMATE=1"
+
+:: Si plan actif n'est pas un des 3 par defaut -> deja Ultimate ou custom, ne rien faire
+if "%NEED_ULTIMATE%"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance / personnalise deja actif
+    goto :ULTIMATE_DONE
+)
+
+:: Chercher si Ultimate Performance existe deja dans la liste
+set "ULTIMATE_GUID="
+for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /v "381b4222 a1841308 8c5e7fda" ^| findstr /i "GUID"') do (
     set "ULTIMATE_GUID=%%G"
 )
+if defined ULTIMATE_GUID set "ULTIMATE_GUID=!ULTIMATE_GUID: =!"
 
-:: Supprimer les espaces du GUID
-if defined ULTIMATE_GUID set "ULTIMATE_GUID=%ULTIMATE_GUID: =%"
-
-if not defined ULTIMATE_GUID (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate Performance non trouve - Creation en cours...
-    
-    :: Dupliquer le schema Ultimate Performance cache de Windows
-    for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do (
-        set "ULTIMATE_GUID=%%G"
-    )
-    if defined ULTIMATE_GUID set "ULTIMATE_GUID=!ULTIMATE_GUID: =!"
-    
-    if defined ULTIMATE_GUID (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance cree avec succes
-    ) else (
-        echo %COLOR_RED%[!]%COLOR_RESET% Impossible de creer le plan Ultimate Performance
-        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Essayez: powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
-    )
-) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance deja present
-)
-
-:: Activer le plan Ultimate Performance
+:: Si Ultimate existe, l'activer
 if defined ULTIMATE_GUID (
-    powercfg -setactive %ULTIMATE_GUID% >nul 2>&1
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate Performance trouve - Activation...
+    powercfg -setactive !ULTIMATE_GUID! >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
+    goto :ULTIMATE_DONE
 )
+
+:: Sinon, creer Ultimate Performance
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate Performance non trouve - Creation en cours...
+for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do (
+    set "ULTIMATE_GUID=%%G"
+)
+if defined ULTIMATE_GUID set "ULTIMATE_GUID=!ULTIMATE_GUID: =!"
+
+if defined ULTIMATE_GUID (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance cree avec succes
+    powercfg -setactive !ULTIMATE_GUID! >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
+) else (
+    echo %COLOR_RED%[!]%COLOR_RESET% Impossible de creer le plan Ultimate Performance
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Essayez: powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
+)
+
+:ULTIMATE_DONE
 
 :: 8.2 - Desactivation du demarrage rapide (Fast Startup) pour stabilite
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
