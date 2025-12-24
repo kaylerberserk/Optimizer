@@ -925,64 +925,75 @@ echo %COLOR_WHITE%  pour maintenir les performances maximales en permanence.%COL
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 8.1 - Activation du plan Ultimate Performance (methode universelle par GUID)
+:: 8.1 - Activation du plan Ultimate Performance (methode universelle + detection intelligente)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan d'alimentation actif...
 
-:: GUIDs des plans Windows par defaut (universels, toutes langues)
+:: GUIDs des plans Windows par defaut (universels)
 :: Equilibre : 381b4222-f694-41f0-9685-ff5bb260df2e
-:: Economies d'energie : a1841308-3541-4fab-bc81-f71556f20b4a
-:: Performances elevees : 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
-:: Ultimate Performance (source) : e9a42b02-d5df-448d-aa00-03f14749eb61
+:: Economies  : a1841308-3541-4fab-bc81-f71556f20b4a
+:: Perf. elev : 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
 
 set "ACTIVE_GUID="
 set "NEED_ULTIMATE=0"
 
-:: Obtenir le GUID du plan actif (methode universelle)
+:: 1. Verifier le plan ACTIF
 for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^>nul') do (
     set "ACTIVE_GUID=%%G"
 )
-set "ACTIVE_GUID=%ACTIVE_GUID: =%"
+if defined ACTIVE_GUID set "ACTIVE_GUID=%ACTIVE_GUID: =%"
 
-:: Verifier si le plan actif est un des 3 plans par defaut
+:: Si le plan actif est un des 3 par defaut, on a besoin d'optimiser
 if "%ACTIVE_GUID%"=="381b4222-f694-41f0-9685-ff5bb260df2e" set "NEED_ULTIMATE=1"
 if "%ACTIVE_GUID%"=="a1841308-3541-4fab-bc81-f71556f20b4a" set "NEED_ULTIMATE=1"
 if "%ACTIVE_GUID%"=="8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" set "NEED_ULTIMATE=1"
 
-:: Si plan actif n'est pas un des 3 par defaut -> deja Ultimate ou custom, ne rien faire
 if "%NEED_ULTIMATE%"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance / personnalise deja actif
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate/Personnalise deja actif - aucune action requise
     goto :ULTIMATE_DONE
 )
 
-:: Chercher si Ultimate Performance existe deja dans la liste
-set "ULTIMATE_GUID="
-for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /v "381b4222 a1841308 8c5e7fda" ^| findstr /i "GUID"') do (
-    set "ULTIMATE_GUID=%%G"
-)
-if defined ULTIMATE_GUID set "ULTIMATE_GUID=!ULTIMATE_GUID: =!"
+:: 2. Si on est sur un plan par defaut, chercher un plan Ultimate existant
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Recherche d'un plan Ultimate existant...
+set "TARGET_GUID="
+set "BEST_MATCH_GUID="
 
-:: Si Ultimate existe, l'activer
-if defined ULTIMATE_GUID (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate Performance trouve - Activation...
-    powercfg -setactive !ULTIMATE_GUID! >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
-    goto :ULTIMATE_DONE
+:: Lister tous les plans NON par defaut
+for /f "tokens=*" %%L in ('powercfg -list 2^>nul ^| findstr /v "381b4222 a1841308 8c5e7fda" ^| findstr /i "GUID"') do (
+    :: Extraire le GUID
+    for /f "tokens=2 delims=:()" %%G in ("%%L") do set "TEMP_GUID=%%G"
+    
+    :: Garder ce GUID comme candidat potentiel
+    set "TARGET_GUID=!TEMP_GUID!"
+    
+    :: Si le nom contient Ultimate ou optimale, c'est le meilleur candidat
+    echo %%L | findstr /i "Ultimate optimale" >nul 2>&1
+    if not errorlevel 1 set "BEST_MATCH_GUID=!TEMP_GUID!"
 )
 
-:: Sinon, creer Ultimate Performance
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate Performance non trouve - Creation en cours...
-for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do (
-    set "ULTIMATE_GUID=%%G"
-)
-if defined ULTIMATE_GUID set "ULTIMATE_GUID=!ULTIMATE_GUID: =!"
+:: Utiliser le meilleur candidat (nomme Ultimate) ou le dernier trouve (Custom)
+if defined BEST_MATCH_GUID set "TARGET_GUID=%BEST_MATCH_GUID%"
+if defined TARGET_GUID set "TARGET_GUID=%TARGET_GUID: =%"
 
-if defined ULTIMATE_GUID (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance cree avec succes
-    powercfg -setactive !ULTIMATE_GUID! >nul 2>&1
+:: 3. Activer ou Creer
+if defined TARGET_GUID (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan personnalise trouve - Activation...
+    powercfg -setactive !TARGET_GUID! >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
 ) else (
-    echo %COLOR_RED%[!]%COLOR_RESET% Impossible de creer le plan Ultimate Performance
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Essayez: powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Aucun plan personnalise trouve - Creation Ultimate Performance...
+    for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do (
+        set "TARGET_GUID=%%G"
+    )
+    if defined TARGET_GUID set "TARGET_GUID=!TARGET_GUID: =!"
+    
+    if defined TARGET_GUID (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance cree
+        powercfg -setactive !TARGET_GUID! >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
+    ) else (
+        echo %COLOR_RED%[!]%COLOR_RESET% Echec creation plan Ultimate
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Essayez la commande: powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
+    )
 )
 
 :ULTIMATE_DONE
