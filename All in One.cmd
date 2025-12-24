@@ -827,7 +827,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourcis d'accessibilite desactives - Plus
 :: 6.4 - USB Selective Suspend OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
 powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale sur secteur
 
@@ -1635,9 +1635,9 @@ for %%C in (
     "%LocalAppData%\Temp\OneDrive*"
     "%Temp%\OneDrive*"
 ) do (
-    if exist "%%C" (
-        rd "%%C" /q /s >nul 2>&1
-        del "%%C" /q /s /f >nul 2>&1
+    if exist "%%~C" (
+        rd "%%~C" /q /s >nul 2>&1
+        del "%%~C" /q /s /f >nul 2>&1
     )
 )
 takeown /f "%USERPROFILE%\OneDrive" /r /d y >nul 2>&1
