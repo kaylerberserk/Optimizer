@@ -1218,6 +1218,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Mitigations CPU desactivees
 :: 9.4 - HVCI et CFG (conserves pour compatibilite anti-cheat)
 :: echo %COLOR_YELLOW%[*]%COLOR_RESET% Conservation du HVCI/CFG (requis pour Valorant, Fortnite, etc.)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
+powershell -NoProfile -Command "Set-ProcessMitigation -System -Disable CFG"
 :: echo %COLOR_GREEN%[OK]%COLOR_RESET% HVCI/CFG conserves (compatibilite anti-cheat)
 
 echo.
