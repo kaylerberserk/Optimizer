@@ -827,7 +827,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourcis d'accessibilite desactives - Plus
 :: 6.4 - USB Selective Suspend OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
 powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale sur secteur
 
@@ -1867,10 +1866,11 @@ echo       %COLOR_YELLOW%Expose le systeme a des attaques par canal auxiliaire%C
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les protections (recommande)
 echo.
-choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les protections ? [O/N]: %COLOR_RESET%"
 set "DESACTIVER_SECURITE=0"
-if errorlevel 2 set "DESACTIVER_SECURITE=0"
-if errorlevel 1 if not errorlevel 2 set "DESACTIVER_SECURITE=1"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les protections ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :DESKTOP_SECURITE_NON
+if errorlevel 1 set "DESACTIVER_SECURITE=1"
+:DESKTOP_SECURITE_NON
 
 cls
 call :OPTIMISATIONS_SYSTEME call
@@ -1917,10 +1917,11 @@ echo       %COLOR_YELLOW%Expose le systeme a des attaques par canal auxiliaire%C
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les protections (recommande)
 echo.
-choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les protections ? [O/N]: %COLOR_RESET%"
 set "DESACTIVER_SECURITE=0"
-if errorlevel 2 set "DESACTIVER_SECURITE=0"
-if errorlevel 1 if not errorlevel 2 set "DESACTIVER_SECURITE=1"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les protections ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :LAPTOP_SECURITE_NON
+if errorlevel 1 set "DESACTIVER_SECURITE=1"
+:LAPTOP_SECURITE_NON
 
 cls
 call :OPTIMISATIONS_SYSTEME call
