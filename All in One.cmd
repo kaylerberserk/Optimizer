@@ -249,6 +249,7 @@ reg add "HKCU\Software\Microsoft\Personalization\Settings" /v AcceptedPrivacyPol
 :: Optimiser le cache d'icones et miniatures
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /t REG_SZ /d "8192" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v DisableThumbsDBOnNetworkFolders /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Optimiser le demarrage du shell Explorer
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v DesktopProcess /t REG_DWORD /d 1 /f >nul 2>&1
@@ -259,6 +260,10 @@ reg add "HKU\.DEFAULT\Control Panel\Keyboard" /v InitialKeyboardIndicators /t RE
 reg add "HKCU\Control Panel\Keyboard" /v InitialKeyboardIndicators /t REG_SZ /d "2" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interface Windows ultra-optimisee
+
+:: Desactiver la compression des papiers peints (100 = qualite maximale sans compression CPU)
+reg add "HKCU\Control Panel\Desktop" /v JPEGImportQuality /t REG_DWORD /d 100 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression des papiers peints desactivee
 
 :: 1.4 - Telemetrie et vie privee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie et des traceurs...
@@ -283,6 +288,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExpe
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v DoNotShowFeedbackNotifications /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Content Delivery Manager
 for %%V in (ContentDeliveryAllowed FeatureManagementEnabled OemPreInstalledAppsEnabled PreInstalledAppsEnabled PreInstalledAppsEverEnabled RemediationRequired RotatingLockScreenEnabled RotatingLockScreenOverlayEnabled SilentInstalledAppsEnabled SoftLandingEnabled SubscribedContentEnabled SystemPaneSuggestionsEnabled SubscribedContent-338387Enabled SubscribedContent-338388Enabled SubscribedContent-338389Enabled SubscribedContent-353698Enabled) do (
@@ -377,10 +383,12 @@ for %%S in (CDPSvc MapsBroker PcaSvc StorSvc StateRepository TextInputManagement
 for %%S in (ALG AxInstSV BDESVC CertPropSvc CscService DmEnrollmentSvc DsSvc EFS EntAppSvc Fax FrameServer GraphicsPerfSvc HvHost IEEtwCollectorService IKEEXT InstallService InventorySvc IpxlatCfgSvc KtmRm LicenseManager LxpSvc MSDTC MSiSCSI McpManagementService MixedRealityOpenXRSvc MsKeyboardFilter NaturalAuthentication NcaSvc NcdAutoSetup NetSetupSvc PNRPAutoReg PNRPsvc PeerDistSvc PlugPlay PolicyAgent PrintNotify QWAVE RasAuto RasMan RetailDemo RmSvc RpcLocator SCPolicySvc SCardSvr SDRSVC SEMgrSvc SNMPTRAP ScDeviceEnum SharedRealitySvc SmsRouter SstpSvc StiSvc TabletInputService TapiSrv TieringEngineService TokenBroker TroubleshootingSvc UI0Detect UmRdpService W32Time WEPHOSTSVC WFDSConMgrSvc WManSvc WPDBusEnum WSService WaaSMedicSvc WarpJITSvc WbioSrvc WcsPlugInService WdiServiceHost WdiSystemHost Wecsvc WerSvc WiaRpc WinRM WpcMonSvc autotimesvc camsvc cloudidsvc dcsvc diagsvc dmwappushservice dot3svc embeddedmode fdPHost fhsvc hidserv lltdsvc lmhosts netprofm p2pimsvc p2psvc perceptionsimulation pla seclogon smphost spectrum svsvc swprv upnphost vds wbengine wcncsvc wercplsupport wisvc wlidsvc wlpasvc wmiApSrv workfolderssvc) do (
   sc config %%S start= demand >nul 2>&1
 )
-:: Services a desactiver
-for %%S in (AJRouter AppVClient AssignedAccessManagerSvc NetTcpPortSharing RemoteAccess RemoteRegistry UevAgentService shpamsvc ssh-agent tzautoupdate uhssvc DialogBlockingService) do (
+:: Services a desactiver (suggestions, telemetrie, inutiles)
+for %%S in (AJRouter AppVClient AssignedAccessManagerSvc NetTcpPortSharing RemoteAccess RemoteRegistry UevAgentService shpamsvc ssh-agent uhssvc DialogBlockingService SystemSuggestions CDPUserSvc) do (
   sc config %%S start= disabled >nul 2>&1
 )
+:: tzautoupdate en manual pour conserver le changement heure ete/hiver
+sc config tzautoupdate start= demand >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services optimises (mode Manuel/Desactive)
 
 :: 1.5 - Optimisations demarrage et systeme
@@ -1162,6 +1170,14 @@ powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe desactivee
 
+:: 8.16 - Desactiver USB Selective Suspend (evite deconnexions souris/clavier gaming)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation USB Selective Suspend...
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+powercfg /S SCHEME_CURRENT >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% USB Selective Suspend desactive - Peripheriques gaming stables
+
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Economies d'energie desactivees - Performances maximales actives.
@@ -1203,6 +1219,8 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
 ::reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableCfg /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v MoveImages /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableGdsMitigation /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v PerformMmioMitigation /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Protections Spectre/Meltdown desactivees
 
 :: 9.3 - Desactivation des mitigations CPU avancees
@@ -1400,41 +1418,80 @@ goto :MENU_GESTION_WINDOWS
 
 :DESACTIVER_ANIMATIONS_SECTION
 cls
-echo %COLOR_RED%[-]%COLOR_RESET% Desactivation des animations Windows pour de meilleures performances...
+echo %COLOR_RED%[-]%COLOR_RESET% Application des parametres visuels optimises...
+echo.
+echo %COLOR_WHITE%  Parametres personnalises :%COLOR_RESET%
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Miniatures au lieu d'icones
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Contenu des fenetres pendant deplacement
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Rectangle de selection translucide
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Lisser les polices ecran (ClearType)
+echo %COLOR_RED%  [OFF]%COLOR_RESET% Toutes les animations et effets visuels
 echo.
 
-:: Effets visuels : "meilleures performances" / profil agressif
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f >nul 2>&1
+:: Mode personnalise (ni "laisser Windows choisir" ni "performances maximales")
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1
 
-:: UserPreferencesMask : profil pauvre en effets (desactive la plupart des animations/fades)
+:: UserPreferencesMask : profil personnalise
 reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9012038010000000 /f >nul 2>&1
 
 :: Minimise / maximise SANS animation
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 0 /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1
+
+:: GARDER : Miniatures (pas icones)
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: GARDER : Contenu des fenetres pendant deplacement
+reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1
+
+:: GARDER : Lisser les polices ecran (ClearType)
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
+
+:: GARDER : Rectangle de selection translucide
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: DESACTIVER : Peek (apercu bureau)
+reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: DESACTIVER : Ombres sous le pointeur de la souris
+reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "0" /f >nul 2>&1
+
+:: DESACTIVER : Ombre sous les fenetres
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: DESACTIVER : Animations barre des taches
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: DESACTIVER : Animer controles/elements a l'interieur des fenetres
+:: DESACTIVER : Animer fenetres lors reduction/agrandissement (deja fait via MinAnimate)
+:: DESACTIVER : Enregistrer miniatures barre des taches
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: DESACTIVER : Faire defiler regulierement zone de liste (SmoothScroll)
+reg add "HKCU\Control Panel\Desktop" /v SmoothScroll /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: DESACTIVER : Faire disparaitre/apparaitre infobulles et menus
+reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9012038010000000 /f >nul 2>&1
+
+:: DESACTIVER : Utiliser ombres pour noms icones Bureau
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowInfoTip /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: UI plus reactive
-reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d 2000 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d 2000 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v WaitToKillServiceTimeout /t REG_SZ /d 2000 /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "0" /f >nul 2>&1
 
-:: DWM + Transparence OFF
+:: DWM Animations OFF + Transparence OFF
 reg add "HKCU\SOFTWARE\Microsoft\Windows\DWM" /v Animations /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: Animations barre des taches + effets de liste OFF
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f >nul 2>&1
-
-:: Politiques forcees OFF (plus d'animations de demarrage, etc.)
+:: Politiques forcees (animations demarrage OFF)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableAnimations /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des changements...
 taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows desactivees.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres visuels optimises appliques.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage peut etre necessaire pour appliquer tous les changements.
 pause
 goto :MENU_GESTION_WINDOWS
 
