@@ -1234,10 +1234,12 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mitigations CPU desactivees
 
 :: 9.4 - HVCI et CFG (conserves pour compatibilite anti-cheat)
-:: echo %COLOR_YELLOW%[*]%COLOR_RESET% Conservation du HVCI/CFG (requis pour Valorant, Fortnite, etc.)...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Conservation du HVCI/CFG (requis pour Valorant, Fortnite, etc.)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-powershell -NoProfile -Command "Set-ProcessMitigation -System -Disable CFG"
-:: echo %COLOR_GREEN%[OK]%COLOR_RESET% HVCI/CFG conserves (compatibilite anti-cheat)
+:: CFG doit rester ACTIVE pour Vanguard (Valorant)
+:: powershell -NoProfile -Command "Set-ProcessMitigation -System -Disable CFG"
+powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% HVCI/CFG conserves (compatibilite anti-cheat)
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -1384,35 +1386,70 @@ if errorlevel 1 goto :ACTIVER_ANIMATIONS_SECTION
 
 :ACTIVER_ANIMATIONS_SECTION
 cls
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Activation des animations Windows...
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Restauration des parametres visuels par defaut de Windows...
 echo.
 
-:: Effets visuels : profil standard (Windows choisit)
+:: Mode par defaut (0 = Laisser Windows choisir)
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: UserPreferencesMask : profil avec animations actives (valeur recommandee MS pour "Show animations in Windows")
+:: UserPreferencesMask : profil Windows par defaut (toutes animations actives)
 reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9E3E078012000000 /f >nul 2>&1
 
-:: Minimise / maximise anime
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d 1 /f >nul 2>&1
+:: Afficher des miniatures au lieu d'icones
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: DWM + Transparence ON
+:: Afficher le contenu des fenetres pendant leur deplacement
+reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1
+
+:: Afficher le rectangle de selection de facon translucide
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: Afficher les listes modifiables
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewWatermark /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: Lisser les polices ecran (ClearType)
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
+
+:: ACTIVER : Peek
+reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: ACTIVER : Ombres sous le pointeur de la souris
+reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "1" /f >nul 2>&1
+
+:: ACTIVER : Ombre sous les fenetres
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: ACTIVER : Animations barre des taches
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: ACTIVER : Animer les fenetres lors reduction/agrandissement
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "1" /f >nul 2>&1
+
+:: ACTIVER : Enregistrer miniatures barre des taches
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /f >nul 2>&1
+
+:: ACTIVER : Faire defiler regulierement zone de liste
+reg add "HKCU\Control Panel\Desktop" /v SmoothScroll /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: ACTIVER : Infobulles sur le Bureau
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowInfoTip /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: Delai menus par defaut (400ms)
+reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "400" /f >nul 2>&1
+
+:: DWM Animations ON + Transparence ON
 reg add "HKCU\SOFTWARE\Microsoft\Windows\DWM" /v Animations /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: Animations barre des taches + effets de liste
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: Supprimer les blocages eventuels
+:: Supprimer les politiques forcees
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableAnimations /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des changements...
 taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows activees.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows activees (parametres par defaut).
 pause
 goto :MENU_GESTION_WINDOWS
 
@@ -1421,36 +1458,37 @@ cls
 echo %COLOR_RED%[-]%COLOR_RESET% Application des parametres visuels optimises...
 echo.
 echo %COLOR_WHITE%  Parametres personnalises :%COLOR_RESET%
-echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Miniatures au lieu d'icones
-echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Contenu des fenetres pendant deplacement
-echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Rectangle de selection translucide
-echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Lisser les polices ecran (ClearType)
-echo %COLOR_RED%  [OFF]%COLOR_RESET% Toutes les animations et effets visuels
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Afficher des miniatures au lieu d'icones
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Afficher le contenu des fenetres pendant deplacement
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Afficher le rectangle de selection translucide
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Afficher les listes modifiables
+echo %COLOR_GREEN%  [ON]%COLOR_RESET%  Lisser les polices ecran
+echo %COLOR_RED%  [OFF]%COLOR_RESET% Toutes les autres animations et effets
 echo.
 
-:: Mode personnalise (ni "laisser Windows choisir" ni "performances maximales")
+:: Mode personnalise (3 = Custom)
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1
 
-:: UserPreferencesMask : profil personnalise
+:: UserPreferencesMask - Valeur pour les 5 options activees
 reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9012038010000000 /f >nul 2>&1
 
-:: Minimise / maximise SANS animation
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1
-
-:: GARDER : Miniatures (pas icones)
+:: Afficher des miniatures au lieu d'icones
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v IconsOnly /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: GARDER : Contenu des fenetres pendant deplacement
+:: Afficher le contenu des fenetres pendant leur deplacement
 reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1
 
-:: GARDER : Lisser les polices ecran (ClearType)
+:: Afficher le rectangle de selection de facon translucide
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: Afficher les listes modifiables
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewWatermark /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: Lisser les polices ecran (ClearType)
 reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
 
-:: GARDER : Rectangle de selection translucide
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: DESACTIVER : Peek (apercu bureau)
+:: DESACTIVER : Peek
 reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: DESACTIVER : Ombres sous le pointeur de la souris
@@ -1462,18 +1500,16 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Li
 :: DESACTIVER : Animations barre des taches
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: DESACTIVER : Animer controles/elements a l'interieur des fenetres
-:: DESACTIVER : Animer fenetres lors reduction/agrandissement (deja fait via MinAnimate)
+:: DESACTIVER : Animer les fenetres lors reduction/agrandissement
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1
+
 :: DESACTIVER : Enregistrer miniatures barre des taches
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: DESACTIVER : Faire defiler regulierement zone de liste (SmoothScroll)
+:: DESACTIVER : Faire defiler regulierement zone de liste
 reg add "HKCU\Control Panel\Desktop" /v SmoothScroll /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: DESACTIVER : Faire disparaitre/apparaitre infobulles et menus
-reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9012038010000000 /f >nul 2>&1
-
-:: DESACTIVER : Utiliser ombres pour noms icones Bureau
+:: DESACTIVER : Ombres pour noms icones Bureau
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowInfoTip /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: UI plus reactive
