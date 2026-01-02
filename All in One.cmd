@@ -1288,7 +1288,7 @@ echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Windows Defender a ete reactive.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 pause
-goto :MENU_GESTION_WINDOWS
+goto :TOGGLE_DEFENDER
 
 :DESACTIVER_DEFENDER_SECTION
 cls
@@ -1310,7 +1310,7 @@ echo.
 echo %COLOR_RED%[-]%COLOR_RESET% Windows Defender a ete desactive.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 pause
-goto :MENU_GESTION_WINDOWS
+goto :TOGGLE_DEFENDER
 
 :TOGGLE_UAC
 cls
@@ -1345,7 +1345,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreen
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% UAC active. Un redemarrage est requis.
 pause
-goto :MENU_GESTION_WINDOWS
+goto :TOGGLE_UAC
 
 :DESACTIVER_UAC_SECTION
 cls
@@ -1366,7 +1366,7 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v
 echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%UAC + tous les avertissements desactives.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Redemarrage requis.
 pause
-goto :MENU_GESTION_WINDOWS
+goto :TOGGLE_UAC
 
 :TOGGLE_ANIMATIONS
 cls
@@ -1451,7 +1451,7 @@ taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows activees (parametres par defaut).
 pause
-goto :MENU_GESTION_WINDOWS
+goto :TOGGLE_ANIMATIONS
 
 :DESACTIVER_ANIMATIONS_SECTION
 cls
@@ -1529,7 +1529,7 @@ start explorer.exe
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres visuels optimises appliques.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage peut etre necessaire pour appliquer tous les changements.
 pause
-goto :MENU_GESTION_WINDOWS
+goto :TOGGLE_ANIMATIONS
 
 :TOGGLE_COPILOT
 cls
