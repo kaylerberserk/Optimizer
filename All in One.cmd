@@ -245,6 +245,7 @@ reg add "HKCU\Software\Microsoft\InputPersonalization" /v RestrictImplicitInkCol
 reg add "HKCU\Software\Microsoft\InputPersonalization" /v RestrictImplicitTextCollection /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\InputPersonalization\TrainedDataStore" /v HarvestContacts /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Personalization\Settings" /v AcceptedPrivacyPolicy /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: Optimiser le cache d'icones et miniatures
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "Max Cached Icons" /t REG_SZ /d "8192" /f >nul 2>&1
@@ -290,8 +291,8 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v DoNotShowFe
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\Windows Error Reporting" /v Disabled /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: Content Delivery Manager
-for %%V in (ContentDeliveryAllowed FeatureManagementEnabled OemPreInstalledAppsEnabled PreInstalledAppsEnabled PreInstalledAppsEverEnabled RemediationRequired RotatingLockScreenEnabled RotatingLockScreenOverlayEnabled SilentInstalledAppsEnabled SoftLandingEnabled SubscribedContentEnabled SystemPaneSuggestionsEnabled SubscribedContent-338387Enabled SubscribedContent-338388Enabled SubscribedContent-338389Enabled SubscribedContent-353698Enabled) do (
+:: Content Delivery Manager (desactive suggestions, publicites, apps preinstallees)
+for %%V in (ContentDeliveryAllowed FeatureManagementEnabled OemPreInstalledAppsEnabled PreInstalledAppsEnabled PreInstalledAppsEverEnabled RemediationRequired RotatingLockScreenEnabled RotatingLockScreenOverlayEnabled SilentInstalledAppsEnabled SoftLandingEnabled SubscribedContentEnabled SystemPaneSuggestionsEnabled SubscribedContent-310093Enabled SubscribedContent-338380Enabled SubscribedContent-338381Enabled SubscribedContent-338387Enabled SubscribedContent-338388Enabled SubscribedContent-338389Enabled SubscribedContent-338393Enabled SubscribedContent-353694Enabled SubscribedContent-353696Enabled SubscribedContent-353698Enabled) do (
   reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v %%V /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
@@ -398,6 +399,9 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableInventory
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableUAR /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v AITEnable /t REG_DWORD /d 0 /f >nul 2>&1
 
+:: Activer les sauvegardes automatiques du registre (desactive depuis W10 1803)
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager" /v EnablePeriodicBackup /t REG_DWORD /d 1 /f >nul 2>&1
+
 :: Desactivation de l'animation de demarrage Windows
 bcdedit /set bootuxdisabled on >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
@@ -477,6 +481,22 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire amelior
 
 :: 2.4 - Disable memory compression
 powershell -NoProfile -NoLogo -Command "Disable-MMAgent -mc" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee
+
+:: 2.5 - SvcHost - Reduire le nombre de processus svchost.exe (selon RAM)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation SvcHost selon la RAM disponible...
+for /f "tokens=2 delims==" %%M in ('wmic computersystem get TotalPhysicalMemory /value 2^>nul ^| find "="') do set "RAM_BYTES=%%M"
+set /a RAM_KB=!RAM_BYTES:~0,-3! 2>nul
+if defined RAM_KB (
+    if !RAM_KB! GEQ 8388608 (
+        reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d !RAM_KB! /f >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
+    ) else (
+        echo %COLOR_YELLOW%[!]%COLOR_RESET% RAM insuffisante pour optimisation SvcHost ^(moins de 8Go^)
+    )
+) else (
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% Impossible de detecter la RAM - SvcHost non modifie
+)
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -754,15 +774,19 @@ powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % {
 :: 5.12 - NIC latence faible
 powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { $adapter=$_; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; 'Energy-Efficient Ethernet','Advanced EEE','Green Ethernet','Power Saving Mode','Gigabit Lite' | % { try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} }; 'Large Send Offload v2 (IPv4)','Large Send Offload v2 (IPv6)','Large Receive Offload (IPv4)','Large Receive Offload (IPv6)' | % { try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} } }" >nul 2>&1
 
-:: 5.13 - DNS cache + DoH auto
+:: 5.13 - DNS cache optimise + DoH auto
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du cache DNS...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v NegativeCacheTime /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v NetFailureCacheTime /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v NegativeSOACacheTime /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxCacheTtl /t REG_DWORD /d 3600 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxNegativeCacheTtl /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxCacheEntryTtlLimit /t REG_DWORD /d 86400 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxSOACacheEntryTtlLimit /t REG_DWORD /d 300 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v EnableAutoDoh /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v DohFlags /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v ServerPriorityTimeLimit /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DNS optimise (resolution plus rapide)
 
 :: 5.14 - QoS Fortnite DSCP 46
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
