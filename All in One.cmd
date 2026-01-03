@@ -283,6 +283,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTeleme
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowSluggishnessTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableConsumerFeatures /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableTailoredExperiences /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f >nul 2>&1
@@ -533,6 +534,8 @@ fsutil behavior set encryptpagingfile 0 >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres NTFS optimises - TRIM actif, metadonnees reduites
 
 :: 3.2 - NTFS optimise
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation I/O NTFS (NVMe)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v MaximumOutstandingRequests /t REG_DWORD /d 256 /f >nul 2>&1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des chemins longs (plus de 260 caracteres)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Support des chemins longs active
@@ -546,6 +549,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Commande TRIM executee sur les SSD
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetcher active pour un demarrage plus rapide
 
+:: 3.5 - Optimisation pilote NVMe natif (2025)
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations des disques appliquees avec succes.
@@ -709,10 +714,15 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la pile TCP/IP pour faible 
 :: 5.1 - Pas de throttling reseau par MMCSS
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 
-:: 5.2 - Pile TCP/UDP moderne CUBIC
+:: 5.2 - Pile TCP/UDP moderne (CUBIC / BBR2)
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
-netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
+:: netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
+netsh int tcp set activepremium template=internet congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+:: Correctif Loopback BBR2 (Windows 11 24H2)
+netsh int ip set global loopbacklargemtu=disabled >nul 2>&1
+netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int tcp set global rss=enabled rsc=disabled ecncapability=disabled >nul 2>&1
 netsh int udp set global uso=enabled ero=disabled >nul 2>&1
 netsh int ip set global sourceroutingbehavior=drop >nul 2>&1
@@ -739,9 +749,14 @@ for /f "tokens=*" %%I in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcp
   reg add "%%I" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-:: 5.6 - Delivery Optimization OFF
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DeliveryOptimization\Config" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: 5.6b - BITS Optimization (Telechargements rapides)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du service BITS (Telechargements)...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v EnableBypassProxyForLocal /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOn-Schedule" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOff-Schedule" /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Service BITS optimise
 
 :: 5.7 - Priorites de resolution DNS
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v LocalPriority /t REG_DWORD /d 4 /f >nul 2>&1
@@ -1654,7 +1669,10 @@ echo.
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSnapshots /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive.
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowRecallEnablement /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowAIGameFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowClickToDo /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall et IA desactives.
 pause
 goto :TOGGLE_COPILOT
 
@@ -1674,12 +1692,15 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_D
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
 winget uninstall "Windows web experience Pack" --silent --accept-source-agreements >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Widgets desactives
-:: Recall
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Recall...
+:: Recall & AI (2025-2026)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Recall et fonctions IA...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSnapshots /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowRecallEnablement /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowAIGameFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowClickToDo /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall et IA desactives
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les fonctionnalites IA ont ete desactivees.
 pause
