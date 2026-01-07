@@ -672,7 +672,7 @@ if "%HAS_NVIDIA%"=="1" (
     
     :: Telecharger le profil optimise
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://kaylerberserk.github.io/Optimizer/Kaylers_profile.nip' -OutFile '%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
     if not exist "%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip" (
         echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
         goto :NPI_DONE
@@ -2349,4 +2349,4 @@ echo %COLOR_YELLOW%[!]%COLOR_RESET% N'oubliez pas de redemarrer votre PC pour qu
 echo.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 timeout /t 3 /nobreak >nul
-exit
+exi
