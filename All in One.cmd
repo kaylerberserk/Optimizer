@@ -557,6 +557,13 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetcher active pour un demarrage plus rap
 
 :: 3.5 - Optimisation pilote NVMe natif (2025)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: 3.6 - Boost Speed NVMe Windows 11 (25H2)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du nouveau pilote NVMe natif (Win 11 25H2)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 735209102 /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations des disques appliquees avec succes.
