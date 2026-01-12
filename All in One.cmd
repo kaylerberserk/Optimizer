@@ -312,16 +312,28 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v UploadUserActivitie
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy" /v ActivityHistoryEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie et publicites desactivees
 
-:: Taches planifiees de telemetrie
+:: Taches planifiees de telemetrie et diagnostics uniquement
+:: On garde les taches utiles (FileHistory, Maps, Speech, IndexerMaintenance, WinSAT...)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees de telemetrie...
 for %%T in (
     "Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser"
     "Microsoft\Windows\Application Experience\ProgramDataUpdater"
-    "Microsoft\Windows\Application Experience\StartupAppTask"
+    "Microsoft\Windows\Application Experience\AitAgent"
+    "Microsoft\Windows\Autochk\Proxy"
+    "Microsoft\Windows\Customer Experience Improvement Program\Consolidator"
+    "Microsoft\Windows\Customer Experience Improvement Program\UsbCeip"
+    "Microsoft\Windows\Customer Experience Improvement Program\KernelCeipTask"
     "Microsoft\Windows\DiskDiagnostic\Microsoft-Windows-DiskDiagnosticDataCollector"
     "Microsoft\Windows\Feedback\Siuf\DmClient"
+    "Microsoft\Windows\Feedback\Siuf\DmClientOnScenarioDownload"
     "Microsoft\Windows\Windows Error Reporting\QueueReporting"
     "Microsoft\Windows\PI\Sqm-Tasks"
+    "Microsoft\Windows\CloudExperienceHost\CreateObjectTask"
+    "Microsoft\Windows\DiskFootprint\Diagnostics"
+    "Microsoft\Windows\NetTrace\GatherNetworkInfo"
+    "Microsoft\Windows\Shell\FamilySafetyMonitor"
+    "Microsoft\Windows\Shell\FamilySafetyRefreshTask"
+    "Microsoft\Windows\WDI\ResolutionHost"
 ) do schtasks /Change /TN "%%~T" /Disable >nul 2>&1
 
 :: Autologgers de diagnostic OFF
@@ -1057,6 +1069,15 @@ if defined TARGET_GUID (
 
 :ULTIMATE_DONE
 
+:: 8.1b - Activation des plans d'alimentation caches (optionnels)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des plans d'alimentation caches...
+:: High Performance Overlay (si non present, on le cree)
+powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
+:: Max Performance Overlay (overlay de performances maximales)
+powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR 75b0ae3f-bce0-45a7-8c89-c9611c25e100 -ATTRIB_HIDE" >nul 2>&1
+powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR ea062031-0e34-4ff1-9b6d-eb1059334028 -ATTRIB_HIDE" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Plans d'alimentation caches actives
+
 :: 8.2 - Desactivation du demarrage rapide (Fast Startup) pour stabilite
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1635,7 +1656,21 @@ echo.
 reg delete "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot active.
+:: Restaurer disponibilite Copilot
+reg delete "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v IsCopilotAvailable /f >nul 2>&1
+reg delete "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v CopilotDisabledReason /f >nul 2>&1
+reg delete "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat" /v IsUserEligible /f >nul 2>&1
+:: Restaurer acces modeles IA
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Allow" /f >nul 2>&1
+:: Restaurer activation vocale IA
+reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+:: Restaurer Click to Do et Insights
+reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+:: Restaurer espaces de travail IA
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot et fonctions IA reactives.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Redemarrez l'Explorateur ou le PC pour voir le bouton Copilot.
 pause
 goto :TOGGLE_COPILOT
@@ -1647,7 +1682,21 @@ echo.
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot desactive.
+:: Marquer Copilot indisponible
+reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v IsCopilotAvailable /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v CopilotDisabledReason /t REG_SZ /d "FeatureIsDisabled" /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat" /v IsUserEligible /t REG_DWORD /d 0 /f >nul 2>&1
+:: Bloquer acces aux modeles IA systeme
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
+:: Desactiver activation vocale IA
+reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+:: Desactiver Click to Do et Insights
+reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+:: Desactiver espaces de travail IA (Windows 11 24H2+)
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot et fonctions IA desactives.
 pause
 goto :TOGGLE_COPILOT
 
@@ -1707,6 +1756,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Copilot...
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 0 /f >nul 2>&1
+:: Marquer Copilot indisponible
+reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v IsCopilotAvailable /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v CopilotDisabledReason /t REG_SZ /d "FeatureIsDisabled" /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat" /v IsUserEligible /t REG_DWORD /d 0 /f >nul 2>&1
+:: Desactiver Copilot dans la recherche Windows
+reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot desactive
 :: Widgets
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Widgets...
@@ -1722,6 +1777,16 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v TurnOffSavingSna
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowRecallEnablement /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowAIGameFeatures /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v AllowClickToDo /t REG_DWORD /d 0 /f >nul 2>&1
+:: Espaces de travail IA (Windows 11 24H2+)
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
+:: Bloquer acces aux modeles IA systeme
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
+:: Desactiver activation vocale IA
+reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+:: Desactiver Click to Do et Insights
+reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall et IA desactives
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les fonctionnalites IA ont ete desactivees.
@@ -2246,6 +2311,35 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage Cache DNS...
 ipconfig /flushdns >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DNS vide
 
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache NVIDIA Shader...
+if exist "%LOCALAPPDATA%\NVIDIA\DXCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\DXCache" >nul 2>&1
+if exist "%LOCALAPPDATA%\NVIDIA\GLCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\GLCache" >nul 2>&1
+if exist "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
+if exist "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache NVIDIA Shader nettoye
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache DirectX Shader...
+if exist "%LOCALAPPDATA%\D3DSCache" rd /s /q "%LOCALAPPDATA%\D3DSCache" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DirectX Shader nettoye
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des journaux Event Viewer...
+for /f "tokens=*" %%G in ('wevtutil el 2^>nul') do wevtutil cl "%%G" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Journaux Event Viewer nettoyes
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression du dossier Windows.old (si present)...
+if exist "C:\Windows.old" (
+    takeown /f "C:\Windows.old" /r /d y >nul 2>&1
+    icacls "C:\Windows.old" /grant administrators:F /t >nul 2>&1
+    rd /s /q "C:\Windows.old" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Dossier Windows.old supprime
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Aucun dossier Windows.old trouve
+)
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des anciens pilotes dupliques...
+powershell -NoProfile -Command "pnputil /enum-drivers 2>$null | Select-String 'oem\d+\.inf' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique | ForEach-Object { pnputil /delete-driver $_ /force 2>$null }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Anciens pilotes dupliques supprimes
+
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%PHASE 3: OPTIMISATION STOCKAGE%COLOR_RESET%
@@ -2356,4 +2450,4 @@ echo %COLOR_YELLOW%[!]%COLOR_RESET% N'oubliez pas de redemarrer votre PC pour qu
 echo.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 timeout /t 3 /nobreak >nul
-exi
+exit
