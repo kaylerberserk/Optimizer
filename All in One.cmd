@@ -202,7 +202,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 6 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming (MMCSS)configures
 
@@ -312,8 +312,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v UploadUserActivitie
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy" /v ActivityHistoryEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie et publicites desactivees
 
-:: Taches planifiees de telemetrie et diagnostics uniquement
-:: On garde les taches utiles (FileHistory, Maps, Speech, IndexerMaintenance, WinSAT...)
+:: Taches planifiees de telemetrie
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees de telemetrie...
 for %%T in (
     "Microsoft\Windows\Application Experience\Microsoft Compatibility Appraiser"
