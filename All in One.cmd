@@ -398,8 +398,13 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des services en mode Manuel...
 for %%S in (CDPSvc MapsBroker PcaSvc StorSvc StateRepository TextInputManagementService UsoSvc cbdhsvc lfsvc WalletService PhoneSvc icssvc WMPNetworkSvc) do (
   sc config %%S start= demand >nul 2>&1
 )
-:: Services supplementaires
-for %%S in (ALG AxInstSV BDESVC CertPropSvc CscService DmEnrollmentSvc DsSvc EFS EntAppSvc Fax FrameServer GraphicsPerfSvc HvHost IEEtwCollectorService IKEEXT InstallService InventorySvc IpxlatCfgSvc KtmRm LicenseManager LxpSvc MSDTC MSiSCSI McpManagementService MixedRealityOpenXRSvc MsKeyboardFilter NaturalAuthentication NcaSvc NcdAutoSetup NetSetupSvc PNRPAutoReg PNRPsvc PeerDistSvc PlugPlay PolicyAgent PrintNotify QWAVE RasAuto RasMan RetailDemo RmSvc RpcLocator SCPolicySvc SCardSvr SDRSVC SEMgrSvc SNMPTRAP ScDeviceEnum SharedRealitySvc SmsRouter SstpSvc StiSvc TabletInputService TapiSrv TieringEngineService TokenBroker TroubleshootingSvc UI0Detect UmRdpService W32Time WEPHOSTSVC WFDSConMgrSvc WManSvc WPDBusEnum WSService WaaSMedicSvc WarpJITSvc WbioSrvc WcsPlugInService WdiServiceHost WdiSystemHost Wecsvc WerSvc WiaRpc WinRM WpcMonSvc autotimesvc camsvc cloudidsvc dcsvc diagsvc dmwappushservice dot3svc embeddedmode fdPHost fhsvc hidserv lltdsvc lmhosts netprofm p2pimsvc p2psvc perceptionsimulation pla seclogon smphost spectrum svsvc swprv upnphost vds wbengine wcncsvc wercplsupport wisvc wlidsvc wlpasvc wmiApSrv workfolderssvc) do (
+:: Services supplementaires (repartis par groupes pour lisibilite)
+:: 1. Services Reseau / Impression / Peripheriques (non critiques)
+for %%S in (ALG BDESVC CertPropSvc CscService Fax FrameServer GraphicsPerfSvc IEEtwCollectorService IKEEXT IpxlatCfgSvc KtmRm LxpSvc MSDTC MSiSCSI McpManagementService NaturalAuthentication NcaSvc NcdAutoSetup NetSetupSvc PNRPAutoReg PNRPsvc PeerDistSvc PlugPlay PolicyAgent PrintNotify QWAVE RasAuto RasMan RetailDemo RmSvc RpcLocator SCPolicySvc SCardSvr SDRSVC SEMgrSvc SNMPTRAP ScDeviceEnum SmsRouter SstpSvc StiSvc TabletInputService TapiSrv TieringEngineService TroubleshootingSvc UI0Detect UmRdpService W32Time WEPHOSTSVC WFDSConMgrSvc) do (
+  sc config %%S start= demand >nul 2>&1
+)
+:: 2. Services Système / Diag / Autres (safe to manual)
+for %%S in (WManSvc WPDBusEnum WSService WarpJITSvc WbioSrvc WcsPlugInService WdiServiceHost WdiSystemHost Wecsvc WiaRpc WinRM WpcMonSvc autotimesvc camsvc cloudidsvc dcsvc diagsvc dot3svc embeddedmode fdPHost fhsvc hidserv lltdsvc lmhosts netprofm p2pimsvc p2psvc perceptionsimulation pla seclogon smphost spectrum svsvc swprv upnphost vds wbengine wcncsvc wercplsupport wisvc wlpasvc wmiApSrv workfolderssvc) do (
   sc config %%S start= demand >nul 2>&1
 )
 :: Services a desactiver (suggestions, telemetrie, inutiles)
@@ -439,6 +444,13 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des interruptions MSI...
 powershell -NoLogo -NoProfile -Command "Get-PnpDevice -Class @('Display','HDC','SCSIAdapter','System') -Status OK | ForEach-Object { $p='HKLM:\SYSTEM\CurrentControlSet\Enum\'+$_.InstanceId+'\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if (Test-Path $p) { Set-ItemProperty -Path $p -Name MSISupported -Value 1 -Force } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interruptions MSI activees
 
+:: Privacy Supplementaire
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des tweaks privacy supplementaires...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Privacy renforcee (DeviceName OFF, Pubs Ciblees OFF, Bing Search OFF)
+
 :: Batterie - Energy Saver
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
@@ -450,6 +462,24 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v UserFeedbackAllowed /t REG_DW
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
+
+:: 1.7 - Desactivation du stockage reserve (~7Go liberes)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du stockage reserve Windows...
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
+powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Stockage reserve desactive (~7Go recuperes apres redemarrage)
+
+:: 1.8 - Affichage du code erreur BSoD (diagnostic facilite)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de l'affichage des codes erreur BSoD...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v DisplayParameters /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Codes erreur BSoD visibles (diagnostic facilite)
+
+:: 1.9 - Desactivation de l'aide F1 (evite popup accidentelle)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la touche F1 (aide Windows)...
+reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win64" /ve /t REG_SZ /d "" /f >nul 2>&1
+reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t REG_SZ /d "" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Touche F1 (aide) desactivee
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -544,7 +574,7 @@ fsutil behavior set disabledeletenotify 0 >nul 2>&1
 fsutil behavior set disabledeletenotify refs 0 >nul 2>&1
 fsutil behavior set disablelastaccess 1 >nul 2>&1
 fsutil behavior set disable8dot3 1 >nul 2>&1
-fsutil behavior set memoryusage 1 >nul 2>&1
+fsutil behavior set memoryusage 2 >nul 2>&1
 fsutil behavior set mftzone 2 >nul 2>&1
 fsutil behavior set disablecompression 1 >nul 2>&1
 fsutil behavior set encryptpagingfile 0 >nul 2>&1
