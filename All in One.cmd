@@ -444,6 +444,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des interruptions MSI...
 powershell -NoLogo -NoProfile -Command "Get-PnpDevice -Class @('Display','HDC','SCSIAdapter','System') -Status OK | ForEach-Object { $p='HKLM:\SYSTEM\CurrentControlSet\Enum\'+$_.InstanceId+'\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if (Test-Path $p) { Set-ItemProperty -Path $p -Name MSISupported -Value 1 -Force } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interruptions MSI activees
 
+:: Désactivation des Co-installateurs tiers (Razer/Logitech Popup)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Co-installateurs (Razer/Logitech Popup)...
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" /v SearchOrderConfig /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer" /v DisableCoInstallers /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Co-installateurs et recherche de pilotes desactives
+
 :: Privacy Supplementaire
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des tweaks privacy supplementaires...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
