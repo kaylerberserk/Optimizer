@@ -522,7 +522,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichier d'echange optimise (kernel en RAM)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du Prefetch et SuperFetch pour le gaming...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableBoottrace /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v SfTracingState /t REG_DWORD /d 0 /f >nul 2>&1
-sc stop SysMain >nul 2>&1
+:: sc stop SysMain >nul 2>&1
 sc config SysMain start= auto >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetch actif, SuperFetch optimise pour les jeux
 
