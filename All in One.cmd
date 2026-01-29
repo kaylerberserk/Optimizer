@@ -195,23 +195,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostTy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
-
-:: 1.1b - Detection CPU hybride (Intel 12th+ / AMD)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection CPU hybride (P-cores / E-cores)...
-for /f %%c in ('powershell -NoProfile -c "(Get-CimInstance Win32_Processor).NumberOfCores"') do set CORES=%%c
-for /f %%t in ('powershell -NoProfile -c "(Get-CimInstance Win32_Processor).NumberOfLogicalProcessors"') do set THREADS=%%t
-set /a HYBRID_RATIO=%THREADS% * 100 / %CORES%
-if %HYBRID_RATIO% GTR 150 (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% CPU hybride detecte ^(ratio %HYBRID_RATIO%%%^) - Optimisation P-cores activee
-    :: Forcer priorite High sur jeux populaires
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\FortniteClient-Win64-Shipping.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\r5apex.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\cs2.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\VALORANT-Win64-Shipping.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
-) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% CPU non-hybride ^(ratio %HYBRID_RATIO%%%^) - skip optimisation P-cores
-)
-
 :: 1.2 - Profil Gaming MMCSS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
