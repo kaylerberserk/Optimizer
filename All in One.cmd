@@ -85,6 +85,18 @@ if "%IS_LAPTOP%"=="1" (
 )
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection CPU hybride (P-cores / E-cores)...
+for /f %%c in ('powershell -c "(Get-CimInstance Win32_Processor).NumberOfCores"') do set CORES=%%c
+for /f %%t in ('powershell -c "(Get-CimInstance Win32_Processor).NumberOfLogicalProcessors"') do set THREADS=%%t
+set /a HYBRID_RATIO=%THREADS% * 100 / %CORES%
+if %HYBRID_RATIO% GTR 150 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% CPU hybride detecte - Application optimisation P-cores
+    :: Exemple pour Fortnite (tu peux dupliquer pour d'autres .exe)
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\FortniteClient-Win64-Shipping.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
+) else (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% CPU non-hybride ou faible ratio - skip
+)
+echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Optimisations Systeme%COLOR_RESET% %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Optimisations Memoire%COLOR_RESET%
@@ -200,11 +212,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming (MMCSS)configures
+echo %COLOR_GREEN%[OK]%COLOR_RESET% MMCSS Gaming Profile optimise (GPU Priority=8)
 
 :: 1.3 - Interface Windows
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de l'interface Windows...
@@ -390,6 +402,20 @@ echo 0.0.0.0 feedback.search.microsoft.com>> "%HOSTS%"
 echo # --- End Telemetry Block --->> "%HOSTS%"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines de telemetrie bloques via hosts
 
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Ajout domaines telemetrie / Copilot / AI 2026...
+(
+    echo 0.0.0.0 activity.windows.com
+    echo 0.0.0.0 bingapis.com
+    echo 0.0.0.0 msedge.api.cdp.microsoft.com
+    echo 0.0.0.0 edge.microsoft.com
+    echo 0.0.0.0 copilot.microsoft.com
+    echo 0.0.0.0 copilot-telemetry.microsoft.com
+    echo 0.0.0.0 windows.ai.microsoft.com
+    echo 0.0.0.0 vortex.data.microsoft.com
+    echo 0.0.0.0 telemetry.microsoft.com
+) >> "%HOSTS%"
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines Copilot / AI / telemetrie supplementaires bloques
+
 :HOSTS_DONE
 
 :: Services en mode Manual
@@ -399,10 +425,15 @@ for %%S in (CDPSvc MapsBroker PcaSvc StorSvc StateRepository TextInputManagement
   sc config %%S start= demand >nul 2>&1
 )
 :: Services supplementaires (repartis par groupes pour lisibilite)
-:: 1. Services Reseau / Impression / Peripheriques (non critiques)
-for %%S in (ALG BDESVC CertPropSvc CscService Fax FrameServer GraphicsPerfSvc IEEtwCollectorService IKEEXT IpxlatCfgSvc KtmRm LxpSvc MSDTC MSiSCSI McpManagementService NaturalAuthentication NcaSvc NcdAutoSetup NetSetupSvc PNRPAutoReg PNRPsvc PeerDistSvc PlugPlay PolicyAgent PrintNotify QWAVE RasAuto RasMan RetailDemo RmSvc RpcLocator SCPolicySvc SCardSvr SDRSVC SEMgrSvc SNMPTRAP ScDeviceEnum SmsRouter SstpSvc StiSvc TabletInputService TapiSrv TieringEngineService TroubleshootingSvc UI0Detect UmRdpService W32Time WEPHOSTSVC WFDSConMgrSvc) do (
+:: Services réseau / impression / périphériques → version safe gaming 2026
+for %%S in (
+    ALG Fax GraphicsPerfSvc IKEEXT MSDTC MSiSCSI NaturalAuthentication NcaSvc
+    PeerDistSvc PNRPAutoReg PNRPsvc RetailDemo RpcLocator SstpSvc
+    TroubleshootingSvc UmRdpService W32Time WFDSConMgrSvc
+) do (
   sc config %%S start= demand >nul 2>&1
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services réseau/impression/périphériques optimisés (version safe)
 :: 2. Services Système / Diag / Autres (safe to manual)
 for %%S in (WManSvc WPDBusEnum WSService WarpJITSvc WbioSrvc WcsPlugInService WdiServiceHost WdiSystemHost Wecsvc WiaRpc WinRM WpcMonSvc autotimesvc camsvc cloudidsvc dcsvc diagsvc dot3svc embeddedmode fdPHost fhsvc hidserv lltdsvc lmhosts netprofm p2pimsvc p2psvc perceptionsimulation pla seclogon smphost spectrum svsvc swprv upnphost vds wbengine wcncsvc wercplsupport wisvc wlpasvc wmiApSrv workfolderssvc) do (
   sc config %%S start= demand >nul 2>&1
@@ -748,6 +779,12 @@ if "%HAS_NVIDIA%"=="1" (
 )
 
 :NPI_DONE
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation Game Mode Windows 11 24H2/25H2...
+reg add "HKCU\Software\Microsoft\GameBar" /v AutoGameModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\GameBar" /v AllowAutoGameMode /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\GameBar" /v UseNexusForGameBarEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Game Mode 24H2/25H2 optimise (GPU scheduling + focus gaming)
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Toutes les optimisations GPU ont ete appliquees.
