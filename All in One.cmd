@@ -195,6 +195,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostTy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
+
 :: 1.1b - Detection CPU hybride (Intel 12th+ / AMD)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection CPU hybride (P-cores / E-cores)...
 for /f %%c in ('powershell -NoProfile -c "(Get-CimInstance Win32_Processor).NumberOfCores"') do set CORES=%%c
@@ -216,11 +217,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 6 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming (MMCSS)configures
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming (MMCSS) configure
 
 :: 1.3 - Interface Windows
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de l'interface Windows...
@@ -405,20 +406,6 @@ echo 0.0.0.0 feedback.windows.com>> "%HOSTS%"
 echo 0.0.0.0 feedback.search.microsoft.com>> "%HOSTS%"
 echo # --- End Telemetry Block --->> "%HOSTS%"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines de telemetrie bloques via hosts
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Ajout domaines telemetrie / Copilot / AI 2026...
-(
-    echo 0.0.0.0 activity.windows.com
-    echo 0.0.0.0 bingapis.com
-    echo 0.0.0.0 msedge.api.cdp.microsoft.com
-    echo 0.0.0.0 edge.microsoft.com
-    echo 0.0.0.0 copilot.microsoft.com
-    echo 0.0.0.0 copilot-telemetry.microsoft.com
-    echo 0.0.0.0 windows.ai.microsoft.com
-    echo 0.0.0.0 vortex.data.microsoft.com
-    echo 0.0.0.0 telemetry.microsoft.com
-) >> "%HOSTS%"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines Copilot / AI / telemetrie supplementaires bloques
 
 :HOSTS_DONE
 
@@ -1036,9 +1023,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la la
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableInputDelayOptimization /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 6.7 - Réduit la taille de la file d'attente souris et clavier
+:: 6.7 - Optimisation des files et priorites clavier/souris
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites et files clavier/souris optimisees
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -1791,6 +1781,9 @@ reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD
 :: Restaurer espaces de travail IA
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
+:: Supprimer les blocages hosts Copilot uniquement
+set "HOSTS=%windir%\System32\drivers\etc\hosts"
+powershell -NoProfile -c "(Get-Content '%HOSTS%') | Where-Object { $_ -notmatch 'copilot\.microsoft\.com|windows\.ai\.microsoft\.com|copilot-telemetry\.microsoft\.com|Copilot Block' } | Set-Content '%HOSTS%'" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot et fonctions IA reactives.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Redemarrez l'Explorateur ou le PC pour voir le bouton Copilot.
 pause
@@ -1817,7 +1810,19 @@ reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD
 :: Desactiver espaces de travail IA (Windows 11 24H2+)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
+:: Bloquer domaines Copilot/AI via hosts
+set "HOSTS=%windir%\System32\drivers\etc\hosts"
+echo.>> "%HOSTS%"
+echo # --- Copilot Block --->> "%HOSTS%"
+echo 0.0.0.0 copilot.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 copilot-telemetry.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 windows.ai.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 bingapis.com>> "%HOSTS%"
+echo 0.0.0.0 msedge.api.cdp.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 edge.microsoft.com>> "%HOSTS%"
+echo # --- End Copilot Block --->> "%HOSTS%"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot et fonctions IA desactives.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines Copilot bloques via hosts.
 pause
 goto :TOGGLE_COPILOT
 
