@@ -85,18 +85,6 @@ if "%IS_LAPTOP%"=="1" (
 )
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection CPU hybride (P-cores / E-cores)...
-for /f %%c in ('powershell -c "(Get-CimInstance Win32_Processor).NumberOfCores"') do set CORES=%%c
-for /f %%t in ('powershell -c "(Get-CimInstance Win32_Processor).NumberOfLogicalProcessors"') do set THREADS=%%t
-set /a HYBRID_RATIO=%THREADS% * 100 / %CORES%
-if %HYBRID_RATIO% GTR 150 (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% CPU hybride detecte - Application optimisation P-cores
-    :: Exemple pour Fortnite (tu peux dupliquer pour d'autres .exe)
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\FortniteClient-Win64-Shipping.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
-) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% CPU non-hybride ou faible ratio - skip
-)
-echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Optimisations Systeme%COLOR_RESET% %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Optimisations Memoire%COLOR_RESET%
@@ -207,6 +195,22 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostTy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
+:: 1.1b - Detection CPU hybride (Intel 12th+ / AMD)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection CPU hybride (P-cores / E-cores)...
+for /f %%c in ('powershell -NoProfile -c "(Get-CimInstance Win32_Processor).NumberOfCores"') do set CORES=%%c
+for /f %%t in ('powershell -NoProfile -c "(Get-CimInstance Win32_Processor).NumberOfLogicalProcessors"') do set THREADS=%%t
+set /a HYBRID_RATIO=%THREADS% * 100 / %CORES%
+if %HYBRID_RATIO% GTR 150 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% CPU hybride detecte ^(ratio %HYBRID_RATIO%%%^) - Optimisation P-cores activee
+    :: Forcer priorite High sur jeux populaires
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\FortniteClient-Win64-Shipping.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\r5apex.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\cs2.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\VALORANT-Win64-Shipping.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
+) else (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% CPU non-hybride ^(ratio %HYBRID_RATIO%%%^) - skip optimisation P-cores
+)
+
 :: 1.2 - Profil Gaming MMCSS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
@@ -216,7 +220,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% MMCSS Gaming Profile optimise (GPU Priority=8)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming (MMCSS)configures
 
 :: 1.3 - Interface Windows
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de l'interface Windows...
@@ -418,33 +422,64 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines Copilot / AI / telemetrie supplemen
 
 :HOSTS_DONE
 
-:: Services en mode Manual
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des services en mode Manuel...
-:: Services de base non-critiques
-for %%S in (CDPSvc MapsBroker PcaSvc StorSvc StateRepository TextInputManagementService UsoSvc cbdhsvc lfsvc WalletService PhoneSvc icssvc WMPNetworkSvc) do (
-  sc config %%S start= demand >nul 2>&1
-)
-:: Services supplementaires (repartis par groupes pour lisibilite)
-:: Services réseau / impression / périphériques → version safe gaming 2026
+:: 1.4 - Services optimises (Version SAFE 2026)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services - Mode SAFE (compatible usages mixtes)...
+
+:: Services inutiles -> DISABLED
 for %%S in (
-    ALG Fax GraphicsPerfSvc IKEEXT MSDTC MSiSCSI NaturalAuthentication NcaSvc
-    PeerDistSvc PNRPAutoReg PNRPsvc RetailDemo RpcLocator SstpSvc
-    TroubleshootingSvc UmRdpService W32Time WFDSConMgrSvc
+    AJRouter
+    AppVClient
+    AssignedAccessManagerSvc
+    DiagTrack
+    dmwappushservice
+    lfsvc
+    MapsBroker
+    NetTcpPortSharing
+    RemoteAccess
+    RemoteRegistry
+    RetailDemo
+    shpamsvc
+    ssh-agent
+    uhssvc
+    UevAgentService
+    WMPNetworkSvc
+    CDPUserSvc
+    SystemSuggestions
+    Fax
+    DialogBlockingService
+) do (
+  sc config %%S start= disabled >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services telemetrie/legacy desactives
+
+:: Services occasionnels -> MANUAL
+for %%S in (
+    ALG
+    BDESVC
+    CertPropSvc
+    GraphicsPerfSvc
+    IKEEXT
+    MSDTC
+    MSiSCSI
+    NaturalAuthentication
+    NcaSvc
+    PeerDistSvc
+    PNRPAutoReg
+    PNRPsvc
+    RpcLocator
+    SstpSvc
+    TroubleshootingSvc
+    W32Time
+    WFDSConMgrSvc
+    tzautoupdate
 ) do (
   sc config %%S start= demand >nul 2>&1
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Services réseau/impression/périphériques optimisés (version safe)
-:: 2. Services Système / Diag / Autres (safe to manual)
-for %%S in (WManSvc WPDBusEnum WSService WarpJITSvc WbioSrvc WcsPlugInService WdiServiceHost WdiSystemHost Wecsvc WiaRpc WinRM WpcMonSvc autotimesvc camsvc cloudidsvc dcsvc diagsvc dot3svc embeddedmode fdPHost fhsvc hidserv lltdsvc lmhosts netprofm p2pimsvc p2psvc perceptionsimulation pla seclogon smphost spectrum svsvc swprv upnphost vds wbengine wcncsvc wercplsupport wisvc wlpasvc wmiApSrv workfolderssvc) do (
-  sc config %%S start= demand >nul 2>&1
-)
-:: Services a desactiver (suggestions, telemetrie, inutiles)
-for %%S in (AJRouter AppVClient AssignedAccessManagerSvc NetTcpPortSharing RemoteAccess RemoteRegistry UevAgentService shpamsvc ssh-agent uhssvc DialogBlockingService SystemSuggestions CDPUserSvc) do (
-  sc config %%S start= disabled >nul 2>&1
-)
-:: tzautoupdate en manual pour conserver le changement heure ete/hiver
-sc config tzautoupdate start= demand >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Services optimises (mode Manuel/Desactive)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services occasionnels en mode Manuel
+
+:: Services critiques laisses intacts : Bluetooth, Hello, RDP, Spooler, PlugPlay
+
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services optimises (Bluetooth/VPN/Hello/RDP preserves)
 
 :: 1.5 - Optimisations demarrage et systeme
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations de demarrage...
@@ -642,6 +677,22 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Over
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 735209102 /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
+
+:: 3.7 - DirectStorage / NVMe avance
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation DirectStorage et I/O NVMe...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v FUA /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\DirectX" /v DirectStorageForceIOPriority /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise (FUA off, I/O prioritaire)
+
+:: 3.8 - Desactiver compression memoire (16Go+ RAM recommande)
+for /f %%r in ('powershell -NoProfile -c "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB)"') do set RAM_GB=%%r
+if %RAM_GB% GEQ 16 (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% RAM %RAM_GB%Go detectee - Desactivation compression memoire...
+    powershell -NoProfile -c "Disable-MMAgent -MemoryCompression" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee (chargement assets plus rapide)
+) else (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% RAM %RAM_GB%Go - Compression memoire conservee
+)
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations des disques appliquees avec succes.
@@ -780,11 +831,13 @@ if "%HAS_NVIDIA%"=="1" (
 
 :NPI_DONE
 echo.
+
+:: 4.10 - Game Mode Windows 11 24H2/25H2
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation Game Mode Windows 11 24H2/25H2...
 reg add "HKCU\Software\Microsoft\GameBar" /v AutoGameModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\GameBar" /v AllowAutoGameMode /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\GameBar" /v UseNexusForGameBarEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Game Mode 24H2/25H2 optimise (GPU scheduling + focus gaming)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Game Mode 24H2/25H2 optimise (auto-detection + overlay desactive)
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Toutes les optimisations GPU ont ete appliquees.
@@ -979,15 +1032,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DmaRemappingCompatibl
 ::reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la latence
 
-:: 6.6 - Threads souris/clavier priorite maximale
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v ThreadPriority /t REG_DWORD /d 31 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 31 /f >nul 2>&1
-
-:: 6.7 - HID parse : desactive buffering + active traitement direct
+:: 6.6 - HID parse : desactive buffering + active traitement direct
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableInputDelayOptimization /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 6.8 - Réduit la taille de la file d'attente souris et clavier
+:: 6.7 - Réduit la taille de la file d'attente souris et clavier
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 
