@@ -989,11 +989,11 @@ if not exist "%DevManView%" (
 :: --- Debug / virtualisation inutiles ---
 %DevManView% /disable "Microsoft Kernel Debug Network Adapter"
 
-:: --- Ports serie anciens (inutiles sur cartes meres modernes) ---
-%DevManView% /disable "Communications Port (COM1)"
-%DevManView% /disable "Communications Port (COM2)"
-%DevManView% /disable "Communications Port (SER1)"
-%DevManView% /disable "Communications Port (SER2)"
+:: --- Ports serie anciens (conserve pour compatibilite) ---
+:: %DevManView% /disable "Communications Port (COM1)"
+:: %DevManView% /disable "Communications Port (COM2)"
+:: %DevManView% /disable "Communications Port (SER1)"
+:: %DevManView% /disable "Communications Port (SER2)"
 
 :: --- WAN miniports inutiles (laisser IP/IPv6 si VPN) ---
 %DevManView% /disable "WAN Miniport (Network Monitor)"
