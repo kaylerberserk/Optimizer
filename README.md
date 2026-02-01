@@ -126,8 +126,8 @@
 | **Copilot** | Bouton + Fonctionnalités IA ON/OFF | ✅ Oui |
 | **Widgets** | Barre des tâches ON/OFF | ✅ Oui |
 | **Recall** | Windows 11 24H2+ snapshot OFF | ✅ Oui |
-| **OneDrive** | Désinstallation complète avec nettoyage | ⚠️ Partiel |
-| **Edge** | Désinstallation complète + bloquage réinstall | ⚠️ Partiel |
+| **OneDrive** | Désinstallation complète (app + registre + dossiers utilisateur) | ✅ Réinstallable |
+| **Edge** | Désinstallation complète (app + composants système) | ✅ Réinstallable |
 
 ---
 
@@ -308,7 +308,9 @@ Après application des optimisations et redémarrage :
 ## 📝 FAQ
 
 ### Le script est-il sûr ?
-**Oui.** Toutes les modifications sont réversibles (sauf désinstallation OneDrive/Edge). Le script préserve toutes les fonctionnalités critiques (Bluetooth, VPN, Xbox, etc.).
+**Oui.** Toutes les modifications sont réversibles. Même la désinstallation d'OneDrive ou Edge est réversible en les réinstallant depuis Microsoft.
+
+Le script préserve toutes les fonctionnalités critiques (Bluetooth, VPN, Xbox, etc.).
 
 ### Puis-je l'utiliser sur un PC portable ?
 **Oui.** Utilise l'option `L` (PC Portable) qui conserve l'hibernation et certaines économies d'énergie tout en appliquant les optimisations gaming.
@@ -331,6 +333,20 @@ Vos documents, photos, jeux, et paramètres sont 100% préservés.
 
 ### Puis-je utiliser le script plusieurs fois ?
 **Oui.** Le script est idempotent - vous pouvez le relancer sans problème. Les modifications déjà appliquées restent, les nouvelles sont ajoutées.
+
+### Que se passe-t-il si je désinstalle OneDrive ?
+**OneDrive est complètement désinstallé** : l'application, toutes les entrées de registre, et les dossiers de synchronisation sont supprimés proprement.
+- ✅ **Désinstallation propre** : Rien ne reste sur le système
+- ✅ **Réinstallable** : Vous pouvez réinstaller OneDrive depuis [onedrive.com](https://www.microsoft.com/microsoft-365/onedrive/download) ou le Microsoft Store
+- ✅ Vos fichiers locaux restent sur votre PC (dans votre dossier utilisateur)
+- ✅ Aucune donnée personnelle n'est perdue
+
+### Que se passe-t-il si je désinstalle Edge ?
+**Edge est complètement désinstallé** : l'application et tous ses composants système sont supprimés proprement.
+- ✅ **Désinstallation propre** : Pas de fichiers résiduels
+- ✅ **Réinstallable** : Vous pouvez réinstaller Edge depuis [microsoft.com/edge](https://www.microsoft.com/edge) ou le Microsoft Store
+- ✅ Le système reste stable (Windows fonctionne parfaitement sans Edge)
+- ✅ Vous pouvez utiliser un autre navigateur (Chrome, Firefox, Brave, etc.)
 
 ---
 
