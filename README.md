@@ -203,6 +203,8 @@ Le script préserve toutes les fonctionnalités critiques (Bluetooth, VPN, Xbox,
 - Cache Windows Update
 - Miniatures
 
+**✅ Cache des jeux préservé** : Les shaders de vos jeux (Forza, etc.) sont conservés. Pas de recompilation nécessaire.
+
 Vos documents, photos, jeux, et paramètres sont 100% préservés.
 
 ### Puis-je utiliser le script plusieurs fois ?
