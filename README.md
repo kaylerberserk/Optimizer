@@ -33,101 +33,78 @@
 
 ## ✨ Fonctionnalités Principales
 
-### 🖥️ Optimisations Système Core
+### 🖥️ Optimisations Système
 
 | Fonctionnalité | Description | Impact |
 |----------------|-------------|---------|
-| **Priorités CPU Avancées** | IRQ0/IRQ8 à priorité 1, Win32PrioritySeparation=38 | Réactivité système immédiate |
-| **Profil Gaming MMCSS** | Scheduling Category High, SFIO Priority High | Pas de micro-freezes en jeu |
-| **Interface Windows** | Menu contextuel classique, MenuShowDelay=0 | UI instantanée |
-| **Démarrage Optimisé** | StartupDelayInMSec=0, animation boot OFF | Boot en 5-8 secondes |
-| **Priorité Foreground** | Applications actives toujours prioritaires CPU | Multitâche fluide |
+| **Priorités CPU** | Optimisation des processus système et interruptions | Réactivité immédiate |
+| **Profil Gaming** | Planification prioritaire pour les jeux | Pas de micro-freezes |
+| **Interface Windows** | Menu contextuel classique, délais minimisés | UI ultra-rapide |
+| **Démarrage Rapide** | Animations désactivées, délais réduits | Boot 5-8 secondes |
 
-### 🧠 Optimisations Mémoire & Cache
-
-| Fonctionnalité | Description | Impact |
-|----------------|-------------|---------|
-| **PageFile Optimisé** | DisablePagingExecutive=1, ClearPageFileAtShutdown=0 | Kernel en RAM |
-| **SysMain/Superfetch** | Activé et optimisé pour NVMe/SSD | Apps s'ouvrent en 0.5s |
-| **Prefetcher** | EnablePrefetcher=3, EnableSuperfetch=1 | Chargement instantané |
-| **Compression Mémoire** | Désactivée via Disable-MMAgent | Moins d'overhead CPU |
-| **SvcHost Optimisé** | SplitThreshold adapté à la RAM | Moins de processus svchost |
-| **FTH OFF** | Fault Tolerant Heap désactivé | Gain de performance mémoire |
-
-### 💾 Optimisations Stockage & I/O
+### 🧠 Optimisations Mémoire
 
 | Fonctionnalité | Description | Impact |
 |----------------|-------------|---------|
-| **NTFS Optimisé** | 8dot3 OFF, LastAccess OFF, TRIM activé | Accès fichiers ultra-rapide |
-| **NVMe Natif** | Windows 11 24H2+ natif mode activé | Performance SSD maximale |
-| **DirectStorage** | FUA=0, ForceIOPriority=1 | Chargement jeux instantané |
-| **Chemins Longs** | LongPathsEnabled=1 | Support >260 caractères |
-| **Cache Icônes** | Max Cached Icons=8192 | Dossiers lourds instantanés |
-| **SysMain Auto** | Détecte SSD/HDD et optimise automatiquement | Adaptatif intelligent |
+| **Gestion Mémoire** | Configuration optimale du fichier d'échange | Meilleures performances |
+| **Superfetch** | Préchargement intelligent des applications | Ouverture instantanée |
+| **Cache Système** | Augmentation du cache pour les fichiers fréquents | Navigation rapide |
 
-### 🎮 Optimisations GPU & Gaming
+### 💾 Optimisations Stockage
 
 | Fonctionnalité | Description | Impact |
 |----------------|-------------|---------|
-| **GameDVR OFF** | Enregistrement Xbox complètement désactivé | 0% overhead GPU |
-| **Game Mode** | Optimisé pour Windows 11 24H2/25H2 | Priorité automatique jeux |
-| **HAGS** | Hardware Accelerated GPU Scheduling ON | Latence GPU réduite |
-| **VRR/Flip Model** | VRROptimizeEnable=1, SwapEffectUpgradeEnable=1 | DirectX ultra-smooth |
-| **NVIDIA Profile** | Profil optimisé téléchargé automatiquement | Paramètres pro gaming |
-| **Télémétrie GPU** | NVIDIA et AMD telemetry OFF | Moins de processus background |
-| **Timer Resolution** | 0.5ms au démarrage (SetTimerResolution) | Input lag minimal |
+| **SSD/NVMe** | Mode performance natif activé | Vitesse maximale |
+| **NTFS** | Optimisation du système de fichiers | Accès ultra-rapide |
+| **DirectStorage** | Support des chargements instantanés | Jeux plus fluides |
 
-### 🌐 Optimisations Réseau Ultra-Rapide
+### 🎮 Optimisations Gaming
 
 | Fonctionnalité | Description | Impact |
 |----------------|-------------|---------|
-| **BBR2 Congestion** | Algorithme moderne remplace CUBIC | Débit maximum, ping stable |
-| **Nagle/DelACK OFF** | TcpAckFrequency=1, TCPNoDelay=1 | Latence TCP minimale |
-| **DNS Optimisé** | Cache avancé + DoH automatique | Résolution DNS instantanée |
-| **QoS Gaming** | DSCP 46 pour jeux UDP/TCP | Priorité paquets gaming |
-| **NIC Optimisé** | EEE OFF, Interrupt Moderation minimal | Réactivité réseau maximale |
-| **ISATAP/Teredo OFF** | Protocoles tunneling inutiles désactivés | Moins de trafic réseau |
-| **LLMNR OFF** | Multicast DNS désactivé | Réduction trafic réseau |
+| **GameDVR OFF** | Désactivation de l'enregistrement Xbox | 0% overhead GPU |
+| **Mode Jeu** | Priorité automatique pour les jeux | Meilleures performances |
+| **GPU Scheduling** | Planification matérielle accélérée | Latence réduite |
+| **Timer Resolution** | Précision timer 0.5ms | Input lag minimal |
 
-### ⚡ Optimisations Énergie (Mode Bureau)
+### 🌐 Optimisations Réseau
 
 | Fonctionnalité | Description | Impact |
 |----------------|-------------|---------|
-| **Ultimate Performance** | Plan d'alimentation maximal | CPU toujours à fond |
-| **Timer Coalescing OFF** | Désactivé complètement | Latence minimale |
-| **Power Throttling OFF** | Aucun bridage CPU | Performances constantes |
-| **Core Parking OFF** | Tous les cœurs actifs | Pas de latence CPU |
-| **ASPM OFF** | Active State Power Management OFF | PCIe à fond |
-| **USB Suspend OFF** | Selective Suspend désactivé | Périphériques gaming stables |
-| **Fast Startup OFF** | Désactivé pour stabilité | Boot propre sans bugs |
+| **Algorithme BBR2** | Protocole congestion moderne | Ping stable, débit max |
+| **Latence TCP** | Désactivation du regroupement de paquets | Réponse immédiate |
+| **DNS Optimisé** | Cache avancé + DoH | Résolution instantanée |
+| **QoS Gaming** | Priorité des paquets jeux | Moins de lag |
 
-### 🛡️ Télémétrie & Vie Privée (Bloquée à 100%)
+### ⚡ Optimisations Énergie
 
-| Composant | Action | Impact |
-|-----------|--------|--------|
-| **DiagTrack** | Service télémétrie principal OFF | Arrêt collecte données |
-| **dmwappushservice** | Push service télémétrie OFF | Plus de notifications push MS |
-| **WerSvc** | Windows Error Reporting OFF | Pas d'envoi rapports crash |
-| **Tâches Planifiées** | 25+ tâches télémétrie OFF | Arrêt analyse comportement |
-| **Autologgers** | AppModel, DiagLog, SQMLogger OFF | Arrêt logs diagnostic |
-| **Fichier hosts** | 30+ domaines télémétrie bloqués | Bloquage réseau |
-| **Registre** | 50+ clés télémétrie à 0 | Désactivation profonde |
-| **Activity History** | Timeline, collecte activités OFF | Vie privée préservée |
-| **Publicités** | Windows Ads, suggestions OFF | Interface propre |
-| **Cortana/Bing** | Recherche web, assistant OFF | Recherche locale uniquement |
+| Fonctionnalité | Description | Impact |
+|----------------|-------------|---------|
+| **Plan Performance** | Mode performance maximale | CPU à fond |
+| **Core Parking OFF** | Tous les cœurs actifs | Pas de ralentissement |
+| **USB Stable** | Pas de mise en veille des périphériques | Gaming stable |
 
-### 🎯 Gestion Windows (Menu Interactif)
+### 🛡️ Télémétrie & Vie Privée
+
+| Fonctionnalité | Description | Impact |
+|----------------|-------------|---------|
+| **Services OFF** | Télémétrie, rapports d'erreurs, collecte données | 100% arrêté |
+| **Tâches Planifiées** | 25+ tâches de tracking désactivées | Moins de processus |
+| **Blocage Réseau** | 30+ domaines Microsoft bloqués | Données protégées |
+| **Publicités** | Windows Ads, suggestions désactivées | Interface propre |
+
+### 🎯 Gestion Windows
 
 | Option | Description | Réversible |
 |--------|-------------|------------|
-| **Windows Defender** | Activer/Désactiver complètement | ✅ Oui |
-| **UAC** | Niveau normal ou complètement OFF | ✅ Oui |
-| **Animations** | Mode Performance ou Complet (5 options ON) | ✅ Oui |
-| **Copilot** | Bouton + Fonctionnalités IA ON/OFF | ✅ Oui |
-| **Widgets** | Barre des tâches ON/OFF | ✅ Oui |
-| **Recall** | Windows 11 24H2+ snapshot OFF | ✅ Oui |
-| **OneDrive** | Désinstallation complète (app + registre + dossiers utilisateur) | ✅ Réinstallable |
-| **Edge** | Désinstallation complète (app + composants système) | ✅ Réinstallable |
+| **Windows Defender** | Activer/Désactiver | ✅ Oui |
+| **UAC** | Niveau normal ou OFF | ✅ Oui |
+| **Animations** | Mode Performance ou Complet | ✅ Oui |
+| **Copilot** | Bouton + Fonctionnalités IA | ✅ Oui |
+| **Widgets** | Barre des tâches | ✅ Oui |
+| **Recall** | Windows 11 snapshots | ✅ Oui |
+| **OneDrive** | Désinstallation complète | ✅ Réinstallable |
+| **Edge** | Désinstallation complète | ✅ Réinstallable |
 
 ---
 
@@ -139,19 +116,12 @@ Optimizer/
 ├── 📄 README.md                    # Ce fichier
 ├── 📁 Tools/
 │   ├── 📁 TCPOptimizer/           # Configuration réseau avancée
-│   │   ├── TCP Config.spg         # Profil gaming BBR2
-│   │   └── TCP Default Config.spg # Sauvegarde paramètres
 │   ├── 📁 NVIDIA Inspector/       # Profil GPU optimisé
-│   │   └── nvidiaProfileInspector.exe
 │   ├── 📁 O&O ShutUp10/           # Outil anti-télémétrie GUI
-│   │   └── OOSU10.exe
 │   └── 📁 Timer & Interrupt/      # Outils timer et MSI
-│       └── SetTimerResolution.exe
 └── 📁 Game Configs/               # Configs jeux optimisés
     ├── 📁 Fortnite/
-    │   └── GameUserSettings.ini   # Paramètres compétitifs
     └── 📁 Valorant/
-        └── GameUserSettings.ini   # Paramètres compétitifs
 ```
 
 ---
@@ -169,6 +139,7 @@ Optimizer/
    - `1-9` → Optimisations individuelles
    - `G` → Gestion Windows (Defender, Edge, etc.)
    - `N` → Nettoyage avancé
+   - `R` → Créer un point de restauration
 
 ### Menu Principal
 
