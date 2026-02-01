@@ -370,12 +370,6 @@ Ce projet est sous license MIT. Vous pouvez l'utiliser, le modifier, et le redis
 
 **Créé par Kayler** avec ❤️ pour la communauté gaming et performance.
 
-**Remerciements** :
-- Chris Titus Tech (WinUtil)
-- BloatyNosy (débloat Windows)
-- Ancel (tweaks réseau)
-- Blur Busters (low latency research)
-
 ---
 
 <div align="center">
