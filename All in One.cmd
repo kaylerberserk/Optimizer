@@ -2442,15 +2442,18 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage Cache DNS...
 ipconfig /flushdns >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DNS vide
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache NVIDIA Shader...
-if exist "%LOCALAPPDATA%\NVIDIA\DXCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\DXCache" >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache NVIDIA (jeux preserves)...
+:: DXCache PRESERVE - Contient les shaders des jeux (Forza, etc.)
+:: if exist "%LOCALAPPDATA%\NVIDIA\DXCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\DXCache" >nul 2>&1
+:: Nettoyage des autres caches NVIDIA (pas de shaders jeux)
 if exist "%LOCALAPPDATA%\NVIDIA\GLCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\GLCache" >nul 2>&1
 if exist "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
 if exist "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache NVIDIA Shader nettoye
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache NVIDIA nettoye (shaders jeux preserves)
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache DirectX Shader...
-if exist "%LOCALAPPDATA%\D3DSCache" rd /s /q "%LOCALAPPDATA%\D3DSCache" >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache DirectX (jeux preserves)...
+:: D3DSCache PRESERVE - Cache shaders DirectX des jeux
+:: if exist "%LOCALAPPDATA%\D3DSCache" rd /s /q "%LOCALAPPDATA%\D3DSCache" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DirectX Shader nettoye
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des journaux Event Viewer...
