@@ -330,9 +330,16 @@ for %%T in (
     "Microsoft\Windows\CloudExperienceHost\CreateObjectTask"
     "Microsoft\Windows\DiskFootprint\Diagnostics"
     "Microsoft\Windows\NetTrace\GatherNetworkInfo"
-    "Microsoft\Windows\Shell\FamilySafetyMonitor"
+"Microsoft\Windows\Shell\FamilySafetyMonitor"
     "Microsoft\Windows\Shell\FamilySafetyRefreshTask"
     "Microsoft\Windows\WDI\ResolutionHost"
+    "Microsoft\Windows\SettingSync\BackgroundUploadTask"
+    "Microsoft\Windows\SettingSync\NetworkStateChangeTask"
+    "Microsoft\Windows\SkyDrive\Idle Sync Maintenance Task"
+    "Microsoft\Windows\Work Folders\Work Folders Logon Synchronization"
+    "Microsoft\Windows\Work Folders\Work Folders Maintenance Work"
+    "Microsoft\Windows\PushToInstall\Registration"
+    "Microsoft\Windows\Subscription\EnableLicenseAcquisition"
 ) do schtasks /Change /TN "%%~T" /Disable >nul 2>&1
 
 :: Autologgers de diagnostic OFF
@@ -505,6 +512,11 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
 
+:: 1.6b - Cache Icônes Explorer (Dossiers ultra-lourds instantanes)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du cache d'icones pour dossiers lourds...
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v Max Cached Icons /t REG_SZ /d "8192" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache icones augmente (dossiers avec 20 000+ fichiers instantanes)
+
 :: 1.7 - Desactivation du stockage reserve (~7Go liberes)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du stockage reserve Windows...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
@@ -555,10 +567,12 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichier d'echange optimise (kernel en RAM)
 
 :: 2.2 - Prefetch/SysMain
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du Prefetch et SuperFetch pour le gaming...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du Prefetch et SuperFetch pour performance maximale...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableBoottrace /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v SfTracingState /t REG_DWORD /d 0 /f >nul 2>&1
-:: sc stop SysMain >nul 2>&1
+:: Activer Superfetch et Prefetcher pour chargement ultra-rapide des applications
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableSuperfetch /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 3 /f >nul 2>&1
 sc config SysMain start= auto >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetch actif, SuperFetch optimise pour les jeux
 
@@ -580,7 +594,7 @@ set /a RAM_KB=!RAM_BYTES:~0,-3! 2>nul
 if defined RAM_KB (
     if !RAM_KB! GEQ 8388608 (
         reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d !RAM_KB! /f >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
+echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
     ) else (
         echo %COLOR_YELLOW%[!]%COLOR_RESET% RAM insuffisante pour optimisation SvcHost ^(moins de 8Go^)
     )
@@ -923,6 +937,14 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v DohFlags
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v ServerPriorityTimeLimit /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DNS optimise (resolution plus rapide)
 
+:: 5.13b - Cache DNS Avance (Resolution instantanee)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation avancee du cache DNS...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v CacheHashTableBucketSize /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v CacheHashTableSize /t REG_DWORD /d 384 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxCacheEntryTtlLimit /t REG_DWORD /d 86400 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxSOACacheEntryTtlLimit /t REG_DWORD /d 301 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DNS avance active (resolution DNS quasi-instantanee)
+
 :: 5.14 - QoS Fortnite DSCP 46
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Version" /t REG_SZ /d "1.0" /f >nul 2>&1
@@ -1212,12 +1234,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
 :: 8.6 - Installation SetTimerResolution (0.5ms)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
-set "STR_EXE=C:\Windows\SetTimerResolution.exe"
+set "STR_EXE=%SystemRoot%\SetTimerResolution.exe"
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
 
 :: Verifier si deja installe
 if exist "%STR_EXE%" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution deja installe dans C:\Windows
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution deja installe dans %SystemRoot%
     goto :STR_SHORTCUT
 )
 
@@ -1228,7 +1250,7 @@ if not exist "%STR_EXE%" (
     echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de SetTimerResolution
     goto :STR_DONE
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution installe dans C:\Windows
+echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution installe dans %SystemRoot%
 
 :STR_SHORTCUT
 :: Verifier si raccourci existe deja
@@ -2337,20 +2359,20 @@ for /d %%d in ("%temp%\*") do rd /s /q "%%d" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires utilisateur supprimes
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires Windows...
-del /s /q /f "C:\Windows\Temp\*.*" >nul 2>&1
-for /d %%d in ("C:\Windows\Temp\*") do rd /s /q "%%d" >nul 2>&1
+del /s /q /f "%SystemRoot%\Temp\*.*" >nul 2>&1
+for /d %%d in ("%SystemRoot%\Temp\*") do rd /s /q "%%d" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires Windows supprimes
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des logs systeme...
-del /s /q /f "C:\Windows\Logs\*.log" >nul 2>&1
-del /s /q /f "C:\Windows\System32\LogFiles\*.log" >nul 2>&1
-del /s /q /f "C:\Windows\Panther\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\Logs\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\System32\LogFiles\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\Panther\*.log" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Logs systeme supprimes
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des fichiers de crash...
-del /s /q /f "C:\Windows\Minidump\*.*" >nul 2>&1
-del /q /f "C:\Windows\*.dmp" >nul 2>&1
-del /s /q /f "C:\Windows\memory.dmp" >nul 2>&1
+del /s /q /f "%SystemRoot%\Minidump\*.*" >nul 2>&1
+del /q /f "%SystemRoot%\*.dmp" >nul 2>&1
+del /s /q /f "%SystemRoot%\memory.dmp" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers de crash supprimes
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des rapports d'erreurs...
@@ -2362,8 +2384,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage cache Windows Update...
 net stop wuauserv >nul 2>&1
 net stop bits >nul 2>&1
 timeout /t 2 /nobreak >nul
-rd /s /q "C:\Windows\SoftwareDistribution\Download" >nul 2>&1
-md "C:\Windows\SoftwareDistribution\Download" >nul 2>&1
+rd /s /q "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
+md "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
 net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Windows Update vide
@@ -2378,15 +2400,15 @@ echo %COLOR_WHITE%PHASE 2: MAINTENANCE SYSTEME ET CACHES%COLOR_RESET%
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des journaux CBS et DISM...
-del /s /q /f "C:\Windows\Logs\CBS\*.log" >nul 2>&1
-del /s /q /f "C:\Windows\Logs\DISM\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\Logs\CBS\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\Logs\DISM\*.log" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Journaux CBS/DISM nettoyes
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache de polices...
 net stop FontCache >nul 2>&1
 timeout /t 1 /nobreak >nul
-del /s /q /f "C:\Windows\ServiceProfiles\LocalService\AppData\Local\FontCache\*.*" >nul 2>&1
-del /q /f "C:\Windows\System32\FNTCACHE.DAT" >nul 2>&1
+del /s /q /f "%SystemRoot%\ServiceProfiles\LocalService\AppData\Local\FontCache\*.*" >nul 2>&1
+del /q /f "%SystemRoot%\System32\FNTCACHE.DAT" >nul 2>&1
 net start FontCache >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache de polices nettoye
 
@@ -2436,10 +2458,10 @@ for /f "tokens=*" %%G in ('wevtutil el 2^>nul') do wevtutil cl "%%G" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Journaux Event Viewer nettoyes
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression du dossier Windows.old (si present)...
-if exist "C:\Windows.old" (
-    takeown /f "C:\Windows.old" /r /d y >nul 2>&1
-    icacls "C:\Windows.old" /grant administrators:F /t >nul 2>&1
-    rd /s /q "C:\Windows.old" >nul 2>&1
+if exist "%SystemDrive%\Windows.old" (
+    takeown /f "%SystemDrive%\Windows.old" /r /d y >nul 2>&1
+    icacls "%SystemDrive%\Windows.old" /grant administrators:F /t >nul 2>&1
+    rd /s /q "%SystemDrive%\Windows.old" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Dossier Windows.old supprime
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Aucun dossier Windows.old trouve
