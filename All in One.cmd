@@ -801,7 +801,7 @@ if "%HAS_NVIDIA%"=="1" (
     :: Appliquer le profil
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
     start "" "%TEMP%\NvidiaProfileInspector\nvidiaProfileInspector.exe" "%TEMP%\NvidiaProfileInspector\Kaylers_profile.nip"
-    ping -n 3 127.0.0.1 >nul 2>&1
+    ping -n 2 127.0.0.1 >nul 2>&1
     taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
     
