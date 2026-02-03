@@ -446,13 +446,16 @@ for %%S in (
     RpcLocator
     SstpSvc
     TroubleshootingSvc
-    W32Time
     WFDSConMgrSvc
     tzautoupdate
 ) do (
   sc config %%S start= demand >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services occasionnels en mode Manuel
+
+:: W32Time en AUTO pour synchronisation horaire immediate
+sc config W32Time start= auto >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% W32Time en demarrage automatique (synchro horaire)
 
 :: Services critiques laisses intacts : Bluetooth, Hello, RDP, Spooler, PlugPlay
 
