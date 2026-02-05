@@ -159,13 +159,17 @@ echo %STYLE_BOLD%%COLOR_BLUE%--- APPLICATIONS MICROSOFT ---%COLOR_RESET%
 echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
 echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
 echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- RUNTIMES ET DEPENDANCES ---%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Installer les Visual C++ Redistributables%COLOR_RESET%
+echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
-choice /C 123456M /N /M "%COLOR_YELLOW%Choisissez une option [1-6, M]: %COLOR_RESET%"
-if errorlevel 7 goto :MENU_PRINCIPAL
+choice /C 1234567M /N /M "%COLOR_YELLOW%Choisissez une option [1-7, M]: %COLOR_RESET%"
+if errorlevel 8 goto :MENU_PRINCIPAL
+if errorlevel 7 goto :INSTALLER_VISUAL_REDIST
 if errorlevel 6 goto :DESINSTALLER_EDGE
 if errorlevel 5 goto :DESINSTALLER_ONEDRIVE
 if errorlevel 4 goto :TOGGLE_COPILOT
@@ -2215,6 +2219,23 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette option va appliquer toutes les optimis
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous installer tous les Visual C++ Redistributables ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Installe tous les VC++ Redist (2005 a 2022) x86 et x64
+echo       %COLOR_YELLOW%Recommande pour la compatibilite des jeux et applications%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Passer cette etape
+echo.
+set "INSTALLER_VCREDIST=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Installer les Visual C++ Redistributables ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :DESKTOP_VCREDIST_NON
+if errorlevel 1 set "INSTALLER_VCREDIST=1"
+:DESKTOP_VCREDIST_NON
+
+cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous desactiver les protections de securite (Spectre/Meltdown) ?%COLOR_RESET%
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
@@ -2230,6 +2251,41 @@ if errorlevel 1 set "DESACTIVER_SECURITE=1"
 :DESKTOP_SECURITE_NON
 
 cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver Windows Defender ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ameliore les performances en desactivant l'antivirus
+echo       %COLOR_YELLOW%Expose le systeme aux virus et logiciels malveillants%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver Windows Defender (recommande)
+echo.
+set "DESACTIVER_DEFENDER=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver Windows Defender ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :DESKTOP_DEFENDER_NON
+if errorlevel 1 set "DESACTIVER_DEFENDER=1"
+:DESKTOP_DEFENDER_NON
+
+cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver les animations Windows ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ameliore les performances en supprimant les animations
+echo       %COLOR_YELLOW%L'interface sera moins fluide visuellement%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les animations (recommande)
+echo.
+set "DESACTIVER_ANIMATIONS=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les animations ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :DESKTOP_ANIMATIONS_NON
+if errorlevel 1 set "DESACTIVER_ANIMATIONS=1"
+:DESKTOP_ANIMATIONS_NON
+
+cls
+if "%INSTALLER_VCREDIST%"=="1" call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2239,12 +2295,20 @@ call :OPTIMISATIONS_PERIPHERIQUES call
 call :DESACTIVER_PERIPHERIQUES_INUTILES call
 call :DESACTIVER_ECONOMIES_ENERGIE call
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
+if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
+if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
 cls
 echo.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les optimisations Desktop ont ete appliquees avec succes.
 if "%DESACTIVER_SECURITE%"=="1" (
   echo %COLOR_RED%[!]%COLOR_RESET% Les protections de securite ont ete desactivees.
+)
+if "%DESACTIVER_DEFENDER%"=="1" (
+  echo %COLOR_RED%[!]%COLOR_RESET% Windows Defender a ete desactive.
+)
+if "%DESACTIVER_ANIMATIONS%"=="1" (
+  echo %COLOR_YELLOW%[!]%COLOR_RESET% Les animations Windows ont ete desactivees.
 )
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour appliquer toutes les modifications.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
@@ -2266,6 +2330,23 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Certaines economies d'energie seront conserv
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous installer tous les Visual C++ Redistributables ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Installe tous les VC++ Redist (2005 a 2022) x86 et x64
+echo       %COLOR_YELLOW%Recommande pour la compatibilite des jeux et applications%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Passer cette etape
+echo.
+set "INSTALLER_VCREDIST=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Installer les Visual C++ Redistributables ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :LAPTOP_VCREDIST_NON
+if errorlevel 1 set "INSTALLER_VCREDIST=1"
+:LAPTOP_VCREDIST_NON
+
+cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous desactiver les protections de securite (Spectre/Meltdown) ?%COLOR_RESET%
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
@@ -2281,18 +2362,61 @@ if errorlevel 1 set "DESACTIVER_SECURITE=1"
 :LAPTOP_SECURITE_NON
 
 cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver Windows Defender ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ameliore les performances en desactivant l'antivirus
+echo       %COLOR_YELLOW%Expose le systeme aux virus et logiciels malveillants%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver Windows Defender (recommande)
+echo.
+set "DESACTIVER_DEFENDER=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver Windows Defender ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :LAPTOP_DEFENDER_NON
+if errorlevel 1 set "DESACTIVER_DEFENDER=1"
+:LAPTOP_DEFENDER_NON
+
+cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver les animations Windows ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ameliore les performances en supprimant les animations
+echo       %COLOR_YELLOW%L'interface sera moins fluide visuellement%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les animations (recommande)
+echo.
+set "DESACTIVER_ANIMATIONS=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les animations ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :LAPTOP_ANIMATIONS_NON
+if errorlevel 1 set "DESACTIVER_ANIMATIONS=1"
+:LAPTOP_ANIMATIONS_NON
+
+cls
+if "%INSTALLER_VCREDIST%"=="1" call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
 call :OPTIMISATIONS_GPU call
 call :OPTIMISATIONS_RESEAU call
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
+if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
+if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
 cls
 echo.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les optimisations Laptop ont ete appliquees avec succes.
 if "%DESACTIVER_SECURITE%"=="1" (
   echo %COLOR_RED%[!]%COLOR_RESET% Les protections de securite ont ete desactivees.
+)
+if "%DESACTIVER_DEFENDER%"=="1" (
+  echo %COLOR_RED%[!]%COLOR_RESET% Windows Defender a ete desactive.
+)
+if "%DESACTIVER_ANIMATIONS%"=="1" (
+  echo %COLOR_YELLOW%[!]%COLOR_RESET% Les animations Windows ont ete desactivees.
 )
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour appliquer toutes les modifications.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
@@ -2575,6 +2699,179 @@ if errorlevel 1 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage de
 pause
 goto :MENU_PRINCIPAL
 
+
+:INSTALLER_VISUAL_REDIST
+cls
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%     INSTALLATION DES VISUAL C++ REDISTRIBUTABLES     %COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Cette section installe tous les Visual C++ Redistributables%COLOR_RESET%
+echo %COLOR_WHITE%  necessaires pour les jeux et applications (2005 a 2022).%COLOR_RESET%
+echo.
+:: Initialiser le compteur
+set "VCREDIST_INSTALL_COUNT=0"
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation de tous les Visual C++ Redistributables...
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+
+:: Creer un dossier temporaire pour les installations
+set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
+if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
+
+:: VC++ 2005 x86
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2005 x86...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2005_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2005_x86.exe" (
+    "%VCREDIST_DIR%\vcredist_2005_x86.exe" /Q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x86 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x86
+)
+
+:: VC++ 2005 x64
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2005 x64...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2005_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2005_x64.exe" (
+    "%VCREDIST_DIR%\vcredist_2005_x64.exe" /Q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x64 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x64
+)
+
+:: VC++ 2008 x86
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2008 x86...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2008_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2008_x86.exe" (
+    "%VCREDIST_DIR%\vcredist_2008_x86.exe" /q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x86 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x86
+)
+
+:: VC++ 2008 x64
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2008 x64...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2008_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2008_x64.exe" (
+    "%VCREDIST_DIR%\vcredist_2008_x64.exe" /q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x64 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x64
+)
+
+:: VC++ 2010 x86
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2010 x86...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2010_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2010_x86.exe" (
+    "%VCREDIST_DIR%\vcredist_2010_x86.exe" /q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x86 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x86
+)
+
+:: VC++ 2010 x64
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2010 x64...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2010_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2010_x64.exe" (
+    "%VCREDIST_DIR%\vcredist_2010_x64.exe" /q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x64 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x64
+)
+
+:: VC++ 2012 x86
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2012 x86...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2012_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2012_x86.exe" (
+    "%VCREDIST_DIR%\vcredist_2012_x86.exe" /install /quiet /norestart >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x86 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x86
+)
+
+:: VC++ 2012 x64
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2012 x64...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2012_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2012_x64.exe" (
+    "%VCREDIST_DIR%\vcredist_2012_x64.exe" /install /quiet /norestart >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x64 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x64
+)
+
+:: VC++ 2013 x86
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2013 x86...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2013_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2013_x86.exe" (
+    "%VCREDIST_DIR%\vcredist_2013_x86.exe" /install /quiet /norestart >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x86 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x86
+)
+
+:: VC++ 2013 x64
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2013 x64...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2013_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2013_x64.exe" (
+    "%VCREDIST_DIR%\vcredist_2013_x64.exe" /install /quiet /norestart >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x64 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x64
+)
+
+:: VC++ 2015-2022 x86
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2015-2022 x86...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2015_2022_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2015_2022_x86.exe" (
+    "%VCREDIST_DIR%\vcredist_2015_2022_x86.exe" /q /norestart >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x86 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x86
+)
+
+:: VC++ 2015-2022 x64
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2015-2022 x64...
+powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2015_2022_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
+if exist "%VCREDIST_DIR%\vcredist_2015_2022_x64.exe" (
+    "%VCREDIST_DIR%\vcredist_2015_2022_x64.exe" /q /norestart >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x64 traite
+    set /a VCREDIST_INSTALL_COUNT+=1
+) else (
+    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x64
+)
+
+:: Nettoyage des fichiers temporaires
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires...
+rd /s /q "%VCREDIST_DIR%" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires supprimes
+
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Installation des Visual C++ Redistributables terminee.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+if not defined VCREDIST_INSTALL_COUNT set "VCREDIST_INSTALL_COUNT=0"
+echo %COLOR_WHITE%Nombre de packages traites: %VCREDIST_INSTALL_COUNT%/12%COLOR_RESET%
+echo %COLOR_CYAN%(Les packages deja installes ont ete mis a jour si necessaire)%COLOR_RESET%
+echo.
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :MENU_PRINCIPAL
+)
 
 :END_SCRIPT
 cls
