@@ -105,6 +105,27 @@
 | **Recall** | Windows 11 snapshots | ✅ Oui |
 | **OneDrive** | Désinstallation complète | ✅ Réinstallable |
 | **Edge** | Désinstallation complète | ✅ Réinstallable |
+| **Visual C++ Redist** | Installation tous les runtimes (2005-2022) | ✅ Installation silencieuse |
+
+### 📦 Visual C++ Redistributables
+
+Le script peut installer automatiquement tous les Visual C++ Redistributables nécessaires :
+
+**Disponible via :**
+- Menu `G` → Option `[7]` : Installation directe
+- Option `D` (Desktop) : Choix O/N avant les optimisations
+- Option `L` (Laptop) : Choix O/N avant les optimisations
+
+**Versions installées :**
+- VC++ 2005, 2008, 2010, 2012, 2013 (x86 et x64)
+- VC++ 2015-2022 (x86 et x64)
+
+**Pourquoi c'est important ?**
+- ✅ Compatibilité avec tous les jeux modernes et anciens
+- ✅ Fonctionnement optimal des applications
+- ✅ Installation silencieuse sans intervention
+- ✅ Mise à jour automatique des versions existantes
+| **Visual C++ Redist** | Installation automatique (2005-2022) | ✅ Installation silencieuse |
 
 ---
 
@@ -134,10 +155,10 @@ Optimizer/
 2. **Extrayez** le dossier `Optimizer-main` sur votre Bureau
 3. **Clic droit** sur `All in One.cmd` → **"Exécuter en tant qu'administrateur"**
 4. **Choisissez votre profil** dans le menu :
-   - `D` → **PC Bureau** (toutes optimisations)
-   - `L` → **PC Portable** (conserve batterie)
+   - `D` → **PC Bureau** (toutes optimisations avec choix VC++ Redist, Defender, Animations)
+   - `L` → **PC Portable** (conserve batterie avec choix VC++ Redist, Defender, Animations)
    - `1-9` → Optimisations individuelles
-   - `G` → Gestion Windows (Defender, Edge, etc.)
+   - `G` → Gestion Windows (Defender, Edge, VC++ Redist, etc.)
    - `N` → Nettoyage avancé
    - `R` → Créer un point de restauration
 
@@ -188,6 +209,16 @@ Le script préserve toutes les fonctionnalités critiques (Bluetooth, VPN, Xbox,
 
 ### Puis-je l'utiliser sur un PC portable ?
 **Oui.** Utilise l'option `L` (PC Portable) qui conserve l'hibernation et certaines économies d'énergie tout en appliquant les optimisations gaming.
+
+### Quels sont les choix proposés dans "Tout optimiser" ?
+Lorsque vous utilisez `D` (Desktop) ou `L` (Laptop), le script vous propose 4 choix avant d'appliquer les optimisations :
+
+1. **Visual C++ Redistributables** : Installer tous les runtimes Microsoft pour la compatibilité jeux/applications
+2. **Protections Spectre/Meltdown** : Désactiver pour gagner en performance (⚠️ réduit la sécurité)
+3. **Windows Defender** : Désactiver l'antivirus pour gagner en performance (⚠️ réduit la sécurité)
+4. **Animations Windows** : Désactiver pour un système plus réactif (l'interface sera moins fluide visuellement)
+
+Chaque choix est **optionnel** et explique les avantages/inconvénients. Vous pouvez dire NON à tout et garder uniquement les optimisations standards.
 
 ### Est-ce que ça marche avec les anti-cheat ?
 **Oui.** Le script conserve HVCI et CFG activés, requis par Valorant, Fortnite, et autres jeux avec anti-cheat.
