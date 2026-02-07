@@ -89,14 +89,12 @@ echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Optimisations Systeme%COLOR_RESET% %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Optimisations Memoire%COLOR_RESET%
 echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Optimisations Disques%COLOR_RESET% %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Optimisations GPU%COLOR_RESET%
-echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESET%
+echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESET%  %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_GREEN%Optimisations Clavier/Souris%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_BLUE%--- PC BUREAUTIQUES UNIQUEMENT ---%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- PC DE BUREAU UNIQUEMENT ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_GREEN%Optimisations Clavier/Souris%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Desactiver Peripheriques Inutiles%COLOR_RESET%
-echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_GREEN%Desactiver Economies d'Energie%COLOR_RESET%
-echo %COLOR_YELLOW%[9]%COLOR_RESET% %COLOR_RED%Desactiver Protections Securite (Spectre/Meltdown)%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Desactiver Economies d'Energie%COLOR_RESET%
+echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Desactiver Protections Securite (Spectre/Meltdown)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -115,20 +113,19 @@ echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COL
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 123456789DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-9, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
+choice /C 12345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
 
 :: Gestion des choix (du plus grand au plus petit pour errorlevel)
-if errorlevel 17 goto :END_SCRIPT
-if errorlevel 16 goto :OUTIL_CHRIS_TITUS
-if errorlevel 15 goto :OUTIL_ACTIVATION
-if errorlevel 14 goto :MENU_GESTION_WINDOWS
-if errorlevel 13 goto :CREER_POINT_RESTAURATION
-if errorlevel 12 goto :NETTOYAGE_AVANCE_WINDOWS
-if errorlevel 11 goto :TOUT_OPTIMISER_LAPTOP
-if errorlevel 10 goto :TOUT_OPTIMISER_DESKTOP
-if errorlevel 9 goto :DESACTIVER_PROTECTIONS_SECURITE
-if errorlevel 8 goto :DESACTIVER_ECONOMIES_ENERGIE
-if errorlevel 7 goto :DESACTIVER_PERIPHERIQUES_INUTILES
+if errorlevel 16 goto :END_SCRIPT
+if errorlevel 15 goto :OUTIL_CHRIS_TITUS
+if errorlevel 14 goto :OUTIL_ACTIVATION
+if errorlevel 13 goto :MENU_GESTION_WINDOWS
+if errorlevel 12 goto :CREER_POINT_RESTAURATION
+if errorlevel 11 goto :NETTOYAGE_AVANCE_WINDOWS
+if errorlevel 10 goto :TOUT_OPTIMISER_LAPTOP
+if errorlevel 9 goto :TOUT_OPTIMISER_DESKTOP
+if errorlevel 8 goto :DESACTIVER_PROTECTIONS_SECURITE
+if errorlevel 7 goto :DESACTIVER_ECONOMIES_ENERGIE
 if errorlevel 6 goto :OPTIMISATIONS_PERIPHERIQUES
 if errorlevel 5 goto :OPTIMISATIONS_RESEAU
 if errorlevel 4 goto :OPTIMISATIONS_GPU
@@ -989,7 +986,7 @@ if "%~1"=="call" (
 :OPTIMISATIONS_PERIPHERIQUES
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%       SECTION 6 : OPTIMISATIONS CLAVIER, SOURIS ET USB     %COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%       SECTION 6 : OPTIMISATIONS CLAVIER ET SOURIS          %COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%  Cette section desactive l'acceleration souris et optimise%COLOR_RESET%
@@ -1020,22 +1017,16 @@ reg add "HKCU\Control Panel\Accessibility\ToggleKeys" /v Flags /t REG_SZ /d "0" 
 reg add "HKCU\Control Panel\Accessibility\ToggleKeys" /v HotkeyActive /t REG_SZ /d "0" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourcis d'accessibilite desactives - Plus d'activation accidentelle
 
-:: 6.4 - USB Selective Suspend OFF
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
-powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale sur secteur
-
-:: 6.5 - DMA Remapping off
+:: 6.4 - DMA Remapping off
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DmaRemappingCompatible /t REG_DWORD /d 0 /f >nul 2>&1
 ::reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la latence
 
-:: 6.6 - HID parse : desactive buffering + active traitement direct
+:: 6.5 - HID parse : desactive buffering + active traitement direct
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableInputDelayOptimization /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 6.7 - Optimisation des files et priorites clavier/souris
+:: 6.6 - Optimisation des files et priorites clavier/souris
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
@@ -1045,60 +1036,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites et files clavier/souris optimisees
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations des peripheriques appliquees avec succes.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-if "%~1"=="call" (
-  exit /b
-) else (
-  pause
-  goto :MENU_PRINCIPAL
-)
-
-:DESACTIVER_PERIPHERIQUES_INUTILES
-cls
-echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%       SECTION 7 : DESACTIVATION DES PERIPHERIQUES          %COLOR_RESET%
-echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Cette section desactive les peripheriques inutiles%COLOR_RESET%
-echo %COLOR_WHITE%  pour reduire la consommation de ressources systeme.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de DevManView...
-set "DevManView=%temp%\DevManView.exe"
-powershell -Command "& {$ProgressPreference='SilentlyContinue'; try { Invoke-WebRequest -Uri 'https://github.com/ancel1x/Ancels-Performance-Batch/raw/main/bin/DevManView.exe' -OutFile '%DevManView%' } catch { exit 1 }}" >nul 2>&1
-if not exist "%DevManView%" (
-    echo %COLOR_RED%[ERREUR]%COLOR_RESET% Impossible de telecharger DevManView.exe
-    echo %COLOR_RED%[ERREUR]%COLOR_RESET% Les peripheriques inutiles ne seront pas desactives.
-    pause
-    goto :MENU_PRINCIPAL
-)
-
-:: --- Debug / virtualisation inutiles ---
-%DevManView% /disable "Microsoft Kernel Debug Network Adapter"
-
-:: --- Ports serie anciens (conserve pour compatibilite) ---
-:: %DevManView% /disable "Communications Port (COM1)"
-:: %DevManView% /disable "Communications Port (COM2)"
-:: %DevManView% /disable "Communications Port (SER1)"
-:: %DevManView% /disable "Communications Port (SER2)"
-
-:: --- WAN miniports inutiles (laisser IP/IPv6 si VPN) ---
-%DevManView% /disable "WAN Miniport (Network Monitor)"
-%DevManView% /disable "WAN Miniport (PPPOE)"
-%DevManView% /disable "WAN Miniport (PPTP)"
-%DevManView% /disable "WAN Miniport (L2TP)"
-%DevManView% /disable "WAN Miniport (SSTP)"
-%DevManView% /disable "WAN Miniport (IKEv2)"
-
-:: --- Enumerateurs logiciels rarement utiles ---
-%DevManView% /disable "SteelSeries Sonar Virtual Audio Device"
-
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Peripheriques inutiles desactives
-
-echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Peripheriques inutiles desactives avec succes.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 if "%~1"=="call" (
@@ -1213,6 +1150,16 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Hibernation desactivee - Espace disque libere
 ) else (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% Hibernation conservee ^(PC Portable detecte^)
+)
+
+:: 8.4 - USB Selective Suspend (PC Bureau uniquement pour performance max)
+if "%IS_LAPTOP%"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
+    powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
+    powercfg /S SCHEME_CURRENT >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale sur secteur
+) else (
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve ^(PC Portable detecte^)
 )
 
 :: 8.4 - Configuration generale du systeme d'alimentation
@@ -1492,8 +1439,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Services Defender restaures
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Windows Defender a ete reactive.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
-pause
-goto :TOGGLE_DEFENDER
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :TOGGLE_DEFENDER
+)
 
 :DESACTIVER_DEFENDER_SECTION
 cls
@@ -1514,8 +1465,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Services Defender desactives
 echo.
 echo %COLOR_RED%[-]%COLOR_RESET% Windows Defender a ete desactive.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
-pause
-goto :TOGGLE_DEFENDER
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :TOGGLE_DEFENDER
+)
 
 :TOGGLE_UAC
 cls
@@ -1549,8 +1504,12 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreen
 :: Reactiver le suivi de zone (fichiers telecharges marques comme Internet)
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% UAC active. Un redemarrage est requis.
-pause
-goto :TOGGLE_UAC
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :TOGGLE_UAC
+)
 
 :DESACTIVER_UAC_SECTION
 cls
@@ -1570,8 +1529,12 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreen
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_RED%[-]%COLOR_RESET% %STYLE_BOLD%UAC + tous les avertissements desactives.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Redemarrage requis.
-pause
-goto :TOGGLE_UAC
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :TOGGLE_UAC
+)
 
 :TOGGLE_ANIMATIONS
 cls
@@ -1655,8 +1618,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des changements...
 taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows activees (parametres par defaut).
-pause
-goto :TOGGLE_ANIMATIONS
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :TOGGLE_ANIMATIONS
+)
 
 :DESACTIVER_ANIMATIONS_SECTION
 cls
@@ -1733,8 +1700,12 @@ taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres visuels optimises appliques.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage peut etre necessaire pour appliquer tous les changements.
-pause
-goto :TOGGLE_ANIMATIONS
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :TOGGLE_ANIMATIONS
+)
 
 :TOGGLE_COPILOT
 cls
@@ -2292,7 +2263,6 @@ call :OPTIMISATIONS_DISQUES call
 call :OPTIMISATIONS_GPU call
 call :OPTIMISATIONS_RESEAU call
 call :OPTIMISATIONS_PERIPHERIQUES call
-call :DESACTIVER_PERIPHERIQUES_INUTILES call
 call :DESACTIVER_ECONOMIES_ENERGIE call
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
@@ -2402,6 +2372,8 @@ call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
 call :OPTIMISATIONS_GPU call
 call :OPTIMISATIONS_RESEAU call
+call :OPTIMISATIONS_PERIPHERIQUES call
+:: Note: DESACTIVER_ECONOMIES_ENERGIE NON appele pour Laptop (preserve la batterie)
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
@@ -2409,6 +2381,7 @@ cls
 echo.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les optimisations Laptop ont ete appliquees avec succes.
+echo %COLOR_GREEN%[INFO]%COLOR_RESET% Les economies d'energie ont ete preservees pour la batterie.
 if "%DESACTIVER_SECURITE%"=="1" (
   echo %COLOR_RED%[!]%COLOR_RESET% Les protections de securite ont ete desactivees.
 )
@@ -2569,19 +2542,20 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage Cache DNS...
 ipconfig /flushdns >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DNS vide
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache NVIDIA (jeux preserves)...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache NVIDIA (shaders jeux preserves)...
 :: DXCache PRESERVE - Contient les shaders des jeux (Forza, etc.)
 :: if exist "%LOCALAPPDATA%\NVIDIA\DXCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\DXCache" >nul 2>&1
+:: GLCache PRESERVE - Contient les shaders OpenGL des jeux
+:: if exist "%LOCALAPPDATA%\NVIDIA\GLCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\GLCache" >nul 2>&1
 :: Nettoyage des autres caches NVIDIA (pas de shaders jeux)
-if exist "%LOCALAPPDATA%\NVIDIA\GLCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\GLCache" >nul 2>&1
 if exist "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
 if exist "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache NVIDIA nettoye (shaders jeux preserves)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache NVIDIA nettoye (shaders DX/GL preserves)
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache DirectX (jeux preserves)...
-:: D3DSCache PRESERVE - Cache shaders DirectX des jeux
+:: Cache DirectX - ENTIEREMENT PRESERVE pour les jeux
+:: D3DSCache contient les shaders DirectX compiles des jeux
 :: if exist "%LOCALAPPDATA%\D3DSCache" rd /s /q "%LOCALAPPDATA%\D3DSCache" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DirectX Shader nettoye
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DirectX Shader preserve
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des journaux Event Viewer...
 for /f "tokens=*" %%G in ('wevtutil el 2^>nul') do wevtutil cl "%%G" >nul 2>&1
@@ -2618,21 +2592,18 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de l'outil de nettoyage Windows...
 set "SAGEID=100"
 
-:: DownloadsFolder RETIRE pour proteger les telechargements
+:: PRESERVES : DownloadsFolder, D3D/DirectX Shader Cache (jeux), Internet Cache Files (sessions)
 for %%K in (
     "Active Setup Temp Folders"
     "BranchCache"
     "Content Indexer Cleaner"
-    "D3D Shader Cache"
     "Delivery Optimization Files"
     "Device Driver Packages"
     "Diagnostic Data Viewer database files"
-    "DirectX Shader Cache"
     "Downloaded Program Files"
     "GameNewsFiles"
     "GameStatisticsFiles"
     "GameUpdateFiles"
-    "Internet Cache Files"
     "Language Pack"
     "Memory Dump Files"
     "Offline Pages Files"
@@ -2709,10 +2680,78 @@ echo.
 echo %COLOR_WHITE%  Cette section installe tous les Visual C++ Redistributables%COLOR_RESET%
 echo %COLOR_WHITE%  necessaires pour les jeux et applications (2005 a 2022).%COLOR_RESET%
 echo.
-:: Initialiser le compteur
-set "VCREDIST_INSTALL_COUNT=0"
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation de tous les Visual C++ Redistributables...
+:: Initialiser les compteurs
+set VCINSTALL=0
+set VCSKIP=0
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions deja installees...
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+
+:: Detection ultra-simple via les DLL systeme (ne crash jamais)
+:: VC++ 2005 x86 = msvcr80.dll dans SysWOW64
+:: VC++ 2005 x64 = msvcr80.dll dans System32
+:: VC++ 2008 x86 = msvcr90.dll dans SysWOW64
+:: VC++ 2008 x64 = msvcr90.dll dans System32
+:: VC++ 2010 x86 = msvcr100.dll dans SysWOW64
+:: VC++ 2010 x64 = msvcr100.dll dans System32
+:: VC++ 2012 x86 = msvcr110.dll dans SysWOW64
+:: VC++ 2012 x64 = msvcr110.dll dans System32
+:: VC++ 2013 x86 = msvcr120.dll dans SysWOW64
+:: VC++ 2013 x64 = msvcr120.dll dans System32
+:: VC++ 2015-2022 x86 = vcruntime140.dll dans SysWOW64
+:: VC++ 2015-2022 x64 = vcruntime140.dll dans System32
+
+set VC2005X86=0
+set VC2005X64=0
+set VC2008X86=0
+set VC2008X64=0
+set VC2010X86=0
+set VC2010X64=0
+set VC2012X86=0
+set VC2012X64=0
+set VC2013X86=0
+set VC2013X64=0
+set VC2015X86=0
+set VC2015X64=0
+
+:: VC++ 2005/2008 utilisent WinSxS - detection via les dossiers d'assemblies
+:: VC++ 2010+ placent les DLL dans System32/SysWOW64
+dir "%WINDIR%\WinSxS\x86_microsoft.vc80.crt*" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2005X86=1
+dir "%WINDIR%\WinSxS\amd64_microsoft.vc80.crt*" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2005X64=1
+dir "%WINDIR%\WinSxS\x86_microsoft.vc90.crt*" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2008X86=1
+dir "%WINDIR%\WinSxS\amd64_microsoft.vc90.crt*" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2008X64=1
+if exist "%WINDIR%\SysWOW64\msvcr100.dll" set VC2010X86=1
+if exist "%WINDIR%\System32\msvcr100.dll" set VC2010X64=1
+if exist "%WINDIR%\SysWOW64\msvcr110.dll" set VC2012X86=1
+if exist "%WINDIR%\System32\msvcr110.dll" set VC2012X64=1
+if exist "%WINDIR%\SysWOW64\msvcr120.dll" set VC2013X86=1
+if exist "%WINDIR%\System32\msvcr120.dll" set VC2013X64=1
+if exist "%WINDIR%\SysWOW64\vcruntime140.dll" set VC2015X86=1
+if exist "%WINDIR%\System32\vcruntime140.dll" set VC2015X64=1
+
+:: Afficher les resultats de detection
+if %VC2005X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2005 x86 - Deja installe
+if %VC2005X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2005 x64 - Deja installe
+if %VC2008X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2008 x86 - Deja installe
+if %VC2008X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2008 x64 - Deja installe
+if %VC2010X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2010 x86 - Deja installe
+if %VC2010X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2010 x64 - Deja installe
+if %VC2012X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2012 x86 - Deja installe
+if %VC2012X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2012 x64 - Deja installe
+if %VC2013X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2013 x86 - Deja installe
+if %VC2013X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2013 x64 - Deja installe
+if %VC2015X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x86 - Deja installe
+if %VC2015X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x64 - Deja installe
+
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation des versions manquantes...
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 
@@ -2721,150 +2760,211 @@ set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
 if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
 
 :: VC++ 2005 x86
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2005 x86...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2005_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2005_x86.exe" (
-    "%VCREDIST_DIR%\vcredist_2005_x86.exe" /Q >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x86 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2005X86%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2005 x86 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x86
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2005 x86...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2005x86.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2005x86.exe" (
+        "%VCREDIST_DIR%\vc2005x86.exe" /Q >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x86 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x86
+    )
 )
 
 :: VC++ 2005 x64
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2005 x64...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2005_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2005_x64.exe" (
-    "%VCREDIST_DIR%\vcredist_2005_x64.exe" /Q >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x64 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2005X64%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2005 x64 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x64
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2005 x64...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2005x64.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2005x64.exe" (
+        "%VCREDIST_DIR%\vc2005x64.exe" /Q >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x64 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x64
+    )
 )
 
 :: VC++ 2008 x86
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2008 x86...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2008_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2008_x86.exe" (
-    "%VCREDIST_DIR%\vcredist_2008_x86.exe" /q >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x86 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2008X86%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2008 x86 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x86
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2008 x86...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2008x86.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2008x86.exe" (
+        "%VCREDIST_DIR%\vc2008x86.exe" /q >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x86 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x86
+    )
 )
 
 :: VC++ 2008 x64
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2008 x64...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2008_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2008_x64.exe" (
-    "%VCREDIST_DIR%\vcredist_2008_x64.exe" /q >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x64 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2008X64%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2008 x64 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x64
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2008 x64...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2008x64.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2008x64.exe" (
+        "%VCREDIST_DIR%\vc2008x64.exe" /q >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x64 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x64
+    )
 )
 
 :: VC++ 2010 x86
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2010 x86...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2010_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2010_x86.exe" (
-    "%VCREDIST_DIR%\vcredist_2010_x86.exe" /q >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x86 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2010X86%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2010 x86 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x86
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2010 x86...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2010x86.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2010x86.exe" (
+        "%VCREDIST_DIR%\vc2010x86.exe" /q >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x86 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x86
+    )
 )
 
 :: VC++ 2010 x64
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2010 x64...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2010_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2010_x64.exe" (
-    "%VCREDIST_DIR%\vcredist_2010_x64.exe" /q >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x64 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2010X64%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2010 x64 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x64
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2010 x64...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2010x64.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2010x64.exe" (
+        "%VCREDIST_DIR%\vc2010x64.exe" /q >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x64 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x64
+    )
 )
 
 :: VC++ 2012 x86
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2012 x86...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2012_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2012_x86.exe" (
-    "%VCREDIST_DIR%\vcredist_2012_x86.exe" /install /quiet /norestart >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x86 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2012X86%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2012 x86 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x86
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2012 x86...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2012x86.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2012x86.exe" (
+        "%VCREDIST_DIR%\vc2012x86.exe" /install /quiet /norestart >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x86 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x86
+    )
 )
 
 :: VC++ 2012 x64
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2012 x64...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2012_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2012_x64.exe" (
-    "%VCREDIST_DIR%\vcredist_2012_x64.exe" /install /quiet /norestart >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x64 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2012X64%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2012 x64 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x64
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2012 x64...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2012x64.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2012x64.exe" (
+        "%VCREDIST_DIR%\vc2012x64.exe" /install /quiet /norestart >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x64 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x64
+    )
 )
 
 :: VC++ 2013 x86
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2013 x86...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2013_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2013_x86.exe" (
-    "%VCREDIST_DIR%\vcredist_2013_x86.exe" /install /quiet /norestart >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x86 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2013X86%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2013 x86 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x86
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2013 x86...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2013x86.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2013x86.exe" (
+        "%VCREDIST_DIR%\vc2013x86.exe" /install /quiet /norestart >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x86 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x86
+    )
 )
 
 :: VC++ 2013 x64
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2013 x64...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2013_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2013_x64.exe" (
-    "%VCREDIST_DIR%\vcredist_2013_x64.exe" /install /quiet /norestart >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x64 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2013X64%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2013 x64 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x64
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2013 x64...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2013x64.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2013x64.exe" (
+        "%VCREDIST_DIR%\vc2013x64.exe" /install /quiet /norestart >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x64 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x64
+    )
 )
 
 :: VC++ 2015-2022 x86
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2015-2022 x86...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vcredist_2015_2022_x86.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2015_2022_x86.exe" (
-    "%VCREDIST_DIR%\vcredist_2015_2022_x86.exe" /q /norestart >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x86 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2015X86%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2015-2022 x86 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x86
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2015-2022 x86...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2015x86.exe" (
+        "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x86 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x86
+    )
 )
 
 :: VC++ 2015-2022 x64
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation VC++ 2015-2022 x64...
-powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vcredist_2015_2022_x64.exe' -UseBasicParsing -ErrorAction SilentlyContinue" >nul 2>&1
-if exist "%VCREDIST_DIR%\vcredist_2015_2022_x64.exe" (
-    "%VCREDIST_DIR%\vcredist_2015_2022_x64.exe" /q /norestart >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x64 traite
-    set /a VCREDIST_INSTALL_COUNT+=1
+if %VC2015X64%==1 (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2015-2022 x64 - Deja present
+    set /a VCSKIP=VCSKIP+1
 ) else (
-    echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x64
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2015-2022 x64...
+    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2015x64.exe" (
+        "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x64 installe
+        set /a VCINSTALL=VCINSTALL+1
+    ) else (
+        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x64
+    )
 )
 
 :: Nettoyage des fichiers temporaires
+echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires...
 rd /s /q "%VCREDIST_DIR%" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires supprimes
 
 echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Installation des Visual C++ Redistributables terminee.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
-if not defined VCREDIST_INSTALL_COUNT set "VCREDIST_INSTALL_COUNT=0"
-echo %COLOR_WHITE%Nombre de packages traites: %VCREDIST_INSTALL_COUNT%/12%COLOR_RESET%
-echo %COLOR_CYAN%(Les packages deja installes ont ete mis a jour si necessaire)%COLOR_RESET%
+echo %COLOR_WHITE%Resume:%COLOR_RESET%
+echo   %COLOR_GREEN%Installes: %VCINSTALL%%COLOR_RESET%
+echo   %COLOR_CYAN%Deja presents: %VCSKIP%%COLOR_RESET%
 echo.
 if "%~1"=="call" (
   exit /b
