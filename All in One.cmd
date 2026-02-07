@@ -93,7 +93,7 @@ echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESE
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- PC DE BUREAU UNIQUEMENT ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Desactiver Economies d'Energie%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Gerer Economies d'Energie (Activer/Restaurer)%COLOR_RESET%
 echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Desactiver Protections Securite (Spectre/Meltdown)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
@@ -125,7 +125,7 @@ if errorlevel 11 goto :NETTOYAGE_AVANCE_WINDOWS
 if errorlevel 10 goto :TOUT_OPTIMISER_LAPTOP
 if errorlevel 9 goto :TOUT_OPTIMISER_DESKTOP
 if errorlevel 8 goto :DESACTIVER_PROTECTIONS_SECURITE
-if errorlevel 7 goto :DESACTIVER_ECONOMIES_ENERGIE
+if errorlevel 7 goto :TOGGLE_ECONOMIES_ENERGIE
 if errorlevel 6 goto :OPTIMISATIONS_PERIPHERIQUES
 if errorlevel 5 goto :OPTIMISATIONS_RESEAU
 if errorlevel 4 goto :OPTIMISATIONS_GPU
@@ -652,35 +652,23 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Execution du TRIM sur les disques SSD detect
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$ssd=Get-PhysicalDisk|?{$_.MediaType -eq 'SSD'};if($ssd){Write-Host 'SSD detecte(s):' $ssd.Count;Get-Volume|?{$_.DriveLetter -and $_.FileSystem -match 'NTFS|ReFS'}|%{Start-Job {Optimize-Volume -DriveLetter $args[0] -ReTrim -ErrorAction SilentlyContinue} -ArgumentList $_.DriveLetter|Out-Null}}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Commande TRIM executee sur les SSD
 
-:: 3.4 - Enable prefetcher
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 3 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetcher active pour un demarrage plus rapide
-
-:: 3.5 - Optimisation pilote NVMe natif (2025)
+ :: 3.4 - Optimisation pilote NVMe natif (2025)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 3.6 - Boost Speed NVMe Windows 11 (25H2)
+:: 3.5 - Boost Speed NVMe Windows 11 (25H2)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du nouveau pilote NVMe natif (Win 11 25H2)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 735209102 /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
 
-:: 3.7 - DirectStorage / NVMe avance
+:: 3.6 - DirectStorage / NVMe avance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation DirectStorage et I/O NVMe...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v FUA /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\DirectX" /v DirectStorageForceIOPriority /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise (FUA off, I/O prioritaire)
 
-:: 3.8 - Desactiver compression memoire (16Go+ RAM recommande)
-for /f %%r in ('powershell -NoProfile -c "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB)"') do set RAM_GB=%%r
-if %RAM_GB% GEQ 16 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% RAM %RAM_GB%Go detectee - Desactivation compression memoire...
-    powershell -NoProfile -c "Disable-MMAgent -MemoryCompression" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee (chargement assets plus rapide)
-) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% RAM %RAM_GB%Go - Compression memoire conservee
-)
+echo.
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations des disques appliquees avec succes.
@@ -1342,6 +1330,224 @@ if "%~1"=="call" (
   pause
   goto :MENU_PRINCIPAL
 )
+
+:REVERT_ECONOMIES_ENERGIE
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%      RESTAURATION DES ECONOMIES D'ENERGIE (REVERT)     %COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Cette section restaure les parametres d'economie d'energie%COLOR_RESET%
+echo %COLOR_WHITE%  aux valeurs par defaut de Windows.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+
+:: 1. Restaurer le plan d'alimentation par defaut (Equilibre)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration du plan d'alimentation par defaut...
+powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan d'alimentation "Equilibre" active
+
+:: 2. Reactiver le demarrage rapide (Fast Startup)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation du demarrage rapide (Fast Startup)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide reactive
+
+:: 3. Reactiver l'hibernation
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de l'hibernation...
+powercfg /hibernate on >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Hibernation reactive
+
+:: 4. Reactiver USB Selective Suspend
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation USB Selective Suspend...
+powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 1 >nul 2>&1
+powercfg /S SCHEME_CURRENT >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% USB Selective Suspend reactive
+
+:: 5. Reactiver Timer Coalescing
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des Timer Coalescing...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v GlobalTimerResolutionRequests /f >nul 2>&1
+bcdedit /set disabledynamictick no >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /f >nul 2>&1
+reg delete "HKLM\System\CurrentControlSet\Control\ModernSleep" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\System\CurrentControlSet\Control\Session Manager\Memory Management" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\System\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing reactive
+
+:: 6. Supprimer SetTimerResolution du demarrage
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression de SetTimerResolution du demarrage...
+set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
+if exist "%STR_STARTUP%" (
+    del "%STR_STARTUP%" /f /q >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci SetTimerResolution supprime du demarrage
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution n'etait pas dans le demarrage
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution supprime du demarrage automatique
+
+:: 7. Reactiver Power Throttling
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation du Power Throttling...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Power Throttling reactive
+
+:: 8. Restaurer les parametres processeur par defaut
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des parametres processeur par defaut...
+:: Min: 5%, Max: 100%, Core Parking: 10%, Intervalle: 30ms
+powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 5 >nul 2>&1
+powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1
+powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 30 >nul 2>&1
+powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 10 >nul 2>&1
+powercfg /S SCHEME_CURRENT >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres processeur restaures
+
+:: 9. Masquer les options de scheduling hybride
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Masquage des options de scheduling hybride...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Options de scheduling hybride masquees
+
+:: 10. Reactiver ASPM
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation ASPM sur le bus PCI Express...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% ASPM reactive
+
+:: 11. Reactiver la mise en veille des disques
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la mise en veille des disques...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v DisableStorageQoS /f >nul 2>&1
+:: Supprimer HIPM/DIPM/HDDParking pour revenir aux valeurs par defaut systeme
+for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
+  for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services" /s /f "%%i" /v 2^>nul ^| findstr /i "^HKEY"') do (
+    reg delete "%%a" /v %%i /f >nul 2>&1
+  )
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Mise en veille des disques reactivee
+
+:: 12. Restaurer les limites de latence I/O (valeurs par defaut generalement 0 ou absentes)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des limites de latence I/O...
+for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
+  reg delete "%%a" /v IoLatencyCap /f >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence I/O restaurees
+
+:: 13. Desactiver PowerMizer (restaurer gestion automatique)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration de la gestion d'energie GPU...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie GPU restauree
+:: 13b. Reactiver la mise en veille des peripheriques PCI (D3Cold)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la gestion d'energie PCI...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}\*" /v D3ColdSupported /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}\*" /v "*WakeOnPattern" /f >nul 2>&1
+
+:: 14. Reactiver les fonctions d'economie d'energie reseau
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des fonctions d'economie d'energie reseau...
+for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+  reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
+  if not errorlevel 1 (
+    :: Reactiver economies d'energie avec valeurs par defaut (generalement 1 ou selon le pilote)
+    reg delete "%%K" /v "*EEE" /f >nul 2>&1
+    reg delete "%%K" /v "*SelectiveSuspend" /f >nul 2>&1
+    reg delete "%%K" /v "*WakeOnMagicPacket" /f >nul 2>&1
+    reg delete "%%K" /v "EnableGreenEthernet" /f >nul 2>&1
+    reg delete "%%K" /v "ULPMode" /f >nul 2>&1
+    reg delete "%%K" /v "*WakeOnPattern" /f >nul 2>&1
+    reg delete "%%K" /v "*PMARPOffload" /f >nul 2>&1
+    reg delete "%%K" /v "*PMNSOffload" /f >nul 2>&1
+    reg delete "%%K" /v "*PMWiFiRekeyOffload" /f >nul 2>&1
+    reg delete "%%K" /v "EnablePME" /f >nul 2>&1
+    reg delete "%%K" /v "PowerSavingMode" /f >nul 2>&1
+    reg delete "%%K" /v "ReduceSpeedOnPowerDown" /f >nul 2>&1
+    reg delete "%%K" /v "EnableDynamicPowerGating" /f >nul 2>&1
+    reg delete "%%K" /v "AutoPowerSaveModeEnabled" /f >nul 2>&1
+    reg delete "%%K" /v "AdvancedEEE" /f >nul 2>&1
+    reg delete "%%K" /v "EEELinkAdvertisement" /f >nul 2>&1
+    reg delete "%%K" /v "GigaLite" /f >nul 2>&1
+    reg delete "%%K" /v "S5WakeOnLan" /f >nul 2>&1
+    reg delete "%%K" /v "WakeOnLink" /f >nul 2>&1
+    reg delete "%%K" /v "WolShutdownLinkSpeed" /f >nul 2>&1
+    :: Restaurer valeurs par defaut pour optimisations latence
+    reg delete "%%K" /v "*FlowControl" /f >nul 2>&1
+    reg delete "%%K" /v "*InterruptModeration" /f >nul 2>&1
+    reg delete "%%K" /v "*InterruptModerationRate" /f >nul 2>&1
+    reg delete "%%K" /v "ITR" /f >nul 2>&1
+    reg delete "%%K" /v "EnableLLI" /f >nul 2>&1
+    reg delete "%%K" /v "EnableDownShift" /f >nul 2>&1
+    reg delete "%%K" /v "WaitAutoNegComplete" /f >nul 2>&1
+    :: Restaurer PnPCapabilities (24 = autoriser la gestion d'energie)
+    reg add "%%K" /v PnPCapabilities /t REG_DWORD /d 0 /f >nul 2>&1
+  )
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Fonctions d'economie d'energie reseau reactivees
+
+:: 15. Configuration systeme d'alimentation - restauration
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration du systeme d'alimentation...
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Systeme d'alimentation restaure
+
+:: 16. Reactiver gestion d'energie PCIe
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation gestion d'energie PCIe...
+powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1 >nul 2>&1
+powercfg /S SCHEME_CURRENT >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe reactivee
+
+:: 17. Restaurer les plans d'alimentation caches
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Masquage des plans d'alimentation avances...
+powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR 75b0ae3f-bce0-45a7-8c89-c9611c25e100 +ATTRIB_HIDE" >nul 2>&1
+powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR ea062031-0e34-4ff1-9b6d-eb1059334028 +ATTRIB_HIDE" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Plans d'alimentation avances masques
+
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Economies d'energie restaurees - Parametres par defaut actifs.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est recommande pour appliquer les modifications.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :MENU_PRINCIPAL
+)
+
+:TOGGLE_ECONOMIES_ENERGIE
+cls
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%  GESTION DES ECONOMIES D'ENERGIE%COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Cette section permet de gerer les economies d'energie du systeme.%COLOR_RESET%
+echo %COLOR_WHITE%  Les PC de bureau peuvent desactiver ces fonctions pour maximiser%COLOR_RESET%
+echo %COLOR_WHITE%  les performances. Les PC portables peuvent les conserver.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_RED%Desactiver les economies d'energie (Performances maximales)%COLOR_RESET%
+echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Restaurer les economies d'energie (Parametres par defaut)%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+choice /C 12M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
+if errorlevel 3 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :REVERT_ECONOMIES_ENERGIE
+if errorlevel 1 goto :DESACTIVER_ECONOMIES_ENERGIE
+goto :TOGGLE_ECONOMIES_ENERGIE
 
 :DESACTIVER_PROTECTIONS_SECURITE
 cls
