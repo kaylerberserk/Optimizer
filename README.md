@@ -157,8 +157,8 @@ Optimizer/
 4. **Choisissez votre profil** dans le menu :
    - `D` → **PC Bureau** (toutes optimisations avec choix VC++ Redist, Defender, Animations)
    - `L` → **PC Portable** (conserve batterie avec choix VC++ Redist, Defender, Animations)
-   - `1-9` → Optimisations individuelles
-   - `G` → Gestion Windows (Defender, Edge, VC++ Redist, etc.)
+   - `1-8` → Optimisations individuelles
+   - `G` → Gestion Windows (Defender, UAC, Edge, VC++ Redist, etc.)
    - `N` → Nettoyage avancé
    - `R` → Créer un point de restauration
 
@@ -168,14 +168,13 @@ Optimizer/
 ╔══════════════════════════════════════════════════════════════╗
 ║                   MENU PRINCIPAL                             ║
 ╠══════════════════════════════════════════════════════════════╣
-║  [1] Optimisations Systeme                                   ║
-║  [2] Optimisations Memoire                                   ║
-║  [3] Optimisations Disques                                   ║
-║  [4] Optimisations GPU                                       ║
-║  [5] Optimisations Reseau                                    ║
-║  [6] Optimisations Peripheriques                             ║
-║  [7] Optimisations Energie (PC Bureau)                       ║
-║  [8] Desactiver Protections Securite                         ║
+║  [1] Optimisations Systeme      [2] Optimisations Memoire    ║
+║  [3] Optimisations Disques      [4] Optimisations GPU        ║
+║  [5] Optimisations Reseau       [6] Optimisations C/S        ║
+╠══════════════════════════════════════════════════════════════╣
+║  [7] Desactiver Economies d'Energie (PC Bureau)              ║
+║  [8] Desactiver Protections Securite (Spectre/Meltdown)      ║
+╠══════════════════════════════════════════════════════════════╣
 ║  [D] TOUT OPTIMISER (PC Bureau) ⭐ RECOMMANDE                ║
 ║  [L] TOUT OPTIMISER (PC Portable)                            ║
 ║  [G] Menu Gestion Windows (Defender, UAC, etc.)              ║
@@ -208,7 +207,7 @@ Optimizer/
 Le script préserve toutes les fonctionnalités critiques (Bluetooth, VPN, Xbox, etc.).
 
 ### Puis-je l'utiliser sur un PC portable ?
-**Oui.** Utilise l'option `L` (PC Portable) qui conserve l'hibernation et certaines économies d'énergie tout en appliquant les optimisations gaming.
+**Oui.** Utilise l'option `L` (PC Portable). Elle applique toutes les optimisations système, réseau et périphériques, mais **conserve** l'hibernation, la veille USB et les plans d'alimentation économes pour préserver votre autonomie.
 
 ### Quels sont les choix proposés dans "Tout optimiser" ?
 Lorsque vous utilisez `D` (Desktop) ou `L` (Laptop), le script vous propose 4 choix avant d'appliquer les optimisations :
