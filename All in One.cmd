@@ -2612,23 +2612,32 @@ echo %COLOR_WHITE% Creation d'un point de restauration%COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Creation d'un point de restauration...
-:: Verifier si la restauration systeme est activee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification et activation de la restauration systeme si necessaire...
-reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" >nul 2>&1
+:: Verifier si la restauration systeme est activee via PowerShell (plus fiable)
+powershell -NoProfile -Command "try { $status = Get-ComputerRestorePoint -ErrorAction SilentlyContinue; if ($status) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
 if %errorlevel% neq 0 (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la restauration systeme...
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" /t REG_DWORD /d 1 /f >nul 2>&1
-    powershell -Command "Enable-ComputerRestore -Drive 'C:'" >nul 2>&1
+    powershell -NoProfile -Command "try { Enable-ComputerRestore -Drive 'C:' -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
+    timeout /t 2 /nobreak >nul
 )
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Creation d'un point de restauration en cours...
-powershell -Command "Checkpoint-Computer -Description 'Point de restauration avant optimisations Windows' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette operation peut prendre 30-60 secondes...
+echo.
+
+:: Creation du point de restauration avec timeout de 120 secondes et timestamp
+set "RP_TIMESTAMP=%DATE:/=-%_%TIME::=-%"
+set "RP_TIMESTAMP=%RP_TIMESTAMP: =%"
+powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; try { $startTime = Get-Date; $job = Start-Job { Checkpoint-Computer -Description 'Optimizations_%RP_TIMESTAMP%' -RestorePointType 'MODIFY_SETTINGS' }; $completed = $job | Wait-Job -Timeout 120; if (-not $completed) { Stop-Job $job; Remove-Job $job; throw 'Timeout' }; $result = Receive-Job $job; Remove-Job $job; exit 0 } catch { exit 1 }" >nul 2>&1
 if %errorlevel% EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Point de restauration cree avec succes.
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Nom : Optimizations_%RP_TIMESTAMP%
 ) else (
     echo %COLOR_RED%[ATTENTION]%COLOR_RESET% Echec de la creation du point de restauration.
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Raison possible : timeout depasse ou restauration desactivee.
 )
+set "RP_TIMESTAMP="
 pause
 goto :MENU_PRINCIPAL
 
