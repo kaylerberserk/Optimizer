@@ -93,7 +93,7 @@ echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESE
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- PC DE BUREAU UNIQUEMENT ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_RED%[7] Gerer Economies d'Energie (Activer/Restaurer)%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie (Activer/Restaurer)%COLOR_RESET%
 echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Desactiver Protections Securite (Spectre/Meltdown)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
@@ -913,7 +913,15 @@ powershell -NoProfile -NoLogo -Command "$adp=Get-NetAdapter|? Status -eq 'Up'; f
 powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lltdio' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_implat' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_rspndr' -ErrorAction SilentlyContinue }" >nul 2>&1
 
 :: 5.12 - NIC latence faible
-powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { $adapter=$_; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue}catch{}; 'Energy-Efficient Ethernet','Advanced EEE','Green Ethernet','Power Saving Mode','Gigabit Lite' | % { try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} }; 'Large Send Offload v2 (IPv4)','Large Send Offload v2 (IPv6)','Large Receive Offload (IPv4)','Large Receive Offload (IPv6)' | % { try{Set-NetAdapterAdvancedProperty -Name $adapter.Name -DisplayName $_ -DisplayValue 'Disabled' -ErrorAction SilentlyContinue}catch{} } }" >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour faible latence...
+
+:: LSO IPv4/IPv6 + RSC IPv4/IPv6 (désactiver avec gestion des noms FR/EN)
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $props = Get-NetAdapterAdvancedProperty -Name $adapter; $lsoProps = $props | Where-Object { $_.DisplayName -like '*Large Send*' -or $_.DisplayName -like '*Grand envoi*' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; $rscProps = $props | Where-Object { $_.DisplayName -like '*Recv Segment*' -or $_.DisplayName -like '*RSC*' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
+
+:: Interrupt Moderation + Economie energie (EN + FR)
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
+
+echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC configuree - LSO/RSC off, Interrupt Moderation on, Economie energie off
 
 :: 5.13 - DNS cache optimise + DoH auto
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du cache DNS...
@@ -2395,20 +2403,8 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette option va appliquer toutes les optimisations pour Desktop.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Voulez-vous installer tous les Visual C++ Redistributables ?%COLOR_RESET%
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Installe tous les VC++ Redist (2005 a 2022) x86 et x64
-echo       %COLOR_YELLOW%Recommande pour la compatibilite des jeux et applications%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Passer cette etape
-echo.
-set "INSTALLER_VCREDIST=0"
-choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Installer les Visual C++ Redistributables ? [O/N]: %COLOR_RESET%"
-if errorlevel 2 goto :DESKTOP_VCREDIST_NON
-if errorlevel 1 set "INSTALLER_VCREDIST=1"
-:DESKTOP_VCREDIST_NON
+
+call :INSTALLER_VISUAL_REDIST call
 
 cls
 echo.
@@ -2462,7 +2458,6 @@ if errorlevel 1 set "DESACTIVER_ANIMATIONS=1"
 :DESKTOP_ANIMATIONS_NON
 
 cls
-if "%INSTALLER_VCREDIST%"=="1" call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2505,20 +2500,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette option va appliquer toutes les optimis
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Certaines economies d'energie seront conservees pour la batterie.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Voulez-vous installer tous les Visual C++ Redistributables ?%COLOR_RESET%
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Installe tous les VC++ Redist (2005 a 2022) x86 et x64
-echo       %COLOR_YELLOW%Recommande pour la compatibilite des jeux et applications%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Passer cette etape
-echo.
-set "INSTALLER_VCREDIST=0"
-choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Installer les Visual C++ Redistributables ? [O/N]: %COLOR_RESET%"
-if errorlevel 2 goto :LAPTOP_VCREDIST_NON
-if errorlevel 1 set "INSTALLER_VCREDIST=1"
-:LAPTOP_VCREDIST_NON
+
+call :INSTALLER_VISUAL_REDIST call
 
 cls
 echo.
@@ -2572,7 +2555,6 @@ if errorlevel 1 set "DESACTIVER_ANIMATIONS=1"
 :LAPTOP_ANIMATIONS_NON
 
 cls
-if "%INSTALLER_VCREDIST%"=="1" call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
