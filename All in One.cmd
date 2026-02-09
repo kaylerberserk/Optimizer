@@ -911,15 +911,7 @@ powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC configuree - LSO/RSC off
 
-:: 5.11 - Cache DNS Avance
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation avancee du cache DNS...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v CacheHashTableBucketSize /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v CacheHashTableSize /t REG_DWORD /d 384 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxCacheEntryTtlLimit /t REG_DWORD /d 86400 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxSOACacheEntryTtlLimit /t REG_DWORD /d 301 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DNS avance active (resolution DNS quasi-instantanee)
-
-:: 5.12 - QoS Fortnite DSCP 46
+:: 5.11 - QoS Fortnite DSCP 46
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Version" /t REG_SZ /d "1.0" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Application Name" /t REG_SZ /d "FortniteClient-Win64-Shipping.exe" /f >nul 2>&1
