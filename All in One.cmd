@@ -403,7 +403,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines de telemetrie bloques via hosts
 
 :HOSTS_DONE
 
-:: 1.4 - Services optimises (Version SAFE 2026)
+:: 1.5 - Services optimises Version SAFE 2026
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services - Mode SAFE (compatible usages mixtes)...
 
 :: Services inutiles -> DISABLED
@@ -465,7 +465,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% W32Time en demarrage automatique (synchro ho
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services optimises (Bluetooth/VPN/Hello/RDP preserves)
 
-:: 1.5 - Optimisations demarrage et systeme
+:: 1.6 - Optimisations demarrage et systeme
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations de demarrage...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v StartupDelayInMSec /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableInventory /t REG_DWORD /d 1 /f >nul 2>&1
@@ -510,7 +510,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Privacy renforcee (DeviceName OFF, Pubs Cibl
 :: Batterie - Energy Saver
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
-:: 1.6 - Navigateurs
+:: 1.7 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation des navigateurs...
 reg add "HKCU\Software\Microsoft\Edge\Main" /v EnablePreload /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Google\Chrome\Prerender" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -519,24 +519,24 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
 
-:: 1.6b - Cache Icônes Explorer (Dossiers ultra-lourds instantanes)
+:: 1.8 - Cache Icones Explorer
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du cache d'icones pour dossiers lourds...
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v Max Cached Icons /t REG_SZ /d "8192" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache icones augmente (dossiers avec 20 000+ fichiers instantanes)
 
-:: 1.7 - Desactivation du stockage reserve (~7Go liberes)
+:: 1.9 - Desactivation du stockage reserve
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du stockage reserve Windows...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Stockage reserve desactive (~7Go recuperes apres redemarrage)
 
-:: 1.8 - Affichage du code erreur BSoD (diagnostic facilite)
+:: 1.10 - Affichage du code erreur BSoD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de l'affichage des codes erreur BSoD...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v DisplayParameters /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Codes erreur BSoD visibles (diagnostic facilite)
 
-:: 1.9 - Desactivation de l'aide F1 (evite popup accidentelle)
+:: 1.11 - Desactivation de l'aide F1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la touche F1 (aide Windows)...
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win64" /ve /t REG_SZ /d "" /f >nul 2>&1
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t REG_SZ /d "" /f >nul 2>&1
@@ -594,7 +594,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire amelior
 powershell -NoProfile -NoLogo -Command "Disable-MMAgent -mc" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee
 
-:: 2.5 - SvcHost - Reduire le nombre de processus svchost.exe (selon RAM)
+:: 2.5 - SvcHost - Reduction du nombre de processus svchost.exe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation SvcHost selon la RAM disponible...
 for /f "tokens=2 delims==" %%M in ('wmic computersystem get TotalPhysicalMemory /value 2^>nul ^| find "="') do set "RAM_BYTES=%%M"
 set /a RAM_KB=!RAM_BYTES:~0,-3! 2>nul
@@ -632,6 +632,8 @@ echo %COLOR_WHITE%  Cette section optimise les SSD/HDD pour des temps de chargem
 echo %COLOR_WHITE%  reduits et une meilleure reactivite du systeme.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+
+:: 3.1 - Configuration NTFS et TRIM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des parametres NTFS et activation du TRIM...
 fsutil behavior set disabledeletenotify 0 >nul 2>&1
 fsutil behavior set disabledeletenotify refs 0 >nul 2>&1
@@ -643,29 +645,27 @@ fsutil behavior set disablecompression 1 >nul 2>&1
 fsutil behavior set encryptpagingfile 0 >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres NTFS optimises - TRIM actif, metadonnees reduites
 
-:: 3.2 - NTFS optimise
+:: 3.2 - Optimisations I/O NTFS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation I/O NTFS (NVMe)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v MaximumOutstandingRequests /t REG_DWORD /d 256 /f >nul 2>&1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des chemins longs (plus de 260 caracteres)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Support des chemins longs active
 
-:: 3.3 - TRIM/ReTRIM tous volumes SSD detectes
+:: 3.3 - TRIM sur volumes SSD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Execution du TRIM sur les disques SSD detectes...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$ssd=Get-PhysicalDisk|?{$_.MediaType -eq 'SSD'};if($ssd){Write-Host 'SSD detecte(s):' $ssd.Count;Get-Volume|?{$_.DriveLetter -and $_.FileSystem -match 'NTFS|ReFS'}|%{Start-Job {Optimize-Volume -DriveLetter $args[0] -ReTrim -ErrorAction SilentlyContinue} -ArgumentList $_.DriveLetter|Out-Null}}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Commande TRIM executee sur les SSD
 
- :: 3.4 - Optimisation pilote NVMe natif (2025)
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: 3.5 - Boost Speed NVMe Windows 11 (25H2)
+:: 3.4 - Optimisation pilote NVMe natif et Boost Speed Windows 11
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du nouveau pilote NVMe natif (Win 11 25H2)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 735209102 /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
 
-:: 3.6 - DirectStorage / NVMe avance
+:: 3.5 - DirectStorage / NVMe avance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation DirectStorage et I/O NVMe...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v FUA /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\DirectX" /v DirectStorageForceIOPriority /t REG_DWORD /d 1 /f >nul 2>&1
@@ -745,17 +745,17 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag
 
-:: 4.7 - WriteCombining
+:: 4.6 - WriteCombining
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la stabilite GPU (WriteCombining)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm" /v DisableWriteCombining /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Stabilite GPU amelioree
 
-:: 4.8 - HAGS Enable
+:: 4.7 - HAGS Enable
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree (HAGS)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.9 - NVIDIA Profile Inspector
+:: 4.8 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
 set "HAS_NVIDIA=0"
 for /f %%i in ('powershell -NoProfile -Command "if((Get-WmiObject Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
@@ -801,7 +801,7 @@ if "%HAS_NVIDIA%"=="1" (
 :NPI_DONE
 echo.
 
-:: 4.10 - Game Mode Windows 11 24H2/25H2
+:: 4.9 - Game Mode Windows 11 24H2/25H2
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation Game Mode Windows 11 24H2/25H2...
 reg add "HKCU\Software\Microsoft\GameBar" /v AutoGameModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\GameBar" /v AllowAutoGameMode /t REG_DWORD /d 1 /f >nul 2>&1
@@ -833,7 +833,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la pile TCP/IP pour faible 
 :: 5.1 - Pas de throttling reseau par MMCSS
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 
-:: 5.2 - Pile TCP/UDP moderne (CUBIC / BBR2)
+:: 5.2 - Pile TCP/UDP moderne CUBIC et BBR2
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
 :: netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
@@ -856,7 +856,7 @@ netsh int tcp set global dca=enabled >nul 2>&1
 netsh int tcp set global timestamps=disabled >nul 2>&1
 powershell -NoProfile -NoLogo -Command "try{Set-NetTCPSetting -SettingName Internet -InitialRtoMs 2000}catch{}" >nul 2>&1
 
-:: 5.3 TCP registre
+:: 5.3 - Optimisations TCP registre
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
@@ -870,23 +870,23 @@ for /f "tokens=*" %%I in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcp
 
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 5.6b - BITS Optimization (Telechargements rapides)
+:: 5.4 - BITS Optimization Telechargements rapides
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du service BITS (Telechargements)...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v EnableBypassProxyForLocal /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOn-Schedule" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOff-Schedule" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Service BITS optimise
 
-:: 5.7 - Priorites de resolution DNS
+:: 5.5 - Priorites de resolution DNS
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v LocalPriority /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v HostsPriority /t REG_DWORD /d 5 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v DnsPriority /t REG_DWORD /d 6 /f >nul 2>&1
 
-:: 5.8 - ISATAP/Teredo OFF
+:: 5.6 - ISATAP/Teredo OFF
 netsh int isatap set state disabled >nul 2>&1
 netsh int teredo set state disabled >nul 2>&1
 
-:: 5.9 - Nagle/DelACK OFF
+:: 5.7 - Nagle/DelACK OFF
 powershell -NoLogo -NoProfile -Command ^
   "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { " ^
   " $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; " ^
@@ -898,25 +898,22 @@ powershell -NoLogo -NoProfile -Command ^
   " New-ItemProperty -Path $p -Name DelayedAckTicks -PropertyType DWord -Value 1 -Force | Out-Null " ^
   " } }" >nul 2>&1
 
-:: 5.10 - QoS Psched
+:: 5.8 - QoS Psched
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 5.11 - NIC : RSS ON, RSC OFF, epuration bindings (aucune affinite forcee)
+:: 5.9 - NIC RSS ON, RSC OFF, epuration bindings
 powershell -NoProfile -NoLogo -Command "$adp=Get-NetAdapter|? Status -eq 'Up'; foreach($a in $adp){ try{Enable-NetAdapterRss -Name $a.Name -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $a.Name -ErrorAction Stop}catch{} }" >nul 2>&1
 powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lltdio' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_implat' -ErrorAction SilentlyContinue; Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_rspndr' -ErrorAction SilentlyContinue }" >nul 2>&1
 
-:: 5.12 - NIC latence faible
+:: 5.10 - NIC latence faible
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour faible latence...
 
 :: LSO IPv4/IPv6 + RSC IPv4/IPv6 (désactiver avec gestion des noms FR/EN)
 powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $props = Get-NetAdapterAdvancedProperty -Name $adapter; $lsoProps = $props | Where-Object { $_.DisplayName -like '*Large Send*' -or $_.DisplayName -like '*Grand envoi*' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; $rscProps = $props | Where-Object { $_.DisplayName -like '*Recv Segment*' -or $_.DisplayName -like '*RSC*' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
 
-:: Interrupt Moderation + Economie energie (EN + FR)
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC configuree - LSO/RSC off (economie d'energie NIC geree dans Section 8)
 
-echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC configuree - LSO/RSC off, Interrupt Moderation on, Economie energie off
-
-:: 5.13 - DNS cache optimise + DoH auto
+:: 5.11 - DNS cache optimise + DoH auto
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du cache DNS...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v NegativeCacheTime /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v NetFailureCacheTime /t REG_DWORD /d 0 /f >nul 2>&1
@@ -930,7 +927,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v DohFlags
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v ServerPriorityTimeLimit /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DNS optimise (resolution plus rapide)
 
-:: 5.13b - Cache DNS Avance (Resolution instantanee)
+:: 5.12 - Cache DNS Avance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation avancee du cache DNS...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v CacheHashTableBucketSize /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v CacheHashTableSize /t REG_DWORD /d 384 /f >nul 2>&1
@@ -938,7 +935,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxCache
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Dnscache\Parameters" /v MaxSOACacheEntryTtlLimit /t REG_DWORD /d 301 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DNS avance active (resolution DNS quasi-instantanee)
 
-:: 5.14 - QoS Fortnite DSCP 46
+:: 5.13 - QoS Fortnite DSCP 46
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Version" /t REG_SZ /d "1.0" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Application Name" /t REG_SZ /d "FortniteClient-Win64-Shipping.exe" /f >nul 2>&1
@@ -982,6 +979,8 @@ echo %COLOR_WHITE%  Cette section desactive l'acceleration souris et optimise%CO
 echo %COLOR_WHITE%  la reactivite des peripheriques d'entree.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+
+:: 6.1 - Souris optimisée
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'acceleration souris et des delais...
 reg add "HKCU\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d "0" /f >nul 2>&1
@@ -990,13 +989,13 @@ reg add "HKCU\Control Panel\Mouse" /v MouseDelay /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Mouse" /v SnapToDefaultButton /t REG_SZ /d "0" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Acceleration souris desactivee - Mouvement 1:1 actif
 
-:: 6.2 - Clavier optimise
+:: 6.2 - Clavier optimisé
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la reactivite clavier...
 reg add "HKCU\Control Panel\Keyboard" /v KeyboardDelay /t REG_SZ /d "1" /f >nul 2>&1
 reg add "HKCU\Control Panel\Keyboard" /v KeyboardSpeed /t REG_SZ /d "31" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Clavier configure - Delai minimal et vitesse maximale
 
-:: 6.3 - Accessibilite OFF
+:: 6.3 - Accessibilité OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des raccourcis d'accessibilite (Sticky/Filter/Toggle Keys)...
 reg add "HKCU\Control Panel\Accessibility\StickyKeys" /v Flags /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Accessibility\StickyKeys" /v HotkeyActive /t REG_SZ /d "0" /f >nul 2>&1
@@ -1006,16 +1005,16 @@ reg add "HKCU\Control Panel\Accessibility\ToggleKeys" /v Flags /t REG_SZ /d "0" 
 reg add "HKCU\Control Panel\Accessibility\ToggleKeys" /v HotkeyActive /t REG_SZ /d "0" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourcis d'accessibilite desactives - Plus d'activation accidentelle
 
-:: 6.4 - DMA Remapping off
+:: 6.4 - DMA Remapping OFF
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DmaRemappingCompatible /t REG_DWORD /d 0 /f >nul 2>&1
 ::reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la latence
 
-:: 6.5 - HID parse : desactive buffering + active traitement direct
+:: 6.5 - HID parse optimisé
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableInputDelayOptimization /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 6.6 - Optimisation des files et priorites clavier/souris
+:: 6.6 - Files et priorités clavier/souris
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
@@ -1045,11 +1044,11 @@ echo %COLOR_WHITE%  pour maintenir les performances maximales en permanence.%COL
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 8.0 - Energie Systeme (Seuils et Power Throttling)
+:: 8.1 - Energie Systeme et GPU
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des seuils d'economie d'energie...
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
-:: 8.0b - GPU Power Management (ULPS & PowerMizer)
+:: GPU Power Management (ULPS & PowerMizer)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'ULPS (AMD) et configuration PowerMizer (NVIDIA)...
 :: ULPS OFF - AMD
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
@@ -1066,12 +1065,13 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v RmDisableRegistryCaching /t REG_DWORD /d 1 /f >nul 2>&1
 )
 
-:: 8.0c - NIC Energy Saving (Ethernet vert, etc.)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau (NIC)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
+:: 8.2 - NIC Energy Saving Ethernet et WiFi
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l\'alimentation 802.11','Mode d\'economie d\'energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {} }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Ethernet + WiFi)
 
 
-:: 8.1 - Activation du plan Ultimate Performance (methode universelle + detection intelligente)
+:: 8.3 - Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan d'alimentation actif...
 
 :: GUIDs des plans Windows par defaut (universels)
@@ -1144,7 +1144,7 @@ if defined TARGET_GUID (
 
 :ULTIMATE_DONE
 
-:: 8.1b - Activation des plans d'alimentation caches (optionnels)
+:: 8.4 - Activation des plans d'alimentation caches
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des plans d'alimentation caches...
 :: High Performance Overlay (si non present, on le cree)
 powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
@@ -1153,12 +1153,12 @@ powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR 75b0ae3f-bce0
 powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR ea062031-0e34-4ff1-9b6d-eb1059334028 -ATTRIB_HIDE" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Plans d'alimentation caches actives
 
-:: 8.2 - Desactivation du demarrage rapide (Fast Startup) pour stabilite
+:: 8.5 - Desactivation du demarrage rapide Fast Startup
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide desactive - Redemarrages propres
 
-:: 8.3 - Desactivation de l'hibernation (PC Bureau uniquement - libere ~16Go)
+:: 8.6 - Desactivation de l'hibernation PC Bureau uniquement
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation ^(PC Bureau^)...
     powercfg /hibernate off >nul 2>&1
@@ -1167,7 +1167,7 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% Hibernation conservee ^(PC Portable detecte^)
 )
 
-:: 8.4 - USB Selective Suspend (PC Bureau uniquement pour performance max)
+:: 8.7 - USB Selective Suspend PC Bureau uniquement
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
     powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
@@ -1177,13 +1177,13 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve ^(PC Portable detecte^)
 )
 
-:: 8.4 - Configuration generale du systeme d'alimentation
+:: 8.8 - Configuration generale du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du systeme d'alimentation...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.5 - Desactivation des Timer Coalescing et DPC (augmente la conso, pour PC de bureau)
+:: 8.9 - Desactivation des Timer Coalescing et DPC
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Timer Coalescing et optimisation DPC...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1201,7 +1201,7 @@ reg add "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /t RE
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
-:: 8.6 - Installation SetTimerResolution (0.5ms)
+:: 8.10 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
 set "STR_EXE=%SystemRoot%\SetTimerResolution.exe"
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
@@ -1239,19 +1239,19 @@ if exist "%STR_STARTUP%" (
 
 :STR_DONE
 
-:: 8.7 - Desactivation du PDC et Power Throttling
+:: 8.11 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.8 - Gestion processeur (equilibree, pas de forcage 100%)
+:: 8.12 - Gestion processeur equilibree
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil processeur (performances maximales)...
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 
-:: 8.9 - Intel / AMD Hybrid CPU Scheduling Visibility (P-cores / E-cores)
+:: 8.13 - Intel AMD Hybrid CPU Scheduling Visibility
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Déblocage des options de scheduling hybride (P-Cores/E-Cores)...
 :: Heterogeneous thread scheduling policy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
@@ -1260,11 +1260,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be
 :: Core Parking (E-cores class 0)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 
-:: 8.10 - Desactivation ASPM
+:: 8.14 - Desactivation ASPM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.11 - Optimisations stockage et disques
+:: 8.15 - Optimisations stockage et disques
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des disques...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1275,18 +1275,18 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
   )
 )
 
-:: 8.11 - Optimisations avancees des services
+:: 8.16 - Optimisations avancees des services
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des limites de latence I/O...
 for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg add "%%a" /v IoLatencyCap /t REG_DWORD /d 0 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence stockage supprimees
 
-:: 8.12 - GPU (PowerMizer)
+:: 8.17 - GPU PowerMizer
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.13 - PCI & peripheriques reseau
+:: 8.18 - PCI & peripheriques reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des peripheriques PCI...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg add "%%K" /v D3ColdSupported /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1295,7 +1295,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v "*WakeOnPattern" /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-:: 8.14 - Cartes reseau (instances detectees)
+:: 8.19 - Cartes reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des fonctions d'economie d'energie reseau...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
@@ -1335,13 +1335,13 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie et optimisations reseau appliquees sur toutes les cartes
 
-:: 8.15 - Energie PCIe
+:: 8.20 - Energie PCIe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe desactivee
 
-:: 8.16 - Desactiver USB Selective Suspend (evite deconnexions souris/clavier gaming)
+:: 8.21 - Desactiver USB Selective Suspend
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation USB Selective Suspend...
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
@@ -1447,10 +1447,10 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg delete "%%K" /v RmDisableRegistryCaching /f >nul 2>&1
 )
 
-:: 11. Restaurer les economies d'energie reseau (NIC)
+:: 11. Restaurer les economies d'energie reseau (NIC - Ethernet et WiFi)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des economies d'energie reseau (NIC)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Activé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Power Throttling reactive
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l\'alimentation 802.11','Mode d\'economie d\'energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Activé' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 0 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 0 -ErrorAction SilentlyContinue } catch {} }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC restaurees (Ethernet + WiFi)
 
 :: 8. Restaurer les parametres processeur par defaut
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des parametres processeur par defaut...
@@ -1619,13 +1619,13 @@ echo %COLOR_WHITE%  Risques   : Exposition a des attaques par canal auxiliaire%C
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 9.1 - Desactivation des protections Kernel (SEHOP, Exception Chain) 
+:: 9.1 - Desactivation des protections Kernel SEHOP Exception Chain 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protections noyau (SEHOP, Exception Chain)... 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Protections noyau desactivees 
 
-:: 9.2 - Desactivation Spectre/Meltdown (Memory Management)
+:: 9.2 - Desactivation Spectre Meltdown Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protections Spectre/Meltdown...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 3 /f >nul 2>&1
@@ -1646,7 +1646,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisableBranchPrediction /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mitigations CPU desactivees
 
-:: 9.4 - HVCI et CFG (conserves pour compatibilite anti-cheat)
+:: 9.4 - HVCI et CFG conserves pour compatibilite anti-cheat
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Conservation du HVCI/CFG (requis pour Valorant, Fortnite, etc.)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 :: CFG doit rester ACTIVE pour Vanguard (Valorant)
