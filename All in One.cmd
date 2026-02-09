@@ -845,8 +845,6 @@ netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int tcp set global rss=enabled rsc=disabled ecncapability=disabled >nul 2>&1
 netsh int udp set global uso=enabled ero=disabled >nul 2>&1
 netsh int ip set global sourceroutingbehavior=drop >nul 2>&1
-netsh int ip set global dhcpmediasense=disabled >nul 2>&1
-netsh int ip set global mediasenseeventlog=disabled >nul 2>&1
 netsh int ip set global icmpredirects=disabled >nul 2>&1
 netsh int ipv6 set global neighborcachelimit=4096 >nul 2>&1
 netsh int tcp set global fastopen=enabled fastopenfallback=enabled >nul 2>&1
