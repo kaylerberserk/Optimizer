@@ -198,7 +198,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
 :: 1.2 - Profil Gaming MMCSS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f >nul 2>&1
 :: Scheduling Category en High = le plus haut tout en restant stable et natif a Windows (Medium est conservateur)
@@ -240,7 +239,6 @@ reg add "HKCU\Control Panel\Desktop" /v WaitToKillAppTimeout /t REG_SZ /d "2000"
 reg add "HKCU\Control Panel\Desktop" /v HungAppTimeout /t REG_SZ /d "1000" /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v AutoEndTasks /t REG_SZ /d "1" /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v LowLevelHooksTimeout /t REG_DWORD /d 1000 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v WaitToKillServiceTimeout /t REG_SZ /d "2000" /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v WaitToKillServiceTimeout /t REG_SZ /d "2000" /f >nul 2>&1
 
 
@@ -304,7 +302,6 @@ for %%V in (ContentDeliveryAllowed FeatureManagementEnabled OemPreInstalledAppsE
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v BingSearchEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v CortanaConsent /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v ConnectedSearchUseWeb /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Wi-Fi Sense OFF
 reg add "HKLM\Software\Microsoft\PolicyManager\default\WiFi\AllowWiFiHotSpotReporting" /v Value /t REG_DWORD /d 0 /f >nul 2>&1
@@ -504,7 +501,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Co-installateurs et recherche de pilotes des
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des tweaks privacy supplementaires...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Privacy renforcee (DeviceName OFF, Pubs Ciblees OFF, Bing Search OFF)
 
 :: Batterie - Energy Saver
@@ -596,8 +592,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee
 
 :: 2.5 - SvcHost - Reduction du nombre de processus svchost.exe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation SvcHost selon la RAM disponible...
-for /f "tokens=2 delims==" %%M in ('wmic computersystem get TotalPhysicalMemory /value 2^>nul ^| find "="') do set "RAM_BYTES=%%M"
-set /a RAM_KB=!RAM_BYTES:~0,-3! 2>nul
+for /f %%M in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1KB)" 2^>nul') do set "RAM_KB=%%M"
 if defined RAM_KB (
     if !RAM_KB! GEQ 8388608 (
         reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d !RAM_KB! /f >nul 2>&1
@@ -758,7 +753,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 :: 4.8 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
 set "HAS_NVIDIA=0"
-for /f %%i in ('powershell -NoProfile -Command "if((Get-WmiObject Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
+for /f %%i in ('powershell -NoProfile -Command "if((Get-CimInstance Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
 
 if "%HAS_NVIDIA%"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
@@ -2107,7 +2102,6 @@ reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v IsCopilotAvailable /t
 reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v CopilotDisabledReason /t REG_SZ /d "FeatureIsDisabled" /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat" /v IsUserEligible /t REG_DWORD /d 0 /f >nul 2>&1
 :: Desactiver Copilot dans la recherche Windows
-reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Copilot desactive
 :: Widgets
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Widgets...
