@@ -77,7 +77,7 @@ Un redémarrage est nécessaire. **C'est terminé en moins de 5 minutes !**
 | **Anti-Cheat** | ✅ Compatible avec Vanguard, Easy Anti-Cheat, BattlEye |
 | **HVCI/CFG** | ✅ Préservés (requis par les jeux compétitifs) |
 | **Windows Hello, Bluetooth, VPN, Xbox** | ✅ Fonctionnent normalement |
-| **Réversibilité** | ✅ 100% via point de restauration automatique |
+| **Réversibilité** | ✅ Oui. Utilisez l'option R du menu pour créer un point de restauration avant. |
 
 ### 🔒 Ce que le script modifie
 
@@ -91,8 +91,8 @@ Un redémarrage est nécessaire. **C'est terminé en moins de 5 minutes !**
 ### 📋 Précautions
 
 - ✅ **Exécuter en tant qu'administrateur** (obligatoire)
-- ✅ **Point de restauration créé automatiquement** (Option R)
-- ✅ **Redémarrer** après l'optimisation
+- ⏭️ **Point de restauration** → Utilisez l'option R du menu avant d'optimiser (recommandé)
+- ⏭️ **Redémarrer** après l'optimisation (recommandé)
 - ❌ **Windows S/ARM** : Non compatible
 - ❌ **Windows 7/8/8.1** : Non supporté
 
@@ -112,7 +112,7 @@ Un redémarrage est nécessaire. **C'est terminé en moins de 5 minutes !**
 ⏱️ **Moins de 5 minutes** pour une optimisation complète.
 
 **❓ Réversible ?**  
-✅ **Oui.** Point de restauration créé automatiquement avant toute modification.
+✅ **Oui.** Utilisez l'option R du menu pour créer un point de restauration avant d'optimiser.
 
 ---
 
