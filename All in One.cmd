@@ -1097,12 +1097,28 @@ if defined TARGET_GUID (
 :: 8.4 - Activation des plans d'alimentation caches
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des plans d'alimentation caches...
 
-:: High Performance Overlay (seulement si pas deja present)
-for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"') do (
-    set "HPOVERLAY_EXISTS=1"
+:: High Performance Overlay (seulement si pas deja present - GUID ou Nom)
+set "HPOVERLAY_EXISTS="
+
+:: 1. Check GUID standard
+for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"') do set "HPOVERLAY_EXISTS=1"
+
+:: 2. Check Nom (Anglais: "High performance" / Francais: "Performances elev...")
+if not defined HPOVERLAY_EXISTS (
+    powercfg -list 2^>nul | findstr /i "High performance" >nul 2>&1
+    if not errorlevel 1 set "HPOVERLAY_EXISTS=1"
 )
 if not defined HPOVERLAY_EXISTS (
+    :: Recherche "Performances" sans "optimales" (Ultimate)
+    powercfg -list 2^>nul | findstr /i "Performances" | findstr /v /i "optimales" >nul 2>&1
+    if not errorlevel 1 set "HPOVERLAY_EXISTS=1"
+)
+
+if not defined HPOVERLAY_EXISTS (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan High Performance non trouve - Creation overlay...
     powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan High Performance deja present
 )
 
 :: Max Performance Overlay (overlay de performances maximales)
