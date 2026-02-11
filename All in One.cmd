@@ -724,12 +724,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie NVIDIA desactivee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie AMD et ULPS...
 reg add "HKLM\SOFTWARE\AMD\CN" /v "CollectGIData" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\ATI ACE\AUEPLauncher" /v "ReportProcessedEvents" /t REG_DWORD /d 0 /f >nul 2>&1
-:: ULPS OFF - AMD
-for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
-  reg add "%%K" /v EnableUlps /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "%%K" /v EnableUlps_NA /t REG_SZ /d 0 /f >nul 2>&1
-)
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie AMD et ULPS desactives
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie AMD desactivee
 
 :: 4.5 - NVIDIA Low Latency
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations Low Latency NVIDIA...
@@ -750,7 +745,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.8 - NVIDIA Profile Inspector
+:: 4.8 - Desactivation de la preemption GPU
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la preemption GPU pour reduire la latence...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU desactivee
+
+:: 4.9 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
 set "HAS_NVIDIA=0"
 for /f %%i in ('powershell -NoProfile -Command "if((Get-CimInstance Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
@@ -1138,14 +1138,16 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% Hibernation conservee ^(PC Portable detecte^)
 )
 
-:: 8.7 - USB Selective Suspend PC Bureau uniquement
+:: 8.7 - USB Selective Suspend (Optimisation latence)
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
-    powercfg /setacvalueindex SCHEME_CURRENT SUB_USB USBSELECTIVESUSPEND 0 >nul 2>&1
+    powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+    powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
     powercfg /S SCHEME_CURRENT >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale sur secteur
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale (Selective Suspend OFF)
 ) else (
-    echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve ^(PC Portable detecte^)
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve (PC Portable detecte)
 )
 
 :: 8.8 - Configuration generale du systeme d'alimentation
@@ -1312,13 +1314,6 @@ powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe desactivee
 
-:: 8.21 - Desactiver USB Selective Suspend
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation USB Selective Suspend...
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% USB Selective Suspend desactive - Peripheriques gaming stables
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -1433,19 +1428,19 @@ powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0c
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres processeur restaures
 
-:: 9. Masquer les options de scheduling hybride
+:: 12. Masquer les options de scheduling hybride
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Masquage des options de scheduling hybride...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Options de scheduling hybride masquees
 
-:: 10. Reactiver ASPM
+:: 13. Reactiver ASPM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation ASPM sur le bus PCI Express...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% ASPM reactive
 
-:: 11. Reactiver la mise en veille des disques
+:: 14. Reactiver la mise en veille des disques
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la mise en veille des disques...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /f >nul 2>&1
@@ -1458,18 +1453,18 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mise en veille des disques reactivee
 
-:: 12. Restaurer les limites de latence I/O (valeurs par defaut generalement 0 ou absentes)
+:: 15. Restaurer les limites de latence I/O
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des limites de latence I/O...
 for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg delete "%%a" /v IoLatencyCap /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence I/O restaurees
 
-:: 13. Desactiver PowerMizer (restaurer gestion automatique)
+:: 16. Restauration de la gestion d'energie GPU et PCI
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration de la gestion d'energie GPU...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie GPU restauree
-:: 13b. Reactiver la mise en veille des peripheriques PCI (D3Cold)
+:: 16b. Reactiver la mise en veille des peripheriques PCI (D3Cold)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la gestion d'energie PCI...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg delete "%%K" /v D3ColdSupported /f >nul 2>&1
@@ -1478,7 +1473,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg delete "%%K" /v "*WakeOnPattern" /f >nul 2>&1
 )
 
-:: 14. Reactiver les fonctions d'economie d'energie reseau
+:: 17. Reactiver les fonctions d'economie d'energie reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des fonctions d'economie d'energie reseau...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
@@ -1518,20 +1513,20 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fonctions d'economie d'energie reseau reactivees
 
-:: 15. Configuration systeme d'alimentation - restauration
+:: 18. Restauration du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration du systeme d'alimentation...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Systeme d'alimentation restaure
 
-:: 16. Reactiver gestion d'energie PCIe
+:: 19. Reactiver gestion d'energie PCIe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe reactivee
 
-:: 17. Restaurer les plans d'alimentation caches
+:: 20. Masquage des plans d'alimentation avances
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Masquage des plans d'alimentation avances...
 powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR 75b0ae3f-bce0-45a7-8c89-c9611c25e100 +ATTRIB_HIDE" >nul 2>&1
 powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR ea062031-0e34-4ff1-9b6d-eb1059334028 +ATTRIB_HIDE" >nul 2>&1
@@ -2903,19 +2898,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions deja installees...
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 
-:: Detection ultra-simple via les DLL systeme (ne crash jamais)
-:: VC++ 2005 x86 = msvcr80.dll dans SysWOW64
-:: VC++ 2005 x64 = msvcr80.dll dans System32
-:: VC++ 2008 x86 = msvcr90.dll dans SysWOW64
-:: VC++ 2008 x64 = msvcr90.dll dans System32
-:: VC++ 2010 x86 = msvcr100.dll dans SysWOW64
-:: VC++ 2010 x64 = msvcr100.dll dans System32
-:: VC++ 2012 x86 = msvcr110.dll dans SysWOW64
-:: VC++ 2012 x64 = msvcr110.dll dans System32
-:: VC++ 2013 x86 = msvcr120.dll dans SysWOW64
-:: VC++ 2013 x64 = msvcr120.dll dans System32
-:: VC++ 2015-2022 x86 = vcruntime140.dll dans SysWOW64
-:: VC++ 2015-2022 x64 = vcruntime140.dll dans System32
+:: Detection fiable via le registre Windows (Uninstall keys)
+:: Methode 100% sure : verifie les installations officielles dans le registre
 
 set VC2005X86=0
 set VC2005X64=0
@@ -2930,24 +2914,112 @@ set VC2013X64=0
 set VC2015X86=0
 set VC2015X64=0
 
-:: VC++ 2005/2008 utilisent WinSxS - detection via les dossiers d'assemblies
-:: VC++ 2010+ placent les DLL dans System32/SysWOW64
-dir "%WINDIR%\WinSxS\x86_microsoft.vc80.crt*" >nul 2>&1
+:: Detection via registre Uninstall (x64 dans SOFTWARE, x86 dans WOW6432Node sur Windows 64-bit)
+:: Note: Sur Windows 32-bit, tout est dans SOFTWARE. Sur 64-bit, x86 est dans WOW6432Node.
+
+:: VC++ 2005 x86 (WOW6432Node sur 64-bit, SOFTWARE sur 32-bit)
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x86" >nul 2>&1
 if %ERRORLEVEL%==0 set VC2005X86=1
-dir "%WINDIR%\WinSxS\amd64_microsoft.vc80.crt*" >nul 2>&1
+:: Fallback pour Windows 32-bit
+if %VC2005X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2005X86=1
+)
+:: VC++ 2005 x64 (toujours dans SOFTWARE)
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x64" >nul 2>&1
 if %ERRORLEVEL%==0 set VC2005X64=1
-dir "%WINDIR%\WinSxS\x86_microsoft.vc90.crt*" >nul 2>&1
+
+:: VC++ 2008 x86 (WOW6432Node sur 64-bit)
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x86" >nul 2>&1
 if %ERRORLEVEL%==0 set VC2008X86=1
-dir "%WINDIR%\WinSxS\amd64_microsoft.vc90.crt*" >nul 2>&1
+if %VC2008X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2008X86=1
+)
+:: VC++ 2008 x64
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x64" >nul 2>&1
 if %ERRORLEVEL%==0 set VC2008X64=1
-if exist "%WINDIR%\SysWOW64\msvcr100.dll" set VC2010X86=1
-if exist "%WINDIR%\System32\msvcr100.dll" set VC2010X64=1
-if exist "%WINDIR%\SysWOW64\msvcr110.dll" set VC2012X86=1
-if exist "%WINDIR%\System32\msvcr110.dll" set VC2012X64=1
-if exist "%WINDIR%\SysWOW64\msvcr120.dll" set VC2013X86=1
-if exist "%WINDIR%\System32\msvcr120.dll" set VC2013X64=1
-if exist "%WINDIR%\SysWOW64\vcruntime140.dll" set VC2015X86=1
-if exist "%WINDIR%\System32\vcruntime140.dll" set VC2015X64=1
+
+:: VC++ 2010 x86 (WOW6432Node sur 64-bit)
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x86" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2010X86=1
+if %VC2010X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2010X86=1
+)
+:: VC++ 2010 x64
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x64" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2010X64=1
+
+:: VC++ 2012 x86 (WOW6432Node sur 64-bit)
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x86" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2012X86=1
+if %VC2012X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2012X86=1
+)
+:: VC++ 2012 x64
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x64" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2012X64=1
+
+:: VC++ 2013 x86 (WOW6432Node sur 64-bit)
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x86" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2013X86=1
+if %VC2013X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2013X86=1
+)
+:: VC++ 2013 x64
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x64" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2013X64=1
+
+:: VC++ 2015-2022 x86 (WOW6432Node sur 64-bit)
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x86" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2015X86=1
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+if %VC2015X86%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x86" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X86=1
+)
+
+:: VC++ 2015-2022 x64 (toujours dans SOFTWARE)
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x64" >nul 2>&1
+if %ERRORLEVEL%==0 set VC2015X64=1
+if %VC2015X64%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x64" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X64=1
+)
+if %VC2015X64%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x64" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X64=1
+)
+if %VC2015X64%==0 (
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x64" >nul 2>&1
+    if %ERRORLEVEL%==0 set VC2015X64=1
+)
 
 :: Afficher les resultats de detection
 if %VC2005X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2005 x86 - Deja installe
@@ -2962,6 +3034,17 @@ if %VC2013X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2013 x86 - Deja instal
 if %VC2013X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2013 x64 - Deja installe
 if %VC2015X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x86 - Deja installe
 if %VC2015X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x64 - Deja installe
+
+:: Compter combien sont deja installes
+set /a VCINSTALLED_COUNT=%VC2005X86%+%VC2005X64%+%VC2008X86%+%VC2008X64%+%VC2010X86%+%VC2010X64%+%VC2012X86%+%VC2012X64%+%VC2013X86%+%VC2013X64%+%VC2015X86%+%VC2015X64%
+
+:: Si tout est deja installe, passer directement au resume
+if %VCINSTALLED_COUNT%==12 (
+    echo.
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions de Visual C++ Redistributables sont deja installees.
+    set /a VCSKIP=%VCINSTALLED_COUNT%
+    goto :VCREDIST_RESUME
+)
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -3165,10 +3248,14 @@ if %VC2015X64%==1 (
     )
 )
 
+:VCREDIST_RESUME
+:: Calculer VCSKIP si on a saute l'installation
+if not defined VCSKIP set /a VCSKIP=%VCINSTALLED_COUNT%
+
 :: Nettoyage des fichiers temporaires
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires...
-rd /s /q "%VCREDIST_DIR%" >nul 2>&1
+if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires supprimes
 
 echo.
