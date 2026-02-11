@@ -1045,84 +1045,70 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Etherne
 :: 8.3 - Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan d'alimentation actif...
 
-:: GUIDs des plans Windows par defaut (universels)
-:: Equilibre : 381b4222-f694-41f0-9685-ff5bb260df2e
-:: Economies  : a1841308-3541-4fab-bc81-f71556f20b4a
-:: Perf. elev : 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c
+:: GUID Ultimate Performance (toutes langues)
+:: e9a42b02-d5df-448d-aa00-03f14749eb61
 
-set "ACTIVE_GUID="
-set "NEED_ULTIMATE=0"
+set "TARGET_GUID="
 
-:: 1. Verifier le plan ACTIF
-for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^>nul') do (
-    set "ACTIVE_GUID=%%G"
+:: 1. Chercher par le GUID specifique (le plus fiable si present)
+for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (
+    set "TARGET_GUID=%%G"
+    set "TARGET_GUID=!TARGET_GUID: =!"
 )
-if defined ACTIVE_GUID set "ACTIVE_GUID=!ACTIVE_GUID: =!"
 
-:: Si le plan actif est un des 3 par defaut, on a besoin d'optimiser
-if "!ACTIVE_GUID!"=="381b4222-f694-41f0-9685-ff5bb260df2e" set "NEED_ULTIMATE=1"
-if "!ACTIVE_GUID!"=="a1841308-3541-4fab-bc81-f71556f20b4a" set "NEED_ULTIMATE=1"
-if "!ACTIVE_GUID!"=="8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c" set "NEED_ULTIMATE=1"
+:: 2. Si non trouve par GUID, chercher par NOM : "Ultimate Performance" (EN) ou "Performances optimales" (FR)
+if not defined TARGET_GUID (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% GUID standard non trouve, recherche par nom...
+    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "Ultimate optimales"') do (
+        set "TARGET_GUID=%%G"
+        set "TARGET_GUID=!TARGET_GUID: =!"
+    )
+)
 
-if "!NEED_ULTIMATE!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate/Personnalise deja actif - aucune action requise
+:: Si le plan existe, verifier s'il est deja actif
+if defined TARGET_GUID (
+    for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^>nul') do set "ACTIVE_GUID=%%G"
+    set "ACTIVE_GUID=!ACTIVE_GUID: =!"
+    if "!ACTIVE_GUID!"=="!TARGET_GUID!" (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate/Optimal deja actif - aucune action requise
+        goto :ULTIMATE_DONE
+    )
+    :: Le plan existe mais n'est pas actif
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan Ultimate/Optimal detecte - Activation...
+    powercfg -setactive !TARGET_GUID! >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate/Optimal active
     goto :ULTIMATE_DONE
 )
 
-:: 2. Si on est sur un plan par defaut, chercher un plan Ultimate existant
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Recherche d'un plan Ultimate existant...
-set "TARGET_GUID="
-set "BEST_MATCH_GUID="
-
-:: Lister tous les plans NON par defaut
-for /f "tokens=*" %%L in ('powercfg -list 2^>nul ^| findstr /v "381b4222 a1841308 8c5e7fda" ^| findstr /i "GUID"') do (
-    :: Extraire le GUID
-    for /f "tokens=2 delims=:()" %%G in ("%%L") do set "TEMP_GUID=%%G"
-    
-    :: Garder ce GUID comme candidat potentiel (seulement si pas encore de meilleur match)
-    if not defined BEST_MATCH_GUID set "TARGET_GUID=!TEMP_GUID!"
-    
-    :: Si le nom contient Ultimate ou optimale, c'est le meilleur candidat
-    echo %%L | findstr /i "Ultimate optimale" >nul 2>&1
-    if not errorlevel 1 set "BEST_MATCH_GUID=!TEMP_GUID!"
-)
-
-:: Utiliser le meilleur candidat (nomme Ultimate) ou le premier custom trouve
-if defined BEST_MATCH_GUID set "TARGET_GUID=!BEST_MATCH_GUID!"
+:: Le plan n'existe pas (ni GUID ni Nom) - le creer
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan "Performances optimales" non present - Creation...
+for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do set "TARGET_GUID=%%G"
 if defined TARGET_GUID set "TARGET_GUID=!TARGET_GUID: =!"
 
-:: 3. Activer ou Creer
 if defined TARGET_GUID (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan personnalise trouve - Activation...
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan "Performances optimales" cree et active
     powercfg -setactive !TARGET_GUID! >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Aucun plan personnalise trouve - Creation Ultimate Performance...
-    for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do (
-        set "TARGET_GUID=%%G"
-    )
-    if defined TARGET_GUID set "TARGET_GUID=!TARGET_GUID: =!"
-    
-    if defined TARGET_GUID (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance cree
-        powercfg -setactive !TARGET_GUID! >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate Performance active
-    ) else (
-        echo %COLOR_RED%[!]%COLOR_RESET% Echec creation plan Ultimate
-        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Essayez la commande: powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
-    )
+    echo %COLOR_RED%[!]%COLOR_RESET% Echec creation plan "Performances optimales"
 )
 
 :ULTIMATE_DONE
 
 :: 8.4 - Activation des plans d'alimentation caches
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des plans d'alimentation caches...
-:: High Performance Overlay (si non present, on le cree)
-powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
+
+:: High Performance Overlay (seulement si pas deja present)
+for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"') do (
+    set "HPOVERLAY_EXISTS=1"
+)
+if not defined HPOVERLAY_EXISTS (
+    powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
+)
+
 :: Max Performance Overlay (overlay de performances maximales)
 powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR 75b0ae3f-bce0-45a7-8c89-c9611c25e100 -ATTRIB_HIDE" >nul 2>&1
 powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR ea062031-0e34-4ff1-9b6d-eb1059334028 -ATTRIB_HIDE" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Plans d'alimentation caches actives
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Plans d'alimentation caches actifs
 
 :: 8.5 - Desactivation du demarrage rapide Fast Startup
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
