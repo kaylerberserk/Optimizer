@@ -40,7 +40,7 @@ git clone https://github.com/kaylerberserk/Optimizer.git
 
 ### 3. Redémarrer
 
-Un redémarrage est nécessaire. **C'est terminé en moins de 5 minutes !**
+⏭️ Un redémarrage est recommandé pour appliquer toutes les modifications. **C'est terminé en moins de 5 minutes !**
 
 ---
 
