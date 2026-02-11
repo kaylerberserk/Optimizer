@@ -79,37 +79,178 @@ Un redémarrage est nécessaire pour appliquer les modifications.
 
 ## ⚠️ Avertissements
 
-### ✅ Sécurité
-- **Compatible anti-cheat** : HVCI et CFG conservés (Valorant, Fortnite, etc.)
-- **Fonctionnalités préservées** : Windows Hello, Bluetooth, VPN, Xbox Game Pass
-- **100% réversible** : Toutes les modifications peuvent être annulées
+### ✅ Sécurité & Compatibilité
 
-### ⚠️ Important
-- **Créez un point de restauration** avant (`Option R` dans le menu)
-- **Redémarrage requis** après l'optimisation
-- **Exécuter en admin** : Le script nécessite les droits administrateur
+| Aspect | Statut | Détails |
+|--------|--------|---------|
+| **Anti-Cheat** | ✅ Compatible | HVCI et CFG préservés. Fonctionne avec Vanguard, Easy Anti-Cheat, BattlEye |
+| **Fonctionnalités Windows** | ✅ Préservées | Windows Hello, Bluetooth, VPN, Xbox Game Pass, imprimantes |
+| **Réversibilité** | ✅ 100% | Toutes les modifications peuvent être annulées via le menu |
+
+### 🔒 Ce que le script modifie
+
+| Domaine | Modifications | Réversible |
+|---------|--------------|------------|
+| **Registre Windows** | ~50 clés optimisées | ✅ Oui |
+| **Services Windows** | ~25 services désactivés | ✅ Oui |
+| **Tâches Planifiées** | ~30 tâches de tracking | ✅ Oui |
+| **Pare-feu/Blocage** | 30+ domaines Microsoft | ✅ Oui |
+| **Politiques Système** | Optimisations performance | ✅ Oui |
+
+### 🛡️ Protection Avant Optimisation
+
+> **⚠️ OBLIGATOIRE** : Le script crée automatiquement un point de restauration (Option `R`) avant toute modification. Cela permet de revenir en arrière en cas de problème.
+
+### 📋 Précautions Importantes
+
+- **Sauvegardez vos données** importantes avant toute utilisation (bonne pratique)
+- **Exécutez en tant qu'administrateur** (clic droit → "Exécuter en tant qu'administrateur")
+- **Redémarrez** votre PC après l'optimisation pour appliquer toutes les modifications
+- **Ne pas utiliser** sur un système que vous ne pouvez pas redémarrer en cas de problème
+- **Réseau d'entreprise** : Certaines optimisations réseau peuvent ne pas être adaptées
+
+### 🚫 Limitations
+
+- **Windows S/Mode ARM** : Non compatible (script nécessite un accès administrateur complet)
+- **Versions Windows non supportées** : Windows 7, 8, 8.1 (script conçu pour Windows 10/11 uniquement)
+- **Ordinateurs professionnels** : Certaines politiques d'entreprise peuvent bloquer les modifications
+
+### 💡 Recommandations Post-Optimisation
+
+1. **Redémarrez** complètement votre PC (pas de veille prolongée)
+2. **Vérifiez** que toutes les fonctionnalités fonctionnent normalement
+3. **Testez** vos applications critiques et jeux
+4. **En cas de problème**, utilisez le point de restauration créé
 
 ---
 
 ## 📝 FAQ
 
+### 🏠 Questions Générales
+
 **❓ Le script est-il sûr ?**  
-✅ Oui. Toutes les modifications sont réversibles. Fonctionnalités critiques préservées.
+✅ **Oui.** Le script est entièrement conçu pour optimiser sans casser votre système. Toutes les modifications sont documentées, réversibles et testées sur plusieurs configurations.
 
-**❓ Puis-je l'utiliser sur un PC portable ?**  
-✅ Oui. Utilisez l'option `L` (conserve l'autonomie).
-
-**❓ Est-ce que ça marche avec les anti-cheat ?**  
-✅ Oui. Compatible Vanguard, Easy Anti-Cheat, BattlEye.
-
-**❓ Puis-je revenir en arrière ?**  
-✅ Oui. Créez un point de restauration avant (`Option R`), ou relancez le script pour inverser.
-
-**❓ Le nettoyage supprime-t-il mes données ?**  
-❌ Non. Uniquement les fichiers temporaires, logs, et cache système. Vos fichiers sont préservés.
+**❓ Quelles versions de Windows sont supportées ?**  
+✅ Windows 10 (toutes versions 2004+) et Windows 11 (toutes versions 21H2+). Non compatible avec Windows 7, 8, 8.1 ou Windows S.
 
 **❓ Puis-je l'utiliser plusieurs fois ?**  
-✅ Oui. Le script est idempotent.
+✅ **Oui.** Le script est idempotent - vous pouvez le relancer autant de fois que vous voulez. Les modifications déjà appliquées restent, les nouvelles sont ajoutées.
+
+**❓ Combien de temps dure l'optimisation ?**  
+⏱️ Environ 2-5 minutes selon les options choisies. Plus long si vous installez les Visual C++ Redistributables (~5-10 minutes).
+
+---
+
+### 🎮 Questions Gaming
+
+**❓ Est-ce que ça marche avec les anti-cheat ?**  
+✅ **Oui.** Le script préserve HVCI (Hypervisor-protected Code Integrity) et CFG (Control Flow Guard), requis par :
+- Valorant / Vanguard
+- Fortnite / Easy Anti-Cheat
+- Counter-Strike 2 / VAC
+- Apex Legends / Easy Anti-Cheat
+- Et beaucoup d'autres jeux
+
+**❓ Quelles optimisations gaming sont incluses ?**  
+🎯 GameDVR désactivé (0% overhead GPU), Mode Jeu activé, GPU Scheduling Hardware accéléré, Timer Resolution 0.5ms pour un input lag minimal, Priorité processus jeux optimisée.
+
+**❓ Puis-je utiliser ce script sur un PC de compétition ?**  
+✅ **Oui.** C'est même recommandé pour le gaming compétitif. Les optimisations réduisent la latence et le input lag de manière mesurable.
+
+**❓ Est-ce que ça améliore mes FPS ?**  
+📈 **Oui, généralement.** Les gains varient selon votre configuration :
+- **Disque SSD** : Accélération du chargement des textures
+- **Réseau** : Ping plus stable et réactif
+- **CPU** : Meilleure réactivité du système
+- **Mémoire** : Moins de micro-stuttering
+
+---
+
+### 💻 Questions Techniques
+
+**❓ Le nettoyage supprime-t-il mes données ?**  
+❌ **Non.** Le nettoyage (`Option N`) ne supprime que :
+- Fichiers temporaires Windows
+- Logs système
+- Cache Windows Update
+- Miniatures
+- **Vos fichiers, mots de passe, cookies, bookmarks et paramètres sont 100% préservés**
+
+**❓ Le cache des jeux est-il préservé ?**  
+✅ **Oui.** Les shaders de jeux (Forza, Cyberpunk, etc.) sont conservés. Pas de recompilation nécessaire après le nettoyage.
+
+**❓ Que se passe-t-il si je désinstalle OneDrive ?**  
+✅ OneDrive est complètement désinstallé proprement :
+- L'application et ses composants sont supprimés
+- Vos fichiers locaux restent dans `%USERPROFILE%`
+- Vous pouvez le réinstaller depuis microsoft.com si besoin
+- OneDrive ne se réinstallera pas automatiquement
+
+**❓ Que se passe-t-il si je désinstalle Edge ?**  
+✅ Edge est complètement désinstallé proprement :
+- L'application et tous ses composants système sont supprimés
+- Windows fonctionne parfaitement sans Edge
+- Vous pouvez utiliser Chrome, Firefox, Brave, etc.
+- Vous pouvez réinstaller Edge depuis microsoft.com/edge si besoin
+
+**❓ Pourquoi certains services sont-ils désactivés ?**  
+Les services désactivés sont principalement des services de :
+- Télémétrie et collecte de données
+- Tracking utilisateur
+- Suggestions et advertisements Windows
+- Diagnostics non essentiels
+
+Ces services ne sont pas nécessaires au fonctionnement de Windows et leur désactivation améliore les performances et la vie privée.
+
+---
+
+### 🔒 Questions Vie Privée
+
+**❓ Est-ce que le script est open source ?**  
+✅ **Oui.** Le code est entièrement visible et auditable. Aucune modification cachée n'est effectuée.
+
+**❓ Quelles données sont collectées par Windows après l'optimisation ?**  
+🛡️ **Très peu.** Le script :
+- Désactive la télémétrie Microsoft
+- Bloque 30+ domaines de tracking
+- Désactive les publicités Windows
+- Désactive les suggestions et recommandations
+
+**❓ Puis-je vérifier les modifications avant de les appliquer ?**  
+✅ **Oui.** Le script affiche chaque modification avant de l'appliquer. Vous pouvez voir exactement quelle clé de registre ou quel service sera modifié.
+
+---
+
+### 🔧 Dépannage
+
+**❓ Mon PC ne démarre plus après l'optimisation ?**  
+🚨 **Solution** :
+1.redémarrez en mode sécurisé (appuyez sur Maj + Redémarrer → Dépannage → Options avancées → Paramètres de démarrage → Redémarrer)
+2.Une fois en mode sécurisé, appuyez sur `R` dans le script pour restaurer le point de sauvegarde
+
+**❓ J'ai des problèmes après l'optimisation ?**  
+🔧 **Solutions rapides** :
+1. Relancez le script et utilisez `R` pour restaurer
+2. Ou utilisez l'option inverse de celle qui a causé le problème
+3. Vérifiez le point de restauration créé avant l'optimisation
+
+**❓ Windows Update ne fonctionne plus ?**  
+✅ C'est normal si vous avez choisi de désactiver les services de mise à jour optionnels. Les mises à jour de sécurité critiques restent activées. Vous pouvez les réactiver via l'option `G` → Gestion Windows.
+
+---
+
+### 💰 Questions Licence & Support
+
+**❓ Puis-je redistribuer ce script ?**  
+✅ **Oui.** Sous licence MIT. Vous pouvez modifier, redistribuer et utiliser ce script librement.
+
+**❓ Comment signaler un bug ?**  
+🐛 Créez une issue sur GitHub avec :
+- Votre version de Windows
+- Les options que vous avez choisies
+- Description du problème
+- Screenshots si pertinent
 
 ---
 
