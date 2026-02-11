@@ -100,42 +100,67 @@ Un redémarrage est nécessaire. **C'est terminé en moins de 5 minutes !**
 
 ## 📝 FAQ
 
-### Questions Générales
+### 🏠 Questions Générales
 
 **❓ Le script est-il sûr ?**  
-✅ **Oui.** Optimise sans casser. Toutes les modifications sont réversibles.
+✅ **Oui.** Le script est entièrement conçu pour optimiser sans casser votre système. Toutes les modifications sont documentées, réversibles et testées.
 
-**❓ Quelles versions de Windows ?**  
-✅ Windows 10 (2004+) et Windows 11 (21H2+)
+**❓ Quelles versions de Windows sont supportées ?**  
+✅ Windows 10 (2004+) et Windows 11 (21H2+). Non compatible avec Windows 7, 8, 8.1 ou Windows S.
 
-**❓ Temps d'optimisation ?**  
+**❓ Combien de temps dure l'optimisation ?**  
 ⏱️ **Moins de 5 minutes** pour une optimisation complète.
 
-**❓ Réversible ?**  
-✅ **Oui.** Utilisez l'option R du menu pour créer un point de restauration avant d'optimiser.
+**❓ Puis-je l'utiliser plusieurs fois ?**  
+✅ **Oui.** Le script est idempotent - vous pouvez le relancer autant de fois que vous voulez.
+
+**❓ Que se passe-t-il si je désinstalle OneDrive ?**  
+✅ OneDrive est complètement désinstallé proprement. Vos fichiers locaux restent dans votre dossier utilisateur. Vous pouvez le réinstaller depuis microsoft.com si besoin.
+
+**❓ Que se passe-t-il si je désinstalle Edge ?**  
+✅ Edge est complètement désinstallé. Windows fonctionne parfaitement sans. Vous pouvez utiliser Chrome, Firefox, Brave, etc.
 
 ---
 
-### Questions Gaming
+### 🎮 Questions Gaming
 
-**❓ Compatible anti-cheat ?**  
-✅ **Oui.** HVCI et CFG préservés. Fonctionne avec Valorant, Fortnite, CS2, Apex, etc.
+**❓ Est-ce que ça marche avec les anti-cheat ?**  
+✅ **Oui.** HVCI et CFG préservés. Compatible avec Vanguard (Valorant), Easy Anti-Cheat (Fortnite), VAC (CS2), etc.
 
-**❓ Gains de performances ?**  
-📈 Latence réduite, ping plus stable, démarrage des jeux plus rapide.
+**❓ Quelles optimisations gaming sont incluses ?**  
+🎯 GameDVR OFF (0% overhead GPU), Timer Resolution 0.5ms pour un input lag minimal, Mode Jeu activé, GPU Scheduling optimisé.
+
+**❓ Puis-je utiliser ce script sur un PC de compétition ?**  
+✅ **Oui.** Recommandé pour le gaming compétitif. Les optimisations réduisent la latence de manière mesurable.
+
+**❓ Est-ce que ça améliore mes FPS ?**  
+📈 **Oui.** Gains variables selon la config : démarrage des jeux plus rapide, moins de micro-stuttering, ping plus stable.
 
 ---
 
-### Questions Techniques
+### 💻 Questions Techniques
 
-**❓ Mes données sont-elles safe ?**  
-✅ **Oui.** Le nettoyage ne supprime que les fichiers temporaires. Vos fichiers, mots de passe et paramètres sont préservés.
+**❓ Le nettoyage supprime-t-il mes données ?**  
+❌ **Non.** Uniquement les fichiers temporaires, logs système, cache Windows. Vos fichiers, mots de passe et paramètres sont préservés.
 
-**❓ Le cache des jeux est conservé ?**  
-✅ **Oui.** Les shaders ne sont pas supprimés.
+**❓ Le cache des jeux est-il préservé ?**  
+✅ **Oui.** Les shaders de jeux (Forza, Cyberpunk, etc.) sont conservés. Pas de recompilation nécessaire.
 
-**❓ Je peux réutiliser le script ?**  
-✅ **Oui.** Le script est idempotent - réutilisable à volonté.
+**❓ Pourquoi certains services sont-ils désactivés ?**  
+Les services désactivés sont principalement de la télémétrie, tracking utilisateur et diagnostics non essentiels. Leur désactivation améliore les performances et la vie privée.
+
+**❓ Quelles données sont collectées par Windows après l'optimisation ?**  
+🛡️ **Très peu.** Télémétrie désactivée, 30+ domaines de tracking bloqués, publicités Windows OFF.
+
+---
+
+### 🔒 Questions Vie Privée
+
+**❓ Est-ce que le script est open source ?**  
+✅ **Oui.** Le code est entièrement visible et auditable. Aucune modification cachée.
+
+**❓ Puis-je vérifier les modifications avant de les appliquer ?**  
+✅ **Oui.** Le script affiche chaque modification avant de l'appliquer.
 
 ---
 
