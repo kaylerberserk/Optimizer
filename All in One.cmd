@@ -331,7 +331,7 @@ for %%T in (
     "Microsoft\Windows\CloudExperienceHost\CreateObjectTask"
     "Microsoft\Windows\DiskFootprint\Diagnostics"
     "Microsoft\Windows\NetTrace\GatherNetworkInfo"
-"Microsoft\Windows\Shell\FamilySafetyMonitor"
+    "Microsoft\Windows\Shell\FamilySafetyMonitor"
     "Microsoft\Windows\Shell\FamilySafetyRefreshTask"
     "Microsoft\Windows\WDI\ResolutionHost"
     "Microsoft\Windows\SettingSync\BackgroundUploadTask"
@@ -585,7 +585,6 @@ reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire ameliorees
 
-
 :: 2.4 - Disable memory compression
 powershell -NoProfile -NoLogo -Command "Disable-MMAgent -mc" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee
@@ -796,7 +795,7 @@ if "%HAS_NVIDIA%"=="1" (
 :NPI_DONE
 echo.
 
-:: 4.9 - Game Mode Windows 11 24H2/25H2
+:: 4.10 - Game Mode Windows 11 24H2/25H2
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation Game Mode Windows 11 24H2/25H2...
 reg add "HKCU\Software\Microsoft\GameBar" /v AutoGameModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\GameBar" /v AllowAutoGameMode /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1007,7 +1006,7 @@ if "%~1"=="call" (
 :DESACTIVER_ECONOMIES_ENERGIE
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%      SECTION 8 : DESACTIVATION DES ECONOMIES D'ENERGIE     %COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%      SECTION 7 : DESACTIVATION DES ECONOMIES D'ENERGIE     %COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%  Cette section desactive les fonctions d'economie d'energie%COLOR_RESET%
@@ -1015,7 +1014,7 @@ echo %COLOR_WHITE%  pour maintenir les performances maximales en permanence.%COL
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 8.1 - Energie Systeme et GPU
+:: 7.1 - Energie Systeme et GPU
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des seuils d'economie d'energie...
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
@@ -1036,13 +1035,13 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v RmDisableRegistryCaching /t REG_DWORD /d 1 /f >nul 2>&1
 )
 
-:: 8.2 - NIC Energy Saving Ethernet et WiFi
+:: 7.2 - NIC Energy Saving Ethernet et WiFi
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...
 powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d\'énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l\'alimentation 802.11','Mode d\'economie d\'energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {} }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Ethernet + WiFi)
 
 
-:: 8.3 - Activation du plan Ultimate Performance
+:: 7.3 - Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan d'alimentation actif...
 
 :: GUID Ultimate Performance (toutes langues)
@@ -1094,44 +1093,12 @@ if defined TARGET_GUID (
 
 :ULTIMATE_DONE
 
-:: 8.4 - Activation des plans d'alimentation caches
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des plans d'alimentation caches...
-
-:: High Performance Overlay (seulement si pas deja present - GUID ou Nom)
-set "HPOVERLAY_EXISTS="
-
-:: 1. Check GUID standard
-for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"') do set "HPOVERLAY_EXISTS=1"
-
-:: 2. Check Nom (Anglais: "High performance" / Francais: "Performances elev...")
-if not defined HPOVERLAY_EXISTS (
-    powercfg -list 2^>nul | findstr /i "High performance" >nul 2>&1
-    if not errorlevel 1 set "HPOVERLAY_EXISTS=1"
-)
-if not defined HPOVERLAY_EXISTS (
-    :: Recherche "Performances" sans "optimales" (Ultimate)
-    powercfg -list 2^>nul | findstr /i "Performances" | findstr /v /i "optimales" >nul 2>&1
-    if not errorlevel 1 set "HPOVERLAY_EXISTS=1"
-)
-
-if not defined HPOVERLAY_EXISTS (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan High Performance non trouve - Creation overlay...
-    powercfg -duplicatescheme 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c >nul 2>&1
-) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan High Performance deja present
-)
-
-:: Max Performance Overlay (overlay de performances maximales)
-powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR 75b0ae3f-bce0-45a7-8c89-c9611c25e100 -ATTRIB_HIDE" >nul 2>&1
-powershell -NoProfile -Command "powercfg /attributes SUB_PROCESSOR ea062031-0e34-4ff1-9b6d-eb1059334028 -ATTRIB_HIDE" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Plans d'alimentation caches actifs
-
-:: 8.5 - Desactivation du demarrage rapide Fast Startup
+:: 7.4 - Desactivation du demarrage rapide Fast Startup
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide desactive - Redemarrages propres
 
-:: 8.6 - Desactivation de l'hibernation PC Bureau uniquement
+:: 7.5 - Desactivation de l'hibernation PC Bureau uniquement
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation ^(PC Bureau^)...
     powercfg /hibernate off >nul 2>&1
@@ -1140,7 +1107,7 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% Hibernation conservee ^(PC Portable detecte^)
 )
 
-:: 8.7 - USB Selective Suspend (Optimisation latence)
+:: 7.6 - USB Selective Suspend (Optimisation latence)
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
     powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
@@ -1152,13 +1119,13 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve (PC Portable detecte)
 )
 
-:: 8.8 - Configuration generale du systeme d'alimentation
+:: 7.7 - Configuration generale du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du systeme d'alimentation...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.9 - Desactivation des Timer Coalescing et DPC
+:: 7.8 - Desactivation des Timer Coalescing et DPC
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Timer Coalescing et optimisation DPC...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1176,7 +1143,7 @@ reg add "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /t RE
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
-:: 8.10 - Installation SetTimerResolution
+:: 7.9 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
 set "STR_EXE=%SystemRoot%\SetTimerResolution.exe"
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
@@ -1214,19 +1181,19 @@ if exist "%STR_STARTUP%" (
 
 :STR_DONE
 
-:: 8.11 - Desactivation du PDC et Power Throttling
+:: 7.10 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.12 - Gestion processeur equilibree
+:: 7.11 - Gestion processeur equilibree
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil processeur (performances maximales)...
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 
-:: 8.13 - Intel AMD Hybrid CPU Scheduling Visibility
+:: 7.12 - Intel AMD Hybrid CPU Scheduling Visibility
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Déblocage des options de scheduling hybride (P-Cores/E-Cores)...
 :: Heterogeneous thread scheduling policy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
@@ -1235,11 +1202,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be
 :: Core Parking (E-cores class 0)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 
-:: 8.14 - Desactivation ASPM
+:: 7.13 - Desactivation ASPM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.15 - Optimisations stockage et disques
+:: 7.14 - Optimisations stockage et disques
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des disques...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1250,18 +1217,18 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
   )
 )
 
-:: 8.16 - Optimisations avancees des services
+:: 7.15 - Optimisations avancees des services
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des limites de latence I/O...
 for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg add "%%a" /v IoLatencyCap /t REG_DWORD /d 0 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence stockage supprimees
 
-:: 8.17 - GPU PowerMizer
+:: 7.16 - GPU PowerMizer
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 8.18 - PCI & peripheriques reseau
+:: 7.17 - PCI & peripheriques reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des peripheriques PCI...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg add "%%K" /v D3ColdSupported /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1270,7 +1237,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v "*WakeOnPattern" /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-:: 8.19 - Cartes reseau
+:: 7.18 - Cartes reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des fonctions d'economie d'energie reseau...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
@@ -1310,7 +1277,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie et optimisations reseau appliquees sur toutes les cartes
 
-:: 8.20 - Energie PCIe
+:: 7.19 - Energie PCIe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
@@ -1575,7 +1542,7 @@ goto :TOGGLE_ECONOMIES_ENERGIE
 :DESACTIVER_PROTECTIONS_SECURITE
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%  SECTION 9 : DESACTIVATION DES PROTECTIONS DE SECURITE   %COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%  SECTION 8 : DESACTIVATION DES PROTECTIONS DE SECURITE   %COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 echo %COLOR_RED%  AVERTISSEMENT :%COLOR_RESET%
@@ -1587,13 +1554,13 @@ echo %COLOR_WHITE%  Risques   : Exposition a des attaques par canal auxiliaire%C
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 9.1 - Desactivation des protections Kernel SEHOP Exception Chain 
+:: 8.1 - Desactivation des protections Kernel SEHOP Exception Chain 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protections noyau (SEHOP, Exception Chain)... 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Protections noyau desactivees 
 
-:: 9.2 - Desactivation Spectre Meltdown Memory Management
+:: 8.2 - Desactivation Spectre Meltdown Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protections Spectre/Meltdown...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 3 /f >nul 2>&1
@@ -1604,7 +1571,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v PerformMmioMitigation /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Protections Spectre/Meltdown desactivees
 
-:: 9.3 - Desactivation des mitigations CPU avancees
+:: 8.3 - Desactivation des mitigations CPU avancees
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des mitigations CPU (KVAS, STIBP, Retpoline)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v RestrictIndirectBranchPrediction /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1614,7 +1581,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisableBranchPrediction /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mitigations CPU desactivees
 
-:: 9.4 - HVCI et CFG conserves pour compatibilite anti-cheat
+:: 8.4 - HVCI et CFG conserves pour compatibilite anti-cheat
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Conservation du HVCI/CFG (requis pour Valorant, Fortnite, etc.)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 :: CFG doit rester ACTIVE pour Vanguard (Valorant)
