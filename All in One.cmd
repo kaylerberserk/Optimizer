@@ -415,8 +415,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services - Mode SAFE (compatibl
 :: Services inutiles -> DISABLED
 for %%S in (
     AJRouter
-    AppVClient
-    AssignedAccessManagerSvc
     DiagTrack
     dmwappushservice
     lfsvc
@@ -430,7 +428,6 @@ for %%S in (
     uhssvc
     UevAgentService
     WMPNetworkSvc
-    CDPUserSvc
     SystemSuggestions
     Fax
     DialogBlockingService
@@ -439,10 +436,12 @@ for %%S in (
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services telemetrie/legacy desactives
 
-:: Services occasionnels -> MANUAL
+:: Services occasionnels/inutiles -> MANUAL
 for %%S in (
     ALG
+    AppVClient
     BDESVC
+    CDPUserSvc
     CertPropSvc
     GraphicsPerfSvc
     IKEEXT
@@ -547,6 +546,17 @@ reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win64" /ve /t
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t REG_SZ /d "" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Touche F1 (aide) desactivee
 
+:: 1.12 - Desactivation audio enhancements (latence audio)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des ameliorations audio...
+for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" 2^>nul ^| findstr /i "HKEY"') do (
+  reg add "%%a" /v "FxNonDestructiveSoftMixer" /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "%%a" /v "FxRender" /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "%%a" /v "DisableAudioEndpointDucking" /t REG_DWORD /d 1 /f >nul 2>&1
+)
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Audio" /v DisableAudioEnhancement /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio" /v ImmersiveAudio /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Ameliorations audio desactivees - Latence reduite
+
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations systeme appliquees.
@@ -571,7 +581,7 @@ echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
 :: 2.1 - Pagefile
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du fichier d'echange (PageFile) pour arrêt rapide...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du fichier d'echange (PageFile) pour arret rapide...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v ClearPageFileAtShutdown /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v SystemPages /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagefileEncryption /t REG_DWORD /d 1 /f >nul 2>&1
@@ -650,7 +660,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres NTFS optimises - TRIM actif, meta
 
 :: 3.2 - Optimisations I/O NTFS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation I/O NTFS (NVMe)...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v MaximumOutstandingRequests /t REG_DWORD /d 256 /f >nul 2>&1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des chemins longs (plus de 260 caracteres)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Support des chemins longs active
@@ -939,6 +948,14 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "Remote P
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "Local IP" /t REG_SZ /d "*" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "Remote IP" /t REG_SZ /d "*" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "DSCP Value" /t REG_SZ /d "46" /f >nul 2>&1
+
+:: 5.12 - Desactivation NetBIOS over TCP/IP (WINS)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de NetBIOS over TCP/IP...
+for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" 2^>nul') do (
+  reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% NetBIOS desactive
+
 gpupdate /target:computer /force >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Pile reseau optimisee avec priorite gaming
 
@@ -1050,6 +1067,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v DisableDynamicPstate /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "%%K" /v RmDisableRegistryCaching /t REG_DWORD /d 1 /f >nul 2>&1
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% GPU Power Management optimise
 
 :: 7.2 - NIC Energy Saving Ethernet et WiFi
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...
@@ -1109,12 +1127,39 @@ if defined TARGET_GUID (
 
 :ULTIMATE_DONE
 
+<<<<<<< HEAD
+:: 7.4 - Optimisations CPU (Intel Hybrid + AMD Core Parking)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisations CPU specifiques (Intel Hybrid / AMD Ryzen)...
+
+:: Intel Hybrid CPUs (Alder Lake/Raptor Lake/Meteor Lake) - Scheduling Policy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration Intel Thread Director (Hybrid CPUs)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Intel Thread Director configure (P-cores prioritaires)
+
+:: AMD Ryzen - Desactivation Core Parking
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation Core Parking (AMD Ryzen)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 0 /f >nul 2>&1
+:: Appliquer immediatement : desactiver le core parking via powercfg sur le plan actif
+powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR 0cc5b647-c1df-4637-891a-dec35c318584 0 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR 0cc5b647-c1df-4637-891a-dec35c318584 0 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Core Parking desactive (AMD Ryzen optimise)
+
+:: 7.5 - Desactivation des plans d'alimentation High Performance Overlay
+:: Ces plans sont deja geres par le plan Ultimate Performance
+
+:: 7.6 - Desactivation du demarrage rapide Fast Startup
+=======
 :: 7.4 - Desactivation du demarrage rapide Fast Startup
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide desactive - Redemarrages propres
 
+<<<<<<< HEAD
+:: 7.7 - Desactivation de l'hibernation PC Bureau uniquement
+=======
 :: 7.5 - Desactivation de l'hibernation PC Bureau uniquement
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation ^(PC Bureau^)...
     powercfg /hibernate off >nul 2>&1
@@ -1123,7 +1168,11 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% Hibernation conservee ^(PC Portable detecte^)
 )
 
+<<<<<<< HEAD
+:: 7.8 - USB Selective Suspend (Optimisation latence)
+=======
 :: 7.6 - USB Selective Suspend (Optimisation latence)
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
     powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
@@ -1135,13 +1184,21 @@ if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve (PC Portable detecte)
 )
 
+<<<<<<< HEAD
+:: 7.9 - Configuration generale du systeme d'alimentation
+=======
 :: 7.7 - Configuration generale du systeme d'alimentation
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du systeme d'alimentation...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
 
+<<<<<<< HEAD
+:: 7.10 - Desactivation des Timer Coalescing et DPC
+=======
 :: 7.8 - Desactivation des Timer Coalescing et DPC
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Timer Coalescing et optimisation DPC...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1159,7 +1216,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /t RE
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
+<<<<<<< HEAD
+:: 7.11 - Installation SetTimerResolution
+=======
 :: 7.9 - Installation SetTimerResolution
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
 set "STR_EXE=%SystemRoot%\SetTimerResolution.exe"
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
@@ -1197,20 +1258,33 @@ if exist "%STR_STARTUP%" (
 
 :STR_DONE
 
+<<<<<<< HEAD
+:: 7.12 - Desactivation du PDC et Power Throttling
+=======
 :: 7.10 - Desactivation du PDC et Power Throttling
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f >nul 2>&1
 
+<<<<<<< HEAD
+:: 7.13 - Gestion processeur equilibree
+=======
 :: 7.11 - Gestion processeur equilibree
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil processeur (performances maximales)...
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 
+<<<<<<< HEAD
+:: 7.14 - Intel AMD Hybrid CPU Scheduling Visibility
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage des options de scheduling hybride (P-Cores/E-Cores)...
+=======
 :: 7.12 - Intel AMD Hybrid CPU Scheduling Visibility
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Déblocage des options de scheduling hybride (P-Cores/E-Cores)...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage des options de scheduling hybride (P-Cores/E-Cores)...
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 :: Heterogeneous thread scheduling policy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 :: Core Parking (P-cores class 1)
@@ -1218,11 +1292,19 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be
 :: Core Parking (E-cores class 0)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 
+<<<<<<< HEAD
+:: 7.15 - Desactivation ASPM
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: 7.16 - Optimisations stockage et disques
+=======
 :: 7.13 - Desactivation ASPM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: 7.14 - Optimisations stockage et disques
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des disques...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1233,18 +1315,30 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
   )
 )
 
+<<<<<<< HEAD
+:: 7.17 - Optimisations avancees des services
+=======
 :: 7.15 - Optimisations avancees des services
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des limites de latence I/O...
 for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg add "%%a" /v IoLatencyCap /t REG_DWORD /d 0 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence stockage supprimees
 
+<<<<<<< HEAD
+:: 7.18 - GPU PreferMaxPerf
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: 7.19 - PCI & peripheriques reseau
+=======
 :: 7.16 - GPU PreferMaxPerf
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: 7.17 - PCI & peripheriques reseau
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des peripheriques PCI...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg add "%%K" /v D3ColdSupported /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1253,7 +1347,11 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v "*WakeOnPattern" /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
+<<<<<<< HEAD
+:: 7.20 - Cartes reseau
+=======
 :: 7.18 - Cartes reseau
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des fonctions d'economie d'energie reseau...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
@@ -1293,7 +1391,11 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie et optimisations reseau appliquees sur toutes les cartes
 
+<<<<<<< HEAD
+:: 7.21 - Energie PCIe
+=======
 :: 7.19 - Energie PCIe
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
@@ -1376,7 +1478,23 @@ if exist "%STR_STARTUP%" (
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution supprime du demarrage automatique
 
-:: 7. Reactiver Power Throttling
+:: 8. Restaurer optimisations CPU (Intel Hybrid + AMD Core Parking)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des optimisations CPU...
+
+:: Restaurer Intel Thread Director
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration Intel Thread Director...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Intel Thread Director restaure
+
+:: Restaurer AMD Core Parking
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration Core Parking (AMD Ryzen)...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
+:: Reactiver le core parking via powercfg
+powercfg /setacvalueindex SCHEME_CURRENT SUB_PROCESSOR 0cc5b647-c1df-4637-891a-dec35c318584 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_PROCESSOR 0cc5b647-c1df-4637-891a-dec35c318584 1 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Core Parking restaure
+
+:: 9. Reactiver Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation du Power Throttling...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /f >nul 2>&1
@@ -1642,13 +1760,34 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de Tamper Protection...
 reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Features" /v TamperProtection /t REG_DWORD /d 5 /f >nul 2>&1
 
+<<<<<<< HEAD
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des services Windows Defender...
+=======
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des services Windows Defender...
+>>>>>>> d7ffab531964d0fa9d6f1c5812f37d3cee53504d
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la protection en temps reel...
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableIOAVProtection /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des politiques Windows Defender...
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiVirus /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des taches planifiees Defender...
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Enable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Enable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Update" /Enable >nul 2>&1
+
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services Defender restaures
 
 echo.
@@ -1679,6 +1818,23 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD 
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la protection en temps reel...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableIOAVProtection /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des politiques Windows Defender...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiVirus /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees Defender...
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Update" /Disable >nul 2>&1
+
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services Defender desactives
 
 echo.
