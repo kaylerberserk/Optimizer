@@ -595,7 +595,7 @@ for /f %%M in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance W
 if defined RAM_KB (
     if !RAM_KB! GEQ 8388608 (
         reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d !RAM_KB! /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
     ) else (
         echo %COLOR_YELLOW%[!]%COLOR_RESET% RAM insuffisante pour optimisation SvcHost ^(moins de 8Go^)
     )
@@ -830,8 +830,6 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 :: 5.2 - Pile TCP/UDP moderne CUBIC et BBR2
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
-:: netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
-netsh int tcp set activepremium template=internet congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
 :: Correctif Loopback BBR2 (Windows 11 24H2)
 netsh int ip set global loopbacklargemtu=disabled >nul 2>&1
@@ -1136,10 +1134,10 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v Coa
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
-reg add "HKLM\System\CurrentControlSet\Control\ModernSleep" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\System\CurrentControlSet\Control\Session Manager\Memory Management" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\System\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\ModernSleep" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
@@ -1219,12 +1217,12 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
 
 :: 7.15 - Optimisations avancees des services
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des limites de latence I/O...
-for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
+for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg add "%%a" /v IoLatencyCap /t REG_DWORD /d 0 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence stockage supprimees
 
-:: 7.16 - GPU PowerMizer
+:: 7.16 - GPU PreferMaxPerf
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
 
@@ -1342,10 +1340,10 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v 
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /f >nul 2>&1
-reg delete "HKLM\System\CurrentControlSet\Control\ModernSleep" /v CoalescingTimerInterval /f >nul 2>&1
-reg delete "HKLM\System\CurrentControlSet\Control\Session Manager\Memory Management" /v CoalescingTimerInterval /f >nul 2>&1
-reg delete "HKLM\System\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /f >nul 2>&1
-reg delete "HKLM\System\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\ModernSleep" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing reactive
 
@@ -1424,7 +1422,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Mise en veille des disques reactivee
 
 :: 15. Restaurer les limites de latence I/O
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des limites de latence I/O...
-for /f "tokens=*" %%a in ('reg query "HKLM\System\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
+for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg delete "%%a" /v IoLatencyCap /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence I/O restaurees
@@ -2841,7 +2839,7 @@ echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour finaliser
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 
-choice /c ON /n /m "%COLOR_YELLOW%Voulez-vous redemarrer maintenant ? (O/N):%COLOR_RESET% "
+choice /C ON /N /M "%COLOR_YELLOW%Voulez-vous redemarrer maintenant ? (O/N):%COLOR_RESET% "
 if errorlevel 2 goto :MENU_PRINCIPAL
 if errorlevel 1 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage de Windows"
 
