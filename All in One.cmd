@@ -781,40 +781,40 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU desactivee
 set "HAS_NVIDIA=0"
 for /f %%i in ('powershell -NoProfile -Command "if((Get-CimInstance Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
 
-if "%HAS_NVIDIA%"=="1" (
+if "!HAS_NVIDIA!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
-    set "NPI_DIR=%TEMP%\NvidiaProfileInspector"
+    set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
     
     :: Creer le dossier temporaire
-    if not exist "%NPI_DIR%" mkdir "%NPI_DIR%"
+    if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
     
     :: Telecharger NVIDIA Profile Inspector
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de NVIDIA Profile Inspector...
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '%NPI_DIR%\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-    if not exist "%NPI_DIR%\nvidiaProfileInspector.exe" (
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
         echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
         goto :NPI_DONE
     )
     
     :: Telecharger le profil optimise
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '%NPI_DIR%\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-    if not exist "%NPI_DIR%\Kaylers_profile.nip" (
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    if not exist "!NPI_DIR!\Kaylers_profile.nip" (
         echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
         goto :NPI_DONE
     )
     
     :: Appliquer le profil
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
-    start "" "%NPI_DIR%\nvidiaProfileInspector.exe" "%NPI_DIR%\Kaylers_profile.nip"
+    start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
     ping -n 2 127.0.0.1 >nul 2>&1
     taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
     
     :: Nettoyage
-    del "%NPI_DIR%\nvidiaProfileInspector.exe" >nul 2>&1
-    del "%NPI_DIR%\Kaylers_profile.nip" >nul 2>&1
-    rmdir "%NPI_DIR%" >nul 2>&1
+    del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
+    del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+    rmdir "!NPI_DIR!" >nul 2>&1
 ) else (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
 )
@@ -1147,13 +1147,11 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Core Parking desactive (AMD Ryzen optimise)
 :: Ces plans sont deja geres par le plan Ultimate Performance
 
 :: 7.6 - Desactivation du demarrage rapide Fast Startup
-:: 7.4 - Desactivation du demarrage rapide Fast Startup
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du demarrage rapide (Fast Startup)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide desactive - Redemarrages propres
 
 :: 7.7 - Desactivation de l'hibernation PC Bureau uniquement
-:: 7.5 - Desactivation de l'hibernation PC Bureau uniquement
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation ^(PC Bureau^)...
     powercfg /hibernate off >nul 2>&1
@@ -1163,7 +1161,6 @@ if "%IS_LAPTOP%"=="0" (
 )
 
 :: 7.8 - USB Selective Suspend (Optimisation latence)
-:: 7.6 - USB Selective Suspend (Optimisation latence)
 if "%IS_LAPTOP%"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
     powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
@@ -1176,14 +1173,12 @@ if "%IS_LAPTOP%"=="0" (
 )
 
 :: 7.9 - Configuration generale du systeme d'alimentation
-:: 7.7 - Configuration generale du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du systeme d'alimentation...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: 7.10 - Desactivation des Timer Coalescing et DPC
-:: 7.8 - Desactivation des Timer Coalescing et DPC
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Timer Coalescing et optimisation DPC...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1202,7 +1197,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Timer Coalescing desactive - Latence reduite
 
 :: 7.11 - Installation SetTimerResolution
-:: 7.9 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de SetTimerResolution...
 set "STR_EXE=%SystemRoot%\SetTimerResolution.exe"
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
@@ -1241,22 +1235,18 @@ if exist "%STR_STARTUP%" (
 :STR_DONE
 
 :: 7.12 - Desactivation du PDC et Power Throttling
-:: 7.10 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: 7.13 - Gestion processeur equilibree
-:: 7.11 - Gestion processeur equilibree
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil processeur (performances maximales)...
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
 
 :: 7.14 - Intel AMD Hybrid CPU Scheduling Visibility
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage des options de scheduling hybride (P-Cores/E-Cores)...
-:: 7.12 - Intel AMD Hybrid CPU Scheduling Visibility
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage des options de scheduling hybride (P-Cores/E-Cores)...
 :: Heterogeneous thread scheduling policy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
@@ -1270,11 +1260,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: 7.16 - Optimisations stockage et disques
-:: 7.13 - Desactivation ASPM
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation ASPM sur le bus PCI Express...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\pci\Parameters" /v ASPMOptOut /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: 7.14 - Optimisations stockage et disques
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des disques...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Storage" /v StorageD3InModernStandby /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v IdlePowerMode /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1286,7 +1271,6 @@ for %%i in (EnableHIPM EnableDIPM EnableHDDParking) do (
 )
 
 :: 7.17 - Optimisations avancees des services
-:: 7.15 - Optimisations avancees des services
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des limites de latence I/O...
 for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services" /s /f "IoLatencyCap" /v 2^>nul ^| findstr /i "^HKEY"') do (
   reg add "%%a" /v IoLatencyCap /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1298,11 +1282,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maxim
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: 7.19 - PCI & peripheriques reseau
-:: 7.16 - GPU PreferMaxPerf
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: 7.17 - PCI & peripheriques reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des peripheriques PCI...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e97d-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg add "%%K" /v D3ColdSupported /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1312,7 +1291,6 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 
 :: 7.20 - Cartes reseau
-:: 7.18 - Cartes reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des fonctions d'economie d'energie reseau...
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg query "%%K" /v "*SpeedDuplex" >nul 2>&1
@@ -1353,7 +1331,6 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie et optimisations reseau appliquees sur toutes les cartes
 
 :: 7.21 - Energie PCIe
-:: 7.19 - Energie PCIe
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
@@ -2258,8 +2235,12 @@ reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall et IA desactives
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les fonctionnalites IA ont ete desactivees.
-pause
-goto :MENU_GESTION_WINDOWS
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :MENU_GESTION_WINDOWS
+)
 
 :DESINSTALLER_ONEDRIVE
 cls
@@ -2603,6 +2584,23 @@ if errorlevel 1 set "DESACTIVER_ANIMATIONS=1"
 :DESKTOP_ANIMATIONS_NON
 
 cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver les fonctionnalites IA de Windows ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Desactive Copilot, Recall, widgets et autres fonctionnalites IA
+echo       %COLOR_YELLOW%Ameliore les performances et la confidentialite%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les fonctionnalites IA
+echo.
+set "DESACTIVER_IA=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les fonctionnalites IA ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :DESKTOP_IA_NON
+if errorlevel 1 set "DESACTIVER_IA=1"
+:DESKTOP_IA_NON
+
+cls
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2613,6 +2611,7 @@ call :DESACTIVER_ECONOMIES_ENERGIE call
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
+if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_COPILOT call
 cls
 echo.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
@@ -2625,6 +2624,9 @@ if "%DESACTIVER_DEFENDER%"=="1" (
 )
 if "%DESACTIVER_ANIMATIONS%"=="1" (
   echo %COLOR_YELLOW%[!]%COLOR_RESET% Les animations Windows ont ete desactivees.
+)
+if "%DESACTIVER_IA%"=="1" (
+  echo %COLOR_YELLOW%[!]%COLOR_RESET% Les fonctionnalites IA de Windows ont ete desactivees.
 )
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour appliquer toutes les modifications.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
@@ -2700,6 +2702,23 @@ if errorlevel 1 set "DESACTIVER_ANIMATIONS=1"
 :LAPTOP_ANIMATIONS_NON
 
 cls
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver les fonctionnalites IA de Windows ?%COLOR_RESET%
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Desactive Copilot, Recall, widgets et autres fonctionnalites IA
+echo       %COLOR_YELLOW%Ameliore les performances et la confidentialite%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les fonctionnalites IA
+echo.
+set "DESACTIVER_IA=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver les fonctionnalites IA ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :LAPTOP_IA_NON
+if errorlevel 1 set "DESACTIVER_IA=1"
+:LAPTOP_IA_NON
+
+cls
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2710,6 +2729,7 @@ call :OPTIMISATIONS_PERIPHERIQUES call
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
+if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_COPILOT call
 cls
 echo.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
@@ -2723,6 +2743,9 @@ if "%DESACTIVER_DEFENDER%"=="1" (
 )
 if "%DESACTIVER_ANIMATIONS%"=="1" (
   echo %COLOR_YELLOW%[!]%COLOR_RESET% Les animations Windows ont ete desactivees.
+)
+if "%DESACTIVER_IA%"=="1" (
+  echo %COLOR_YELLOW%[!]%COLOR_RESET% Les fonctionnalites IA de Windows ont ete desactivees.
 )
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour appliquer toutes les modifications.
 echo %COLOR_CYAN%===========================================================%COLOR_RESET%
