@@ -771,10 +771,10 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.8 - Desactivation de la preemption GPU
+:: 4.8 - Activation de la preemption GPU
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la preemption GPU pour reduire la latence...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU desactivee
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 
 :: 4.9 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
