@@ -1078,29 +1078,33 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Etherne
 :: 7.3 - Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification du plan d'alimentation actif...
 
-:: GUID Ultimate Performance (toutes langues)
-:: e9a42b02-d5df-448d-aa00-03f14749eb61
-
 set "TARGET_GUID="
 
-:: 1. Chercher par le GUID specifique (le plus fiable si present)
+:: 1. Chercher par le GUID specifique d'origine
 for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (
     set "TARGET_GUID=%%G"
     set "TARGET_GUID=!TARGET_GUID: =!"
 )
 
-:: 2. Si non trouve par GUID, chercher par NOM : "Ultimate Performance" (EN) ou "Performances optimales" (FR)
+:: 2. Si non present, chercher le GUID duplique (cree precedemment par ce script)
 if not defined TARGET_GUID (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% GUID standard non trouve, recherche par nom...
+    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "99999999-9999-9999-9999-999999999999"') do (
+        set "TARGET_GUID=%%G"
+        set "TARGET_GUID=!TARGET_GUID: =!"
+    )
+)
+
+:: 3. Si non present, chercher par NOM ("Ultimate" ou "optimales") pour assurer la retrocompatibilite avec les anciennes versions du script
+if not defined TARGET_GUID (
     for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "Ultimate optimales"') do (
         set "TARGET_GUID=%%G"
         set "TARGET_GUID=!TARGET_GUID: =!"
     )
 )
 
-:: Si le plan existe, verifier s'il est deja actif
+:: Si le plan existe (origine ou notre copie), verifier s'il est deja actif
 if defined TARGET_GUID (
-    for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^>nul') do set "ACTIVE_GUID=%%G"
+    for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^^^>nul') do set "ACTIVE_GUID=%%G"
     set "ACTIVE_GUID=!ACTIVE_GUID: =!"
     if "!ACTIVE_GUID!"=="!TARGET_GUID!" (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate/Optimal deja actif - aucune action requise
@@ -1113,17 +1117,13 @@ if defined TARGET_GUID (
     goto :ULTIMATE_DONE
 )
 
-:: Le plan n'existe pas (ni GUID ni Nom) - le creer
+:: Le plan n'existe pas, on le cree avec notre GUID personnalise pour eviter les doublons futurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Plan "Performances optimales" non present - Creation...
-for /f "tokens=2 delims=:()" %%G in ('powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2^>nul') do set "TARGET_GUID=%%G"
-if defined TARGET_GUID set "TARGET_GUID=!TARGET_GUID: =!"
+powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1
+set "TARGET_GUID=99999999-9999-9999-9999-999999999999"
 
-if defined TARGET_GUID (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan "Performances optimales" cree et active
-    powercfg -setactive !TARGET_GUID! >nul 2>&1
-) else (
-    echo %COLOR_RED%[!]%COLOR_RESET% Echec creation plan "Performances optimales"
-)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan "Performances optimales" cree et active
+powercfg -setactive !TARGET_GUID! >nul 2>&1
 
 :ULTIMATE_DONE
 
