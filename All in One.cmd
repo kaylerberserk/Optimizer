@@ -1696,7 +1696,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de Tamper Protection...
 reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Features" /v TamperProtection /t REG_DWORD /d 5 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des services Windows Defender...
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des services Windows Defender...
+sc config WinDefend start= auto >nul 2>&1
+sc config WdNisSvc start= demand >nul 2>&1
+sc config Sense start= demand >nul 2>&1
+sc config WdBoot start= boot >nul 2>&1
+sc config WdFilter start= boot >nul 2>&1
+sc config SecurityHealthService start= demand >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1704,16 +1709,28 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD 
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+sc start WinDefend >nul 2>&1
+sc start WdNisSvc >nul 2>&1
+sc start Sense >nul 2>&1
+sc start SecurityHealthService >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la protection en temps reel...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableIOAVProtection /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableOnAccessProtection /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des politiques Windows Defender...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiVirus /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableBlockAtFirstSeen /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de SmartScreen...
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Warn" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v EnableWebContentEvaluation /t REG_DWORD /d 1 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des taches planifiees Defender...
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Enable >nul 2>&1
@@ -1744,6 +1761,17 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Tamper Protection...
 reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Features" /v TamperProtection /t REG_DWORD /d 0 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des services Windows Defender...
+sc stop WinDefend >nul 2>&1
+sc stop WdNisSvc >nul 2>&1
+sc stop Sense >nul 2>&1
+sc stop SecurityHealthService >nul 2>&1
+sc config WinDefend start= disabled >nul 2>&1
+sc config WdNisSvc start= disabled >nul 2>&1
+sc config Sense start= disabled >nul 2>&1
+sc config WdBoot start= disabled >nul 2>&1
+sc config WdFilter start= disabled >nul 2>&1
+sc config WdNisDrv start= disabled >nul 2>&1
+sc config SecurityHealthService start= disabled >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
@@ -1756,11 +1784,19 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la protection en temps reel
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableIOAVProtection /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableOnAccessProtection /t REG_DWORD /d 1 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des politiques Windows Defender...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiVirus /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableBlockAtFirstSeen /t REG_DWORD /d 1 /f >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de SmartScreen...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Off" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v EnableWebContentEvaluation /t REG_DWORD /d 0 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees Defender...
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >nul 2>&1
@@ -1921,6 +1957,9 @@ reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v E
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableAnimations /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /f >nul 2>&1
 
+:: Reactiver l'animation de demarrage Windows
+bcdedit /set bootuxdisabled off >nul 2>&1
+
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des changements...
 taskkill /f /im explorer.exe >nul 2>&1
 start explorer.exe
@@ -2001,6 +2040,9 @@ reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v E
 :: Politiques forcees (animations demarrage OFF)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableAnimations /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: Desactivation de l'animation de demarrage Windows
+bcdedit /set bootuxdisabled on >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des changements...
 taskkill /f /im explorer.exe >nul 2>&1
