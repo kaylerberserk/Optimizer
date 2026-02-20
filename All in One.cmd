@@ -786,8 +786,6 @@ if "!HAS_NVIDIA!"=="1" (
     if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
     
     :: Telecharger NVIDIA Profile Inspector
-    call :REQUIRE_INTERNET "NVIDIA Profile Inspector" NOPAUSE
-    if errorlevel 1 goto :NPI_DONE
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de NVIDIA Profile Inspector...
     powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
     if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
@@ -1207,8 +1205,6 @@ if exist "%STR_EXE%" (
 )
 
 :: Telecharger SetTimerResolution.exe
-call :REQUIRE_INTERNET "Installation SetTimerResolution" NOPAUSE
-if errorlevel 1 goto :STR_DONE
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de SetTimerResolution.exe...
 powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
 if not exist "%STR_EXE%" (
@@ -2445,8 +2441,6 @@ pause
 goto :MENU_GESTION_WINDOWS
 
 :OUTIL_ACTIVATION
-call :REQUIRE_INTERNET "Outil activation Windows / Office (MAS)"
-if errorlevel 1 goto :MENU_PRINCIPAL
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% OUTIL D'ACTIVATION WINDOWS / OFFICE (MAS)%COLOR_RESET%
@@ -2461,8 +2455,6 @@ pause
 goto :MENU_PRINCIPAL
 
 :OUTIL_CHRIS_TITUS
-call :REQUIRE_INTERNET "Outil Chris Titus Tech (WinUtil)"
-if errorlevel 1 goto :MENU_PRINCIPAL
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% OUTIL CHRIS TITUS TECH (WINUTIL)%COLOR_RESET%
@@ -2994,18 +2986,6 @@ goto :MENU_PRINCIPAL
 
 
 :INSTALLER_VISUAL_REDIST
-if /I "%~1"=="call" (
-    call :REQUIRE_INTERNET "Installation des Visual C++ Redistributables" NOPAUSE
-) else (
-    call :REQUIRE_INTERNET "Installation des Visual C++ Redistributables"
-)
-if errorlevel 1 (
-    if /I "%~1"=="call" (
-        exit /b
-    ) else (
-        goto :MENU_PRINCIPAL
-    )
-)
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE%     INSTALLATION DES VISUAL C++ REDISTRIBUTABLES     %COLOR_RESET%
@@ -3403,20 +3383,6 @@ if "%~1"=="call" (
 set "HAS_INTERNET=0"
 for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri 'https://www.msftconnecttest.com/connecttest.txt' -Method Head -TimeoutSec 4 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){1}else{0} } catch { 0 }"') do set "HAS_INTERNET=%%i"
 exit /b
-
-:REQUIRE_INTERNET
-set "REQ_CONTEXT=%~1"
-
-:: Verifier la connectivite en temps reel (evite un etat stale de HAS_INTERNET)
-call :REFRESH_INTERNET_STATUS
-if "%HAS_INTERNET%"=="1" exit /b 0
-
-echo.
-echo %COLOR_YELLOW%[!]%COLOR_RESET% %REQ_CONTEXT% indisponible sans connexion Internet.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Reconnectez Internet puis relancez cette option.
-if /I "%~2"=="NOPAUSE" exit /b 1
-pause
-exit /b 1
 
 :END_SCRIPT
 cls
