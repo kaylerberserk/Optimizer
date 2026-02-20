@@ -1897,10 +1897,13 @@ cls
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Activation des animations Windows...
 echo.
 
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 1 /f >nul 2>&1
+:: VisualFXSetting=3 (Personnalise) pour que Windows utilise uniquement les cles
+:: individuelles ci-dessous sans recalculer tous les effets (ce qui reset le menu Demarrer)
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1
+:: NOTE: UserPreferencesMask et SystemParametersInfo volontairement non utilises
+:: car ils declenchent un recalcul global qui vide les applis epinglees du menu Demarrer W11
 reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "1" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9E3E078012000000 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Activer les effets visuels supplementaires
@@ -1913,9 +1916,10 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Li
 reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "1" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /f >nul 2>&1
 
-:: Supprimer les politiques forcees
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableAnimations /f >nul 2>&1
+:: Supprimer la politique DisableStartupAnimation
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /f >nul 2>&1
+:: NOTE: DisableAnimations sous Policies\Windows\Explorer volontairement non touche
+:: car modifier cette cle de registre reinitialise le layout du menu Demarrer W11
 
 :: Reactiver l'animation de demarrage Windows
 bcdedit /set bootuxdisabled off >nul 2>&1
@@ -1934,10 +1938,13 @@ cls
 echo %COLOR_RED%[-]%COLOR_RESET% Desactivation des animations Windows...
 echo.
 
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 2 /f >nul 2>&1
+:: VisualFXSetting=3 (Personnalise) pour que Windows utilise uniquement les cles
+:: individuelles ci-dessous sans recalculer tous les effets (ce qui reset le menu Demarrer)
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1
+:: NOTE: UserPreferencesMask et SystemParametersInfo volontairement non utilises
+:: car ils declenchent un recalcul global qui vide les applis epinglees du menu Demarrer W11
 reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v UserPreferencesMask /t REG_BINARY /d 9012038010000000 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: Garder les options utiles actives
@@ -1947,9 +1954,10 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Li
 reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
 
-:: Politiques forcees (animations demarrage OFF)
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableAnimations /t REG_DWORD /d 1 /f >nul 2>&1
+:: Animation demarrage OFF
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
+:: NOTE: DisableAnimations sous Policies\Windows\Explorer volontairement non utilise
+:: car modifier cette cle de registre reinitialise le layout du menu Demarrer W11
 
 :: Desactivation de l'animation de demarrage Windows
 bcdedit /set bootuxdisabled on >nul 2>&1
@@ -3381,7 +3389,7 @@ if "%~1"=="call" (
 
 :REFRESH_INTERNET_STATUS
 set "HAS_INTERNET=0"
-for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri 'https://www.msftconnecttest.com/connecttest.txt' -Method Head -TimeoutSec 4 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){1}else{0} } catch { 0 }"') do set "HAS_INTERNET=%%i"
+for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri 'https://www.google.com' -Method Head -TimeoutSec 4 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){1}else{0} } catch { 0 }"') do set "HAS_INTERNET=%%i"
 exit /b
 
 :END_SCRIPT
