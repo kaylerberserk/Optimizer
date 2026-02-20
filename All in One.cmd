@@ -2995,7 +2995,11 @@ goto :MENU_PRINCIPAL
 
 
 :INSTALLER_VISUAL_REDIST
-call :REQUIRE_INTERNET "Installation des Visual C++ Redistributables"
+if /I "%~1"=="call" (
+    call :REQUIRE_INTERNET "Installation des Visual C++ Redistributables" NOPAUSE
+) else (
+    call :REQUIRE_INTERNET "Installation des Visual C++ Redistributables"
+)
 if errorlevel 1 (
     if /I "%~1"=="call" (
         exit /b
