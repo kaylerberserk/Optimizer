@@ -2342,6 +2342,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci Edge supprime (les autres icones s
 :: Desinstallation de Microsoft Edge
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Tentative de desinstallation de Microsoft Edge...
 if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" (
+    set "EDGE_OLDDIR=%CD%"
     cd /d "%ProgramFiles(x86)%\Microsoft\Edge\Application"
     for /d %%i in (*) do (
         if exist "%%i\Installer\setup.exe" (
@@ -2349,6 +2350,7 @@ if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" (
             "%%i\Installer\setup.exe" --uninstall --system-level --verbose-logging --force-uninstall
         )
     )
+    cd /d "!EDGE_OLDDIR!"
 )
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage force des dossiers programme...
@@ -2722,7 +2724,7 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification et activation de la restauration systeme si necessaire...
 :: Verifier si la restauration systeme est activee via PowerShell (plus fiable)
 powershell -NoProfile -Command "try { $status = Get-ComputerRestorePoint -ErrorAction SilentlyContinue; if ($status) { exit 0 } else { exit 1 } } catch { exit 1 }" >nul 2>&1
-if %errorlevel% neq 0 (
+if errorlevel 1 (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la restauration systeme...
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" /t REG_DWORD /d 1 /f >nul 2>&1
     powershell -NoProfile -Command "try { Enable-ComputerRestore -Drive 'C:' -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
@@ -2737,7 +2739,7 @@ echo.
 set "RP_TIMESTAMP=%DATE:/=-%_%TIME::=-%"
 set "RP_TIMESTAMP=%RP_TIMESTAMP: =%"
 powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; try { $startTime = Get-Date; $job = Start-Job { Checkpoint-Computer -Description 'Optimizations_%RP_TIMESTAMP%' -RestorePointType 'MODIFY_SETTINGS' }; $completed = $job | Wait-Job -Timeout 120; if (-not $completed) { Stop-Job $job; Remove-Job $job; throw 'Timeout' }; $result = Receive-Job $job; Remove-Job $job; exit 0 } catch { exit 1 }" >nul 2>&1
-if %errorlevel% EQU 0 (
+if not errorlevel 1 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Point de restauration cree avec succes.
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Nom : Optimizations_%RP_TIMESTAMP%
 ) else (
@@ -3032,106 +3034,106 @@ set VC2015X64=0
 
 :: VC++ 2005 x86 (WOW6432Node sur 64-bit, SOFTWARE sur 32-bit)
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x86" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2005X86=1
+if not errorlevel 1 set VC2005X86=1
 :: Fallback pour Windows 32-bit
 if %VC2005X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2005X86=1
+    if not errorlevel 1 set VC2005X86=1
 )
 :: VC++ 2005 x64 (toujours dans SOFTWARE)
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x64" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2005X64=1
+if not errorlevel 1 set VC2005X64=1
 
 :: VC++ 2008 x86 (WOW6432Node sur 64-bit)
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x86" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2008X86=1
+if not errorlevel 1 set VC2008X86=1
 if %VC2008X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2008X86=1
+    if not errorlevel 1 set VC2008X86=1
 )
 :: VC++ 2008 x64
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x64" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2008X64=1
+if not errorlevel 1 set VC2008X64=1
 
 :: VC++ 2010 x86 (WOW6432Node sur 64-bit)
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x86" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2010X86=1
+if not errorlevel 1 set VC2010X86=1
 if %VC2010X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2010X86=1
+    if not errorlevel 1 set VC2010X86=1
 )
 :: VC++ 2010 x64
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x64" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2010X64=1
+if not errorlevel 1 set VC2010X64=1
 
 :: VC++ 2012 x86 (WOW6432Node sur 64-bit)
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x86" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2012X86=1
+if not errorlevel 1 set VC2012X86=1
 if %VC2012X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2012X86=1
+    if not errorlevel 1 set VC2012X86=1
 )
 :: VC++ 2012 x64
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x64" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2012X64=1
+if not errorlevel 1 set VC2012X64=1
 
 :: VC++ 2013 x86 (WOW6432Node sur 64-bit)
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x86" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2013X86=1
+if not errorlevel 1 set VC2013X86=1
 if %VC2013X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2013X86=1
+    if not errorlevel 1 set VC2013X86=1
 )
 :: VC++ 2013 x64
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x64" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2013X64=1
+if not errorlevel 1 set VC2013X64=1
 
 :: VC++ 2015-2022 x86 (WOW6432Node sur 64-bit)
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x86" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2015X86=1
+if not errorlevel 1 set VC2015X86=1
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x86" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X86=1
+    if not errorlevel 1 set VC2015X86=1
 )
 
 :: VC++ 2015-2022 x64 (toujours dans SOFTWARE)
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x64" >nul 2>&1
-if %ERRORLEVEL%==0 set VC2015X64=1
+if not errorlevel 1 set VC2015X64=1
 if %VC2015X64%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x64" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X64=1
+    if not errorlevel 1 set VC2015X64=1
 )
 if %VC2015X64%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x64" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X64=1
+    if not errorlevel 1 set VC2015X64=1
 )
 if %VC2015X64%==0 (
     reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x64" >nul 2>&1
-    if %ERRORLEVEL%==0 set VC2015X64=1
+    if not errorlevel 1 set VC2015X64=1
 )
 
 :: Afficher les resultats de detection
