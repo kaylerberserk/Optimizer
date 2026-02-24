@@ -8,7 +8,7 @@ reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 title Script d'Optimisation Windows - All in One
 
 :: Definition robuste du caractere ESC (code ASCII 27)
-for /f "delims=" %%a in ('powershell -NoProfile -Command "$([char]27)"') do set "ESC=%%a"
+for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
 
 :: Definitions des couleurs avec couleurs vives et styles
 set "COLOR_GREEN=!ESC![32m"
@@ -91,7 +91,7 @@ echo.
 :: Detection du type de systeme (PC fixe ou portable)
 set "IS_LAPTOP=0"
 for /f %%i in ('powershell -NoProfile -Command "if(Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue){Write-Output 1} else {Write-Output 0}"') do (
-    if %%i gtr 0 set "IS_LAPTOP=1"
+    if %%i equ 1 set "IS_LAPTOP=1"
 )
 if "%IS_LAPTOP%"=="1" (
     echo %STYLE_BOLD%%COLOR_WHITE%SYSTEME DETECTE:%COLOR_RESET% %COLOR_GREEN%PC PORTABLE%COLOR_RESET%
@@ -895,6 +895,8 @@ for /f "tokens=*" %%I in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcp
   reg add "%%I" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "%%I" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "%%I" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "%%I" /v DelayedAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
+  reg add "%%I" /v DelayedAckTicks /t REG_DWORD /d 1 /f >nul 2>&1
 )
 
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1022,7 +1024,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourcis d'accessibilite desactives - Plus
 
 :: 6.4 - DMA Remapping OFF
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DmaRemappingCompatible /t REG_DWORD /d 0 /f >nul 2>&1
-::reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la latence
 
 :: 6.5 - HID parse optimise
@@ -1116,7 +1117,7 @@ if not defined TARGET_GUID (
 
 :: Si le plan existe (origine ou notre copie), verifier s'il est deja actif
 if defined TARGET_GUID (
-    for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^^^>nul') do set "ACTIVE_GUID=%%G"
+    for /f "tokens=2 delims=:()" %%G in ('powercfg /getactivescheme 2^>nul') do set "ACTIVE_GUID=%%G"
     set "ACTIVE_GUID=!ACTIVE_GUID: =!"
     if "!ACTIVE_GUID!"=="!TARGET_GUID!" (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% Plan Ultimate/Optimal deja actif - aucune action requise
@@ -2239,7 +2240,9 @@ taskkill /f /im FileSyncHelper.exe >nul 2>&1
 taskkill /f /im OneDriveStandaloneUpdater.exe >nul 2>&1
 timeout /t 3 >nul
 taskkill /f /im explorer.exe >nul 2>&1
+timeout /t 2 >nul
 start explorer.exe
+timeout /t 3 >nul
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Deconnexion des comptes OneDrive...
 powershell -Command "try { Import-Module -Name Microsoft.PowerShell.Management -Force; Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts' -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue } } catch {}" >nul 2>&1
@@ -2756,8 +2759,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette operation peut prendre 30-60 secondes.
 echo.
 
 :: Creation du point de restauration avec timeout de 120 secondes et timestamp
-set "RP_TIMESTAMP=%DATE:/=-%_%TIME::=-%"
-set "RP_TIMESTAMP=%RP_TIMESTAMP: =%"
+for /f "tokens=1-3 delims=/ " %%a in ("%DATE%") do set "RP_DATE=%%a-%%b-%%c"
+for /f "tokens=1-3 delims=:." %%a in ("%TIME%") do set "RP_TIME=%%a-%%b-%%c"
+set "RP_TIMESTAMP=%RP_DATE%_%RP_TIME%"
+set "RP_DATE="
+set "RP_TIME="
 powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; try { $startTime = Get-Date; $job = Start-Job { Checkpoint-Computer -Description 'Optimizations_%RP_TIMESTAMP%' -RestorePointType 'MODIFY_SETTINGS' }; $completed = $job | Wait-Job -Timeout 120; if (-not $completed) { Stop-Job $job; Remove-Job $job; throw 'Timeout' }; $result = Receive-Job $job; Remove-Job $job; exit 0 } catch { exit 1 }" >nul 2>&1
 if not errorlevel 1 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Point de restauration cree avec succes.
@@ -2994,10 +3000,6 @@ if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86=1
 if %VC2015X64%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
     if not errorlevel 1 set VC2015X64=1
-)
-if %VC2015X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
 )
 if %VC2015X86%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
