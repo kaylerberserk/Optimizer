@@ -3396,7 +3396,7 @@ exit /b
 
 :REFRESH_INTERNET_STATUS
 set "HAS_INTERNET=0"
-for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $endpoints = @('https://www.google.com','https://www.microsoft.com','https://cloudflare.com'); foreach($url in $endpoints){ try { $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 3 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){ exit 1 } } catch {} } exit 0"') do set "HAS_INTERNET=%%i"
+for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $endpoints = @('https://www.google.com','https://www.microsoft.com','https://cloudflare.com'); foreach($url in $endpoints){ try { $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 3 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){ Write-Output 1; exit } } catch {} } Write-Output 0"') do set "HAS_INTERNET=%%i"
 exit /b
 
 :END_SCRIPT
