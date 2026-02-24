@@ -8,7 +8,7 @@ reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 title Script d'Optimisation Windows - All in One
 
 :: Definition robuste du caractere ESC (code ASCII 27)
-for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
+for /f "delims=" %%a in ('powershell -NoProfile -Command "$([char]27)"') do set "ESC=%%a"
 
 :: Definitions des couleurs avec couleurs vives et styles
 set "COLOR_GREEN=!ESC![32m"
