@@ -7,17 +7,34 @@ reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 :: Definir le titre de la console
 title Script d'Optimisation Windows - All in One
 
+:: Definition robuste du caractere ESC (code ASCII 27)
+for /f "delims=" %%a in ('powershell -NoProfile -Command "$([char]27)"') do set "ESC=%%a"
+
 :: Definitions des couleurs avec couleurs vives et styles
-for /f %%a in ('echo prompt $E^| cmd') do set "ESC=%%a"
-set "COLOR_GREEN=%ESC%[32m"
-set "COLOR_YELLOW=%ESC%[33m"
-set "COLOR_RED=%ESC%[31m"
-set "COLOR_CYAN=%ESC%[36m"
-set "COLOR_WHITE=%ESC%[37m"
-set "COLOR_BLUE=%ESC%[34m"
-set "COLOR_MAGENTA=%ESC%[35m"
-set "COLOR_RESET=%ESC%[0m"
-set "STYLE_BOLD=%ESC%[1m"
+set "COLOR_GREEN=!ESC![32m"
+set "COLOR_YELLOW=!ESC![33m"
+set "COLOR_RED=!ESC![31m"
+set "COLOR_CYAN=!ESC![36m"
+set "COLOR_WHITE=!ESC![37m"
+set "COLOR_BLUE=!ESC![34m"
+set "COLOR_MAGENTA=!ESC![35m"
+set "COLOR_RESET=!ESC![0m"
+set "STYLE_BOLD=!ESC![1m"
+
+:: ===========================================================================
+:: INITIALISATION DES VARIABLES GLOBALES
+:: ===========================================================================
+set "HAS_INTERNET=0"
+set "IS_LAPTOP=0"
+set "HAS_NVIDIA=0"
+set "DESACTIVER_SECURITE=0"
+set "DESACTIVER_DEFENDER=0"
+set "DESACTIVER_ANIMATIONS=0"
+set "DESACTIVER_IA=0"
+set "VCINSTALL=0"
+set "VCSKIP=0"
+set "PROGRESS_CURRENT=0"
+set "PROGRESS_TOTAL=0"
 
 :: ===========================================================================
 :: CONVENTION DES INDICATEURS ET COULEURS
@@ -34,7 +51,7 @@ set "STYLE_BOLD=%ESC%[1m"
 
 
 :: VERIFICATION DES PRE-REQUIS
-echo %COLOR_YELLOW%[*] Verification des prerequis...%COLOR_RESET%
+echo %COLOR_YELLOW%[*] Verification des pre-requis...%COLOR_RESET%
 net session >nul 2>&1
 if errorlevel 1 (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% Ce script necessite des privileges administrateur.
@@ -496,7 +513,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation des interruptions MSI...
 powershell -NoLogo -NoProfile -Command "Get-PnpDevice -Class @('Display','HDC','SCSIAdapter','System') -Status OK | ForEach-Object { $p='HKLM:\SYSTEM\CurrentControlSet\Enum\'+$_.InstanceId+'\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if (Test-Path $p) { Set-ItemProperty -Path $p -Name MSISupported -Value 1 -Force } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interruptions MSI activees
 
-:: Désactivation des Co-installateurs tiers (Razer/Logitech Popup)
+:: Desactivation des Co-installateurs tiers (Razer/Logitech Popup)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Co-installateurs (Razer/Logitech Popup)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" /v SearchOrderConfig /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer" /v DisableCoInstallers /t REG_DWORD /d 1 /f >nul 2>&1
@@ -922,7 +939,7 @@ powershell -NoProfile -NoLogo -Command "Get-NetAdapter | ? Status -eq 'Up' | % {
 :: 5.10 - NIC latence faible
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour faible latence...
 
-:: LSO IPv4/IPv6 + RSC IPv4/IPv6 (désactiver avec gestion des noms FR/EN)
+:: LSO IPv4/IPv6 + RSC IPv4/IPv6 (desactiver avec gestion des noms FR/EN)
 powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $props = Get-NetAdapterAdvancedProperty -Name $adapter; $lsoProps = $props | Where-Object { $_.DisplayName -like '*Large Send*' -or $_.DisplayName -like '*Grand envoi*' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; $rscProps = $props | Where-Object { $_.DisplayName -like '*Recv Segment*' -or $_.DisplayName -like '*RSC*' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC configuree - LSO/RSC off
@@ -980,7 +997,7 @@ echo %COLOR_WHITE%  la reactivite des peripheriques d'entree.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 6.1 - Souris optimisée
+:: 6.1 - Souris optimisee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'acceleration souris et des delais...
 reg add "HKCU\Control Panel\Mouse" /v MouseSpeed /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Mouse" /v MouseThreshold1 /t REG_SZ /d "0" /f >nul 2>&1
@@ -989,13 +1006,13 @@ reg add "HKCU\Control Panel\Mouse" /v MouseDelay /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Mouse" /v SnapToDefaultButton /t REG_SZ /d "0" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Acceleration souris desactivee - Mouvement 1:1 actif
 
-:: 6.2 - Clavier optimisé
+:: 6.2 - Clavier optimise
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la reactivite clavier...
 reg add "HKCU\Control Panel\Keyboard" /v KeyboardDelay /t REG_SZ /d "1" /f >nul 2>&1
 reg add "HKCU\Control Panel\Keyboard" /v KeyboardSpeed /t REG_SZ /d "31" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Clavier configure - Delai minimal et vitesse maximale
 
-:: 6.3 - Accessibilité OFF
+:: 6.3 - Accessibilite OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des raccourcis d'accessibilite (Sticky/Filter/Toggle Keys)...
 reg add "HKCU\Control Panel\Accessibility\StickyKeys" /v Flags /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Accessibility\StickyKeys" /v HotkeyActive /t REG_SZ /d "0" /f >nul 2>&1
@@ -1010,11 +1027,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DmaRemappingCompatibl
 ::reg add "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la latence
 
-:: 6.5 - HID parse optimisé
+:: 6.5 - HID parse optimise
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableInputDelayOptimization /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 6.6 - Files et priorités clavier/souris
+:: 6.6 - Files et priorites clavier/souris
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
@@ -2433,7 +2450,6 @@ if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
             echo %COLOR_RED%[-]%COLOR_RESET% Donnees utilisateur supprimees.
         ) else (
             echo %COLOR_GREEN%[OK]%COLOR_RESET% Donnees utilisateur conservees.
-        )
     )
 )
 
@@ -3013,8 +3029,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions deja installees...
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 
-:: Detection fiable via le registre Windows (Uninstall keys)
-:: Methode 100% sure : verifie les installations officielles dans le registre
+:: ===========================================================================
+:: DETECTION ROBUSTE MULTI-NIVEAUX
+:: Methode 1: Verification des DLL (le plus fiable)
+:: Methode 2: Registry Uninstall keys (fallback)
+:: Methode 3: Registry WinSxS (assembly side-by-side)
+:: ===========================================================================
 
 set VC2005X86=0
 set VC2005X64=0
@@ -3029,111 +3049,137 @@ set VC2013X64=0
 set VC2015X86=0
 set VC2015X64=0
 
-:: Detection via registre Uninstall (x64 dans SOFTWARE, x86 dans WOW6432Node sur Windows 64-bit)
-:: Note: Sur Windows 32-bit, tout est dans SOFTWARE. Sur 64-bit, x86 est dans WOW6432Node.
+:: ===========================================================================
+:: OPTIMISATION REGISTRE : Export unique pour accelerer la detection
+:: ===========================================================================
+set "REG_DUMP=%TEMP%\vc_uninstall_dump.txt"
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s > "%REG_DUMP%" 2>nul
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s >> "%REG_DUMP%" 2>nul
 
-:: VC++ 2005 x86 (WOW6432Node sur 64-bit, SOFTWARE sur 32-bit)
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x86" >nul 2>&1
-if not errorlevel 1 set VC2005X86=1
-:: Fallback pour Windows 32-bit
-if %VC2005X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2005X86=1
+:: --- VC++ 2015-2022 (v14) - Detection DLL + Registry ---
+:: DLL: vcruntime140.dll, msvcp140.dll (System32 pour x64, SysWOW64 pour x86)
+if exist "%SystemRoot%\System32\vcruntime140.dll" set VC2015X64=1
+if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86=1
+:: Fallback registry pour les versions 2015/2017/2019/2022
+if %VC2015X64%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
+    if not errorlevel 1 set VC2015X64=1
 )
-:: VC++ 2005 x64 (toujours dans SOFTWARE)
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2005" | findstr /I "x64" >nul 2>&1
-if not errorlevel 1 set VC2005X64=1
-
-:: VC++ 2008 x86 (WOW6432Node sur 64-bit)
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x86" >nul 2>&1
-if not errorlevel 1 set VC2008X86=1
-if %VC2008X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2008X86=1
+if %VC2015X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2015X86=1
 )
-:: VC++ 2008 x64
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2008" | findstr /I "x64" >nul 2>&1
-if not errorlevel 1 set VC2008X64=1
-
-:: VC++ 2010 x86 (WOW6432Node sur 64-bit)
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x86" >nul 2>&1
-if not errorlevel 1 set VC2010X86=1
-if %VC2010X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2010X86=1
+if %VC2015X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2015X86=1
 )
-:: VC++ 2010 x64
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2010" | findstr /I "x64" >nul 2>&1
-if not errorlevel 1 set VC2010X64=1
 
-:: VC++ 2012 x86 (WOW6432Node sur 64-bit)
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x86" >nul 2>&1
-if not errorlevel 1 set VC2012X86=1
-if %VC2012X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2012X86=1
+:: --- VC++ 2013 (v12) - Detection DLL + Registry ---
+:: DLL: msvcp120.dll, msvcr120.dll
+if exist "%SystemRoot%\System32\msvcp120.dll" set VC2013X64=1
+if exist "%SystemRoot%\SysWOW64\msvcp120.dll" set VC2013X86=1
+:: Fallback registry
+if %VC2013X64%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
+    if not errorlevel 1 set VC2013X64=1
 )
-:: VC++ 2012 x64
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2012" | findstr /I "x64" >nul 2>&1
-if not errorlevel 1 set VC2012X64=1
-
-:: VC++ 2013 x86 (WOW6432Node sur 64-bit)
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x86" >nul 2>&1
-if not errorlevel 1 set VC2013X86=1
 if %VC2013X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x86" >nul 2>&1
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
     if not errorlevel 1 set VC2013X86=1
 )
-:: VC++ 2013 x64
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2013" | findstr /I "x64" >nul 2>&1
-if not errorlevel 1 set VC2013X64=1
-
-:: VC++ 2015-2022 x86 (WOW6432Node sur 64-bit)
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x86" >nul 2>&1
-if not errorlevel 1 set VC2015X86=1
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-if %VC2015X86%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
+if %VC2013X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
+    if not errorlevel 1 set VC2013X86=1
 )
 
-:: VC++ 2015-2022 x64 (toujours dans SOFTWARE)
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2015" | findstr /I "x64" >nul 2>&1
-if not errorlevel 1 set VC2015X64=1
-if %VC2015X64%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2017" | findstr /I "x64" >nul 2>&1
-    if not errorlevel 1 set VC2015X64=1
+:: --- VC++ 2012 (v11) - Detection DLL + Registry ---
+:: DLL: msvcp110.dll, msvcr110.dll
+if exist "%SystemRoot%\System32\msvcp110.dll" set VC2012X64=1
+if exist "%SystemRoot%\SysWOW64\msvcp110.dll" set VC2012X86=1
+:: Fallback registry
+if %VC2012X64%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
+    if not errorlevel 1 set VC2012X64=1
 )
-if %VC2015X64%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2019" | findstr /I "x64" >nul 2>&1
-    if not errorlevel 1 set VC2015X64=1
+if %VC2012X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
+    if not errorlevel 1 set VC2012X86=1
 )
-if %VC2015X64%==0 (
-    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s 2>nul | findstr /I "Visual C++ 2022" | findstr /I "x64" >nul 2>&1
-    if not errorlevel 1 set VC2015X64=1
+if %VC2012X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
+    if not errorlevel 1 set VC2012X86=1
+)
+
+:: --- VC++ 2010 (v10) - Detection DLL + Registry ---
+:: DLL: msvcp100.dll, msvcr100.dll
+if exist "%SystemRoot%\System32\msvcp100.dll" set VC2010X64=1
+if exist "%SystemRoot%\SysWOW64\msvcp100.dll" set VC2010X86=1
+:: Fallback registry
+if %VC2010X64%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
+    if not errorlevel 1 set VC2010X64=1
+)
+if %VC2010X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2010X86=1
+)
+if %VC2010X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2010X86=1
+)
+
+:: --- VC++ 2008 (v9) - Detection DLL + Registry + WinSxS ---
+:: DLL: msvcp90.dll, msvcr90.dll
+if exist "%SystemRoot%\System32\msvcp90.dll" set VC2008X64=1
+if exist "%SystemRoot%\SysWOW64\msvcp90.dll" set VC2008X86=1
+:: Fallback registry
+if %VC2008X64%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
+    if not errorlevel 1 set VC2008X64=1
+)
+if %VC2008X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2008X86=1
+)
+if %VC2008X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2008X86=1
+)
+:: Fallback WinSxS (assembly side-by-side pour 2008)
+if %VC2008X86%==0 (
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc90" >nul 2>&1
+    if not errorlevel 1 set VC2008X86=1
+)
+if %VC2008X64%==0 (
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc90" >nul 2>&1
+    if not errorlevel 1 set VC2008X64=1
+)
+
+:: --- VC++ 2005 (v8) - Detection DLL + Registry + WinSxS ---
+:: DLL: msvcp80.dll, msvcr80.dll
+if exist "%SystemRoot%\System32\msvcp80.dll" set VC2005X64=1
+if exist "%SystemRoot%\SysWOW64\msvcp80.dll" set VC2005X86=1
+:: Fallback registry
+if %VC2005X64%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
+    if not errorlevel 1 set VC2005X64=1
+)
+if %VC2005X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2005X86=1
+)
+if %VC2005X86%==0 (
+    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
+    if not errorlevel 1 set VC2005X86=1
+)
+:: Fallback WinSxS (assembly side-by-side pour 2005)
+if %VC2005X86%==0 (
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc80" >nul 2>&1
+    if not errorlevel 1 set VC2005X86=1
+)
+if %VC2005X64%==0 (
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc80" >nul 2>&1
+    if not errorlevel 1 set VC2005X64=1
 )
 
 :: Afficher les resultats de detection
@@ -3153,13 +3199,17 @@ if %VC2015X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x64 - Deja i
 :: Compter combien sont deja installes
 set /a VCINSTALLED_COUNT=%VC2005X86%+%VC2005X64%+%VC2008X86%+%VC2008X64%+%VC2010X86%+%VC2010X64%+%VC2012X86%+%VC2012X64%+%VC2013X86%+%VC2013X64%+%VC2015X86%+%VC2015X64%
 
-:: Si tout est deja installe, passer directement au resume
-if %VCINSTALLED_COUNT%==12 (
-    echo.
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions de Visual C++ Redistributables sont deja installees.
-    set /a VCSKIP=%VCINSTALLED_COUNT%
-    goto :VCREDIST_RESUME
-)
+:: Si tout est deja installe, afficher message et retourner
+if not %VCINSTALLED_COUNT%==12 goto :VCREDIST_INSTALL
+
+echo.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions de Visual C++ Redistributables sont deja installees.
+if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
+if "%~1"=="call" exit /b
+pause
+goto :MENU_PRINCIPAL
+
+:VCREDIST_INSTALL
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -3167,210 +3217,214 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation des versions manquantes...
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 
+:: Initialiser la barre de progression (12 packages au total)
+set /a VC_TOTAL=12
+set /a VC_STEP=0
+set /a VCINSTALL=0
+set /a VCSKIP=0
+
 :: Creer un dossier temporaire pour les installations
 set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
 if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
 
 :: VC++ 2005 x86
-if %VC2005X86%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2005 x86 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2005 x86...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2005x86.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2005x86.exe" (
-        "%VCREDIST_DIR%\vc2005x86.exe" /Q >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x86 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x86
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2005 x86"
+if %VC2005X86%==1 goto :skip2005x86
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2005x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2005x86.exe" start /wait "" "%VCREDIST_DIR%\vc2005x86.exe" /Q >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2005x86
+:skip2005x86
+set /a VCSKIP+=1
+:done2005x86
 
 :: VC++ 2005 x64
-if %VC2005X64%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2005 x64 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2005 x64...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2005x64.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2005x64.exe" (
-        "%VCREDIST_DIR%\vc2005x64.exe" /Q >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2005 x64 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2005 x64
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2005 x64"
+if %VC2005X64%==1 goto :skip2005x64
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2005x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2005x64.exe" start /wait "" "%VCREDIST_DIR%\vc2005x64.exe" /Q >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2005x64
+:skip2005x64
+set /a VCSKIP+=1
+:done2005x64
 
 :: VC++ 2008 x86
-if %VC2008X86%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2008 x86 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2008 x86...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2008x86.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2008x86.exe" (
-        "%VCREDIST_DIR%\vc2008x86.exe" /q >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x86 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x86
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2008 x86"
+if %VC2008X86%==1 goto :skip2008x86
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2008x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2008x86.exe" start /wait "" "%VCREDIST_DIR%\vc2008x86.exe" /q >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2008x86
+:skip2008x86
+set /a VCSKIP+=1
+:done2008x86
 
 :: VC++ 2008 x64
-if %VC2008X64%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2008 x64 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2008 x64...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2008x64.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2008x64.exe" (
-        "%VCREDIST_DIR%\vc2008x64.exe" /q >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2008 x64 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2008 x64
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2008 x64"
+if %VC2008X64%==1 goto :skip2008x64
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2008x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2008x64.exe" start /wait "" "%VCREDIST_DIR%\vc2008x64.exe" /q >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2008x64
+:skip2008x64
+set /a VCSKIP+=1
+:done2008x64
 
 :: VC++ 2010 x86
-if %VC2010X86%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2010 x86 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2010 x86...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2010x86.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2010x86.exe" (
-        "%VCREDIST_DIR%\vc2010x86.exe" /q >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x86 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x86
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2010 x86"
+if %VC2010X86%==1 goto :skip2010x86
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2010x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2010x86.exe" start /wait "" "%VCREDIST_DIR%\vc2010x86.exe" /q >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2010x86
+:skip2010x86
+set /a VCSKIP+=1
+:done2010x86
 
 :: VC++ 2010 x64
-if %VC2010X64%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2010 x64 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2010 x64...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2010x64.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2010x64.exe" (
-        "%VCREDIST_DIR%\vc2010x64.exe" /q >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2010 x64 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2010 x64
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2010 x64"
+if %VC2010X64%==1 goto :skip2010x64
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2010x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2010x64.exe" start /wait "" "%VCREDIST_DIR%\vc2010x64.exe" /q >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2010x64
+:skip2010x64
+set /a VCSKIP+=1
+:done2010x64
 
 :: VC++ 2012 x86
-if %VC2012X86%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2012 x86 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2012 x86...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2012x86.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2012x86.exe" (
-        "%VCREDIST_DIR%\vc2012x86.exe" /install /quiet /norestart >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x86 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x86
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2012 x86"
+if %VC2012X86%==1 goto :skip2012x86
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2012x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2012x86.exe" start /wait "" "%VCREDIST_DIR%\vc2012x86.exe" /install /quiet /norestart >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2012x86
+:skip2012x86
+set /a VCSKIP+=1
+:done2012x86
 
 :: VC++ 2012 x64
-if %VC2012X64%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2012 x64 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2012 x64...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2012x64.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2012x64.exe" (
-        "%VCREDIST_DIR%\vc2012x64.exe" /install /quiet /norestart >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2012 x64 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2012 x64
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2012 x64"
+if %VC2012X64%==1 goto :skip2012x64
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2012x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2012x64.exe" start /wait "" "%VCREDIST_DIR%\vc2012x64.exe" /install /quiet /norestart >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2012x64
+:skip2012x64
+set /a VCSKIP+=1
+:done2012x64
 
 :: VC++ 2013 x86
-if %VC2013X86%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2013 x86 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2013 x86...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2013x86.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2013x86.exe" (
-        "%VCREDIST_DIR%\vc2013x86.exe" /install /quiet /norestart >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x86 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x86
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2013 x86"
+if %VC2013X86%==1 goto :skip2013x86
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2013x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2013x86.exe" start /wait "" "%VCREDIST_DIR%\vc2013x86.exe" /install /quiet /norestart >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2013x86
+:skip2013x86
+set /a VCSKIP+=1
+:done2013x86
 
 :: VC++ 2013 x64
-if %VC2013X64%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2013 x64 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2013 x64...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2013x64.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2013x64.exe" (
-        "%VCREDIST_DIR%\vc2013x64.exe" /install /quiet /norestart >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2013 x64 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2013 x64
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2013 x64"
+if %VC2013X64%==1 goto :skip2013x64
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2013x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2013x64.exe" start /wait "" "%VCREDIST_DIR%\vc2013x64.exe" /install /quiet /norestart >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2013x64
+:skip2013x64
+set /a VCSKIP+=1
+:done2013x64
 
 :: VC++ 2015-2022 x86
-if %VC2015X86%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2015-2022 x86 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2015-2022 x86...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2015x86.exe" (
-        "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x86 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x86
-    )
-)
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x86"
+if %VC2015X86%==1 goto :skip2015x86
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2015x86.exe" start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2015x86
+:skip2015x86
+set /a VCSKIP+=1
+:done2015x86
 
 :: VC++ 2015-2022 x64
-if %VC2015X64%==1 (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% VC++ 2015-2022 x64 - Deja present
-    set /a VCSKIP=VCSKIP+1
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement VC++ 2015-2022 x64...
-    powershell -NoProfile -Command "Invoke-WebRequest -Uri 'https://aka.ms/vs/17/release/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2015x64.exe" (
-        "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% VC++ 2015-2022 x64 installe
-        set /a VCINSTALL=VCINSTALL+1
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec telechargement VC++ 2015-2022 x64
-    )
+set /a VC_STEP+=1
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x64"
+if %VC2015X64%==1 goto :skip2015x64
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+if exist "%VCREDIST_DIR%\vc2015x64.exe" start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
+set /a VCINSTALL+=1
+goto :done2015x64
+:skip2015x64
+set /a VCSKIP+=1
+:done2015x64
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification des installations...
+
+:: Re-detection des DLLs apres installation
+set VC2005X86_NEW=0
+set VC2005X64_NEW=0
+set VC2008X86_NEW=0
+set VC2008X64_NEW=0
+set VC2010X86_NEW=0
+set VC2010X64_NEW=0
+set VC2012X86_NEW=0
+set VC2012X64_NEW=0
+set VC2013X86_NEW=0
+set VC2013X64_NEW=0
+set VC2015X86_NEW=0
+set VC2015X64_NEW=0
+
+:: Verification DLL + Registry + WinSxS
+if exist "%SystemRoot%\System32\vcruntime140.dll" set VC2015X64_NEW=1
+if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86_NEW=1
+if exist "%SystemRoot%\System32\msvcp120.dll" set VC2013X64_NEW=1
+if exist "%SystemRoot%\SysWOW64\msvcp120.dll" set VC2013X86_NEW=1
+if exist "%SystemRoot%\System32\msvcp110.dll" set VC2012X64_NEW=1
+if exist "%SystemRoot%\SysWOW64\msvcp110.dll" set VC2012X86_NEW=1
+if exist "%SystemRoot%\System32\msvcp100.dll" set VC2010X64_NEW=1
+if exist "%SystemRoot%\SysWOW64\msvcp100.dll" set VC2010X86_NEW=1
+if exist "%SystemRoot%\System32\msvcp90.dll" set VC2008X64_NEW=1
+if exist "%SystemRoot%\SysWOW64\msvcp90.dll" set VC2008X86_NEW=1
+if exist "%SystemRoot%\System32\msvcp80.dll" set VC2005X64_NEW=1
+if exist "%SystemRoot%\SysWOW64\msvcp80.dll" set VC2005X86_NEW=1
+
+:: Fallback WinSxS pour 2005/2008
+if exist "%SystemRoot%\WinSxS" (
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc90" >nul 2>&1
+    if not errorlevel 1 if %VC2008X86_NEW%==0 set VC2008X86_NEW=1
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc90" >nul 2>&1
+    if not errorlevel 1 if %VC2008X64_NEW%==0 set VC2008X64_NEW=1
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc80" >nul 2>&1
+    if not errorlevel 1 if %VC2005X86_NEW%==0 set VC2005X86_NEW=1
+    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc80" >nul 2>&1
+    if not errorlevel 1 if %VC2005X64_NEW%==0 set VC2005X64_NEW=1
 )
 
-:VCREDIST_RESUME
-:: Calculer VCSKIP si on a saute l'installation
-if not defined VCSKIP set /a VCSKIP=%VCINSTALLED_COUNT%
+:: Calculer les vrais comptes
+set /a VCINSTALL=%VC2005X86_NEW%+%VC2005X64_NEW%+%VC2008X86_NEW%+%VC2008X64_NEW%+%VC2010X86_NEW%+%VC2010X64_NEW%+%VC2012X86_NEW%+%VC2012X64_NEW%+%VC2013X86_NEW%+%VC2013X64_NEW%+%VC2015X86_NEW%+%VC2015X64_NEW%
+set /a VCSKIP=12-VCINSTALL
+
+:VCREDIST_FINAL
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Verification terminee
 
 :: Nettoyage des fichiers temporaires
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires...
 if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
+if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires supprimes
 
 echo.
@@ -3378,16 +3432,67 @@ echo %COLOR_CYAN%===============================================================
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Installation des Visual C++ Redistributables terminee.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%Resume:%COLOR_RESET%
-echo   %COLOR_GREEN%Installes: %VCINSTALL%%COLOR_RESET%
-echo   %COLOR_CYAN%Deja presents: %VCSKIP%%COLOR_RESET%
+echo %COLOR_WHITE%Resume des installations:%COLOR_RESET%
 echo.
-if "%~1"=="call" (
-  exit /b
-) else (
-  pause
-  goto :MENU_PRINCIPAL
-)
+echo   %COLOR_WHITE%VC++ 2005:    %COLOR_RESET%x86 [%VC2005X86_NEW%]  x64 [%VC2005X64_NEW%]
+echo   %COLOR_WHITE%VC++ 2008:    %COLOR_RESET%x86 [%VC2008X86_NEW%]  x64 [%VC2008X64_NEW%]
+echo   %COLOR_WHITE%VC++ 2010:    %COLOR_RESET%x86 [%VC2010X86_NEW%]  x64 [%VC2010X64_NEW%]
+echo   %COLOR_WHITE%VC++ 2012:    %COLOR_RESET%x86 [%VC2012X86_NEW%]  x64 [%VC2012X64_NEW%]
+echo   %COLOR_WHITE%VC++ 2013:    %COLOR_RESET%x86 [%VC2013X86_NEW%]  x64 [%VC2013X64_NEW%]
+echo   %COLOR_WHITE%VC++ 2015-22: %COLOR_RESET%x86 [%VC2015X86_NEW%]  x64 [%VC2015X64_NEW%]
+echo.
+echo   %COLOR_GREEN%Total installes: %VCINSTALL% / 12%COLOR_RESET%
+echo   %COLOR_YELLOW%Note: Les versions 2005/2008 peuvent echouer (liens obsoletes)%COLOR_RESET%
+echo.
+if "%~1"=="call" exit /b
+pause
+goto :MENU_PRINCIPAL
+
+:PROGRESS_BAR
+:: ===========================================================================
+:: Affiche une barre de progression
+:: Parametres: %1 = current, %2 = total, %3 = description (optionnel)
+:: Utilise PROGRESS_CHARS pour le caractere de remplissage
+:: ===========================================================================
+setlocal
+set "PROG_CURRENT=%~1"
+set "PROG_TOTAL=%~2"
+set "PROG_DESC=%~3"
+set "PROG_CHAR=█"
+set "PROG_EMPTY=░"
+set "PROG_WIDTH=40"
+
+:: Calcul du pourcentage
+set /a PROG_PERCENT=PROG_CURRENT*100/PROG_TOTAL 2>nul
+if %PROG_PERCENT% gtr 100 set "PROG_PERCENT=100"
+
+:: Calcul des caracteres remplis
+set /a PROG_FILLED=PROG_PERCENT*PROG_WIDTH/100
+set /a PROG_EMPTY_COUNT=PROG_WIDTH-PROG_FILLED
+
+:: Construction de la barre
+set "PROG_BAR="
+for /l %%i in (1,1,%PROG_FILLED%) do set "PROG_BAR=!PROG_BAR!%PROG_CHAR%"
+for /l %%i in (1,1,%PROG_EMPTY_COUNT%) do set "PROG_BAR=!PROG_BAR!%PROG_EMPTY%"
+
+:: Affichage sur la meme ligne
+<nul set /p "=%ESC%[2K%ESC%[1G%COLOR_YELLOW%[%PROG_BAR%]%COLOR_RESET% %PROG_PERCENT%%% (%PROG_CURRENT%/%PROG_TOTAL%) %PROG_DESC%%ESC%[0K"
+if %PROG_CURRENT% equ %PROG_TOTAL% echo.
+
+endlocal
+exit /b
+
+:PROGRESS_INIT
+:: Initialise le compteur de progression
+set "PROGRESS_CURRENT=0"
+set "PROGRESS_TOTAL=%~1"
+exit /b
+
+:PROGRESS_UPDATE
+:: Met a jour la progression et affiche la barre
+set /a PROGRESS_CURRENT+=1
+call :PROGRESS_BAR %PROGRESS_CURRENT% %PROGRESS_TOTAL% "%~1"
+exit /b
 
 :REFRESH_INTERNET_STATUS
 set "HAS_INTERNET=0"
@@ -3406,3 +3511,4 @@ echo.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 timeout /t 3 /nobreak >nul
 exit /b
+
