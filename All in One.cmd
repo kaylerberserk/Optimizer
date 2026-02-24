@@ -3017,17 +3017,12 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE%     INSTALLATION DES VISUAL C++ REDISTRIBUTABLES     %COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Cette section installe tous les Visual C++ Redistributables%COLOR_RESET%
-echo %COLOR_WHITE%  necessaires pour les jeux et applications (2005 a 2022).%COLOR_RESET%
-echo.
 
 :: Initialiser les compteurs
 set VCINSTALL=0
 set VCSKIP=0
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions deja installees...
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions installees...
 
 :: ===========================================================================
 :: DETECTION ROBUSTE MULTI-NIVEAUX
@@ -3182,39 +3177,28 @@ if %VC2005X64%==0 (
     if not errorlevel 1 set VC2005X64=1
 )
 
-:: Afficher les resultats de detection
-if %VC2005X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2005 x86 - Deja installe
-if %VC2005X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2005 x64 - Deja installe
-if %VC2008X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2008 x86 - Deja installe
-if %VC2008X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2008 x64 - Deja installe
-if %VC2010X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2010 x86 - Deja installe
-if %VC2010X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2010 x64 - Deja installe
-if %VC2012X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2012 x86 - Deja installe
-if %VC2012X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2012 x64 - Deja installe
-if %VC2013X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2013 x86 - Deja installe
-if %VC2013X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2013 x64 - Deja installe
-if %VC2015X86%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x86 - Deja installe
-if %VC2015X64%==1 echo %COLOR_GREEN%[+]%COLOR_RESET% VC++ 2015-2022 x64 - Deja installe
-
 :: Compter combien sont deja installes
 set /a VCINSTALLED_COUNT=%VC2005X86%+%VC2005X64%+%VC2008X86%+%VC2008X64%+%VC2010X86%+%VC2010X64%+%VC2012X86%+%VC2012X64%+%VC2013X86%+%VC2013X64%+%VC2015X86%+%VC2015X64%
+
+echo.
+echo %COLOR_WHITE%Versions detectees:%COLOR_RESET% %COLOR_GREEN%%VCINSTALLED_COUNT%/12%COLOR_RESET%
 
 :: Si tout est deja installe, afficher message et retourner
 if not %VCINSTALLED_COUNT%==12 goto :VCREDIST_INSTALL
 
 echo.
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions de Visual C++ Redistributables sont deja installees.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions sont deja installees.
 if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
 if "%~1"=="call" exit /b
+echo.
 pause
 goto :MENU_PRINCIPAL
 
 :VCREDIST_INSTALL
-
 echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation des versions manquantes...
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+set /a VC_TO_INSTALL=12-VCINSTALLED_COUNT
+echo %COLOR_WHITE%Packages a installer:%COLOR_RESET% %COLOR_YELLOW%%VC_TO_INSTALL%%COLOR_RESET%
 echo.
 
 :: Initialiser la barre de progression (12 packages au total)
@@ -3415,36 +3399,16 @@ if exist "%SystemRoot%\WinSxS" (
 
 :: Calculer les vrais comptes
 set /a VCINSTALL=%VC2005X86_NEW%+%VC2005X64_NEW%+%VC2008X86_NEW%+%VC2008X64_NEW%+%VC2010X86_NEW%+%VC2010X64_NEW%+%VC2012X86_NEW%+%VC2012X64_NEW%+%VC2013X86_NEW%+%VC2013X64_NEW%+%VC2015X86_NEW%+%VC2015X64_NEW%
-set /a VCSKIP=12-VCINSTALL
 
-:VCREDIST_FINAL
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Verification terminee
+echo.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Verification terminee - %COLOR_GREEN%%VCINSTALL%/12%COLOR_RESET% versions presentes
 
 :: Nettoyage des fichiers temporaires
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires...
 if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
 if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires supprimes
 
-echo.
-echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Installation des Visual C++ Redistributables terminee.
-echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%Resume des installations:%COLOR_RESET%
-echo.
-echo   %COLOR_WHITE%VC++ 2005:    %COLOR_RESET%x86 [%VC2005X86_NEW%]  x64 [%VC2005X64_NEW%]
-echo   %COLOR_WHITE%VC++ 2008:    %COLOR_RESET%x86 [%VC2008X86_NEW%]  x64 [%VC2008X64_NEW%]
-echo   %COLOR_WHITE%VC++ 2010:    %COLOR_RESET%x86 [%VC2010X86_NEW%]  x64 [%VC2010X64_NEW%]
-echo   %COLOR_WHITE%VC++ 2012:    %COLOR_RESET%x86 [%VC2012X86_NEW%]  x64 [%VC2012X64_NEW%]
-echo   %COLOR_WHITE%VC++ 2013:    %COLOR_RESET%x86 [%VC2013X86_NEW%]  x64 [%VC2013X64_NEW%]
-echo   %COLOR_WHITE%VC++ 2015-22: %COLOR_RESET%x86 [%VC2015X86_NEW%]  x64 [%VC2015X64_NEW%]
-echo.
-echo   %COLOR_GREEN%Total installes: %VCINSTALL% / 12%COLOR_RESET%
-echo   %COLOR_YELLOW%Note: Les versions 2005/2008 peuvent echouer (liens obsoletes)%COLOR_RESET%
-echo.
 if "%~1"=="call" exit /b
+echo.
 pause
 goto :MENU_PRINCIPAL
 
@@ -3452,15 +3416,14 @@ goto :MENU_PRINCIPAL
 :: ===========================================================================
 :: Affiche une barre de progression
 :: Parametres: %1 = current, %2 = total, %3 = description (optionnel)
-:: Utilise PROGRESS_CHARS pour le caractere de remplissage
 :: ===========================================================================
 setlocal
 set "PROG_CURRENT=%~1"
 set "PROG_TOTAL=%~2"
 set "PROG_DESC=%~3"
-set "PROG_CHAR=█"
-set "PROG_EMPTY=░"
-set "PROG_WIDTH=40"
+set "PROG_CHAR=#"
+set "PROG_EMPTY=."
+set "PROG_WIDTH=30"
 
 :: Calcul du pourcentage
 set /a PROG_PERCENT=PROG_CURRENT*100/PROG_TOTAL 2>nul
@@ -3476,7 +3439,7 @@ for /l %%i in (1,1,%PROG_FILLED%) do set "PROG_BAR=!PROG_BAR!%PROG_CHAR%"
 for /l %%i in (1,1,%PROG_EMPTY_COUNT%) do set "PROG_BAR=!PROG_BAR!%PROG_EMPTY%"
 
 :: Affichage sur la meme ligne
-<nul set /p "=%ESC%[2K%ESC%[1G%COLOR_YELLOW%[%PROG_BAR%]%COLOR_RESET% %PROG_PERCENT%%% (%PROG_CURRENT%/%PROG_TOTAL%) %PROG_DESC%%ESC%[0K"
+<nul set /p "=!ESC![2K!ESC![1G%COLOR_YELLOW%[%PROG_BAR%]%COLOR_RESET% %PROG_PERCENT%%% (%PROG_CURRENT%/%PROG_TOTAL%) %PROG_DESC%!ESC![0K"
 if %PROG_CURRENT% equ %PROG_TOTAL% echo.
 
 endlocal
