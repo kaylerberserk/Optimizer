@@ -514,10 +514,11 @@ powershell -NoLogo -NoProfile -Command "Get-PnpDevice -Class @('Display','HDC','
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interruptions MSI activees
 
 :: Desactivation des Co-installateurs tiers (Razer/Logitech Popup)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Co-installateurs (Razer/Logitech Popup)...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Co-installateurs et recherche pilotes auto...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" /v SearchOrderConfig /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer" /v DisableCoInstallers /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Co-installateurs et recherche de pilotes desactives
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Popups Razer/Logitech bloques
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Les nouveaux peripheriques ne trouveront pas automatiquement leurs pilotes
 
 :: Privacy Supplementaire
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des tweaks privacy supplementaires...
@@ -537,30 +538,25 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
 
-:: 1.8 - Cache Icones Explorer
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du cache d'icones pour dossiers lourds...
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v Max Cached Icons /t REG_SZ /d "8192" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache icones augmente (dossiers avec 20 000+ fichiers instantanes)
-
-:: 1.9 - Desactivation du stockage reserve
+:: 1.8 - Desactivation du stockage reserve
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du stockage reserve Windows...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Stockage reserve desactive (~7Go recuperes apres redemarrage)
 
-:: 1.10 - Affichage du code erreur BSoD
+:: 1.9 - Affichage du code erreur BSoD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de l'affichage des codes erreur BSoD...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v DisplayParameters /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Codes erreur BSoD visibles (diagnostic facilite)
 
-:: 1.11 - Desactivation de l'aide F1
+:: 1.10 - Desactivation de l'aide F1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la touche F1 (aide Windows)...
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win64" /ve /t REG_SZ /d "" /f >nul 2>&1
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t REG_SZ /d "" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Touche F1 (aide) desactivee
 
-:: 1.12 - Desactivation audio enhancements (latence audio)
+:: 1.11 - Desactivation audio enhancements (latence audio)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des ameliorations audio...
 for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" 2^>nul ^| findstr /i "HKEY"') do (
   reg add "%%a" /v "FxNonDestructiveSoftMixer" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -769,10 +765,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie AMD desactivee
 :: 4.5 - NVIDIA Low Latency
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations Low Latency NVIDIA...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v F1TransitionLatency /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
+for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+  reg add "%%K" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
+  reg add "%%K" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
+  reg add "%%K" /v F1TransitionLatency /t REG_DWORD /d 1 /f >nul 2>&1
+  reg add "%%K" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
+)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag
 
 :: 4.6 - WriteCombining
@@ -1293,7 +1291,10 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence stockage supprimees
 
 :: 7.18 - GPU PreferMaxPerf
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration GPU en mode performances maximales...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
+for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+  reg add "%%K" /v PreferMaxPerf /t REG_DWORD /d 1 /f >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% GPU configure en mode performances maximales
 
 :: 7.19 - PCI & peripheriques reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la mise en veille des peripheriques PCI...
@@ -1514,7 +1515,9 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Limites de latence I/O restaurees
 
 :: 16. Restauration de la gestion d'energie GPU et PCI
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration de la gestion d'energie GPU...
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v PreferMaxPerf /f >nul 2>&1
+for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+  reg delete "%%K" /v PreferMaxPerf /f >nul 2>&1
+)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie GPU restauree
 :: 16b. Reactiver la mise en veille des peripheriques PCI (D3Cold)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la gestion d'energie PCI...
@@ -2450,6 +2453,7 @@ if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
             echo %COLOR_RED%[-]%COLOR_RESET% Donnees utilisateur supprimees.
         ) else (
             echo %COLOR_GREEN%[OK]%COLOR_RESET% Donnees utilisateur conservees.
+        )
     )
 )
 
@@ -3390,7 +3394,7 @@ exit /b
 
 :REFRESH_INTERNET_STATUS
 set "HAS_INTERNET=0"
-for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri 'https://www.google.com' -Method Head -TimeoutSec 4 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){1}else{0} } catch { 0 }"') do set "HAS_INTERNET=%%i"
+for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $endpoints = @('https://www.google.com','https://www.microsoft.com','https://cloudflare.com'); foreach($url in $endpoints){ try { $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 3 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){ exit 1 } } catch {} } exit 0"') do set "HAS_INTERNET=%%i"
 exit /b
 
 :END_SCRIPT
