@@ -2769,58 +2769,65 @@ goto :MENU_PRINCIPAL
 :NETTOYAGE_AVANCE_WINDOWS
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %COLOR_WHITE%                      NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                 NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 
-:: -----------------------------------------------------------------------------
-:: ANALYSE ESPACE (Initial, sans affichage)
-:: -----------------------------------------------------------------------------
+:: Analyse espace initial
 for /f %%a in ('powershell -nologo -command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set space_before_mb=%%a
 
 echo %COLOR_YELLOW%[!] AVERTISSEMENT%COLOR_RESET%
-echo %COLOR_WHITE% Ce script effectue un nettoyage avance, incluant :%COLOR_RESET%
-echo %COLOR_WHITE% - Vidage de la Corbeille : perte definitive des fichiers.%COLOR_RESET%
-echo %COLOR_WHITE% - Suppression des logs systeme et rapports d'erreur.%COLOR_RESET%
-echo %COLOR_WHITE% - Nettoyage des caches et fichiers temporaires.%COLOR_RESET%
-echo %COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%Continuez uniquement si vous acceptez ces actions.%COLOR_RESET%
+echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, caches,%COLOR_RESET%
+echo %COLOR_WHITE%  rapports d'erreurs, corbeille, et anciens pilotes dupliques.%COLOR_RESET%
 echo.
-pause
+choice /C ON /N /M "%COLOR_YELLOW%Continuer ? (O/N): %COLOR_RESET%"
+if errorlevel 2 goto :MENU_PRINCIPAL
+
 cls
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                 NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%PHASE 1: FICHIERS TEMPORAIRES ET CACHES SYSTEME%COLOR_RESET%
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+:: Initialiser la barre de progression (19 etapes)
+set /a CLEAN_TOTAL=19
+set /a CLEAN_STEP=0
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires utilisateur...
+:: ETAPE 1
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires utilisateur"
 del /s /q /f "%temp%\*.*" >nul 2>&1
 for /d %%d in ("%temp%\*") do rd /s /q "%%d" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires utilisateur supprimes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires Windows...
+:: ETAPE 2
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires Windows"
 del /s /q /f "%SystemRoot%\Temp\*.*" >nul 2>&1
 for /d %%d in ("%SystemRoot%\Temp\*") do rd /s /q "%%d" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers temporaires Windows supprimes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des logs systeme...
+:: ETAPE 3
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs systeme"
 del /s /q /f "%SystemRoot%\Logs\*.log" >nul 2>&1
 del /s /q /f "%SystemRoot%\System32\LogFiles\*.log" >nul 2>&1
 del /s /q /f "%SystemRoot%\Panther\*.log" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Logs systeme supprimes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des fichiers de crash...
+:: ETAPE 4
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers de crash"
 del /s /q /f "%SystemRoot%\Minidump\*.*" >nul 2>&1
 del /q /f "%SystemRoot%\*.dmp" >nul 2>&1
 del /s /q /f "%SystemRoot%\memory.dmp" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichiers de crash supprimes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des rapports d'erreurs...
+:: ETAPE 5
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Rapports d'erreurs"
 rd /s /q "C:\ProgramData\Microsoft\Windows\WER" >nul 2>&1
 md "C:\ProgramData\Microsoft\Windows\WER" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Rapports d'erreurs supprimes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage cache Windows Update...
+:: ETAPE 6
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Update"
 net stop wuauserv >nul 2>&1
 net stop bits >nul 2>&1
 timeout /t 2 /nobreak >nul
@@ -2828,186 +2835,110 @@ rd /s /q "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
 md "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
 net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Windows Update vide
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Vidage de la corbeille...
+:: ETAPE 7
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Corbeille"
 powershell -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Corbeille videe
 
-echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%PHASE 2: MAINTENANCE SYSTEME ET CACHES%COLOR_RESET%
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des journaux CBS et DISM...
+:: ETAPE 8
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux CBS/DISM"
 del /s /q /f "%SystemRoot%\Logs\CBS\*.log" >nul 2>&1
 del /s /q /f "%SystemRoot%\Logs\DISM\*.log" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Journaux CBS/DISM nettoyes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache de polices...
+:: ETAPE 9
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache de polices"
 net stop FontCache >nul 2>&1
 timeout /t 1 /nobreak >nul
 del /s /q /f "%SystemRoot%\ServiceProfiles\LocalService\AppData\Local\FontCache\*.*" >nul 2>&1
 del /q /f "%SystemRoot%\System32\FNTCACHE.DAT" >nul 2>&1
 net start FontCache >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache de polices nettoye
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Reset du Cache Windows Store (Edge completement preserve)...
-:: NE PAS utiliser wsreset car ca peut affecter Edge
-:: Nettoyage selectif : exclure Edge, WebView2, et tout ce qui contient Microsoft.Windows
+:: ETAPE 10
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Store"
 powershell -NoProfile -Command "Get-ChildItem -Path \"$env:LOCALAPPDATA\Packages\" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'Edge|WebView|Microsoft\.Windows' } | ForEach-Object { Remove-Item -Path \"$($_.FullName)\AC\INetCache\*\" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path \"$($_.FullName)\AC\Temp\*\" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache Store vide (Edge completement preserve)
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage cache des miniatures...
+:: ETAPE 11
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache des miniatures"
 del /f /s /q "%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache*.db" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache des miniatures nettoye
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage cache des navigateurs (hors Edge)...
-:: Chrome (cache seulement, pas les cookies/sessions)
-if exist "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" (
-    rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" >nul 2>&1
-    rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache" >nul 2>&1
-)
-:: Firefox (cache seulement)
-for /d %%p in ("%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*") do (
-    rd /s /q "%%p\cache2" >nul 2>&1
-)
-:: Brave (cache seulement)
-if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" (
-    rd /s /q "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" >nul 2>&1
-)
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache des navigateurs nettoye (sessions preservees)
+:: ETAPE 12
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache des navigateurs"
+if exist "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" >nul 2>&1
+if exist "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache" rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache" >nul 2>&1
+for /d %%p in ("%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*") do rd /s /q "%%p\cache2" >nul 2>&1
+if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" rd /s /q "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" >nul 2>&1
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage Cache DNS...
+:: ETAPE 13
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache DNS"
 ipconfig /flushdns >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% DNS vide
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage du cache NVIDIA (shaders jeux preserves)...
-:: DXCache PRESERVE - Contient les shaders des jeux (Forza, etc.)
-:: if exist "%LOCALAPPDATA%\NVIDIA\DXCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\DXCache" >nul 2>&1
-:: GLCache PRESERVE - Contient les shaders OpenGL des jeux
-:: if exist "%LOCALAPPDATA%\NVIDIA\GLCache" rd /s /q "%LOCALAPPDATA%\NVIDIA\GLCache" >nul 2>&1
-:: Nettoyage des autres caches NVIDIA (pas de shaders jeux)
+:: ETAPE 14
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache NVIDIA"
 if exist "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
 if exist "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache NVIDIA nettoye (shaders DX/GL preserves)
 
-:: Cache DirectX - ENTIEREMENT PRESERVE pour les jeux
-:: D3DSCache contient les shaders DirectX compiles des jeux
-:: if exist "%LOCALAPPDATA%\D3DSCache" rd /s /q "%LOCALAPPDATA%\D3DSCache" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Cache DirectX Shader preserve
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des journaux Event Viewer...
+:: ETAPE 15
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
 for /f "tokens=*" %%G in ('wevtutil el 2^>nul') do wevtutil cl "%%G" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Journaux Event Viewer nettoyes
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression du dossier Windows.old (si present)...
+:: ETAPE 16
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Dossier Windows.old"
 if exist "%SystemDrive%\Windows.old" (
     takeown /f "%SystemDrive%\Windows.old" /r /d y >nul 2>&1
     icacls "%SystemDrive%\Windows.old" /grant administrators:F /t >nul 2>&1
     rd /s /q "%SystemDrive%\Windows.old" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Dossier Windows.old supprime
-) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Aucun dossier Windows.old trouve
 )
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des anciens pilotes dupliques...
+:: ETAPE 17
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Anciens pilotes dupliques"
 powershell -NoProfile -Command "pnputil /enum-drivers 2>$null | Select-String 'oem\d+\.inf' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique | ForEach-Object { pnputil /delete-driver $_ /force 2>$null }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Anciens pilotes dupliques supprimes
 
-echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%PHASE 3: OPTIMISATION STOCKAGE%COLOR_RESET%
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Maintenance Stockage (TRIM SSD / Defrag HDD)...
+:: ETAPE 18
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation disque (TRIM/Defrag)"
 defrag C: /O /H >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Disque optimise (TRIM execute si SSD)
 
-echo.
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%PHASE 4: NETTOYAGE FINAL CLEANMGR%COLOR_RESET%
-echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de l'outil de nettoyage Windows...
+:: ETAPE 19
+set /a CLEAN_STEP+=1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
-
-:: PRESERVES : DownloadsFolder, D3D/DirectX Shader Cache (jeux), Internet Cache Files (sessions)
-for %%K in (
-    "Active Setup Temp Folders"
-    "BranchCache"
-    "Content Indexer Cleaner"
-    "Delivery Optimization Files"
-    "Device Driver Packages"
-    "Diagnostic Data Viewer database files"
-    "Downloaded Program Files"
-    "GameNewsFiles"
-    "GameStatisticsFiles"
-    "GameUpdateFiles"
-    "Language Pack"
-    "Memory Dump Files"
-    "Offline Pages Files"
-    "Old ChkDsk Files"
-    "Previous Installations"
-    "Recycle Bin"
-    "RetailDemo Offline Content"
-    "Service Pack Cleanup"
-    "Setup Log Files"
-    "System error memory dump files"
-    "System error minidump files"
-    "Temporary Files"
-    "Temporary Setup Files"
-    "Temporary Sync Files"
-    "Thumbnail Cache"
-    "Update Cleanup"
-    "Upgrade Discarded Files"
-    "User file versions"
-    "Windows Defender"
-    "Windows Error Reporting Archive Files"
-    "Windows Error Reporting Files"
-    "Windows Error Reporting Queue Files"
-    "Windows Error Reporting System Archive Files"
-    "Windows Error Reporting System Queue Files"
-    "Windows Error Reporting Temp Files"
-    "Windows ESD installation files"
-    "Windows Upgrade Log Files"
-) do (
+for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Previous Installations" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "User file versions" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows ESD installation files" "Windows Upgrade Log Files") do (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
 )
+cleanmgr /sagerun:%SAGEID% /d C: >nul 2>&1
+timeout /t 2 /nobreak >nul
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Execution Cleanmgr (peut prendre plusieurs minutes)...
-cleanmgr /sagerun:%SAGEID% /d C:
-timeout /t 3 /nobreak >nul
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Nettoyage Cleanmgr termine
-
-:: -----------------------------------------------------------------------------
-:: CALCUL FINAL
-:: -----------------------------------------------------------------------------
+:: Calcul final
 for /f %%a in ('powershell -nologo -command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set space_after_mb=%%a
 set /a space_freed_mb=%space_after_mb% - %space_before_mb%
-set /a space_before_gb_final=%space_before_mb% / 1024
+set /a space_before_gb=%space_before_mb% / 1024
 set /a space_after_gb=%space_after_mb% / 1024
 set /a space_freed_gb=%space_freed_mb% / 1024
 
 echo.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
-echo %COLOR_WHITE%                        RAPPORT DE NETTOYAGE%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Nettoyage de Windows termine.
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Espace avant  : %COLOR_YELLOW%%space_before_gb_final% Go (%space_before_mb% Mo)%COLOR_RESET%
-echo %COLOR_WHITE%  Espace apres  : %COLOR_GREEN%%space_after_gb% Go (%space_after_mb% Mo)%COLOR_RESET%
-echo %COLOR_WHITE%  Gain total    : %COLOR_CYAN%%space_freed_gb% Go (%space_freed_mb% Mo)%COLOR_RESET%
+echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%space_before_gb% Go%COLOR_RESET%
+echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%space_after_gb% Go%COLOR_RESET%
+echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%space_freed_gb% Go%COLOR_RESET%
 echo.
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Nettoyage termine avec succes !
-echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour finaliser le nettoyage.
-echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour finaliser.
 echo.
-
-choice /C ON /N /M "%COLOR_YELLOW%Voulez-vous redemarrer maintenant ? (O/N):%COLOR_RESET% "
-if errorlevel 2 goto :MENU_PRINCIPAL
-if errorlevel 1 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage de Windows"
-
-pause
+choice /C ON /N /M "%COLOR_YELLOW%Redemarrer maintenant ? (O/N): %COLOR_RESET%"
+if errorlevel 1 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
 goto :MENU_PRINCIPAL
 
 
