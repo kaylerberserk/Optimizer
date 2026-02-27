@@ -208,6 +208,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ0Priority /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostType /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v Win32PrioritySeparation /t REG_DWORD /d 36 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
 :: 1.2 - Profil Gaming MMCSS
@@ -888,8 +889,7 @@ echo %COLOR_WHITE%  et ameliorer la stabilite de la connexion en jeu.%COLOR_RESE
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la pile TCP/IP pour faible latence...
-:: 5.1 - Pas de throttling reseau par MMCSS
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
+
 
 :: 5.2 - Pile TCP/UDP moderne CUBIC et BBR2
 netsh int tcp set heuristics disabled >nul 2>&1
