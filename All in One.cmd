@@ -565,7 +565,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation navigateurs ...
 reg add "HKLM\Software\Policies\Microsoft\Edge" /v HideFirstRunExperience /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v StartupBoostEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d secure /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsTemplates /t REG_SZ /d "https://cloudflare-dns.com/dns-query" /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v SleepingTabsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v EfficiencyModeEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -575,7 +576,8 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v EdgeCollectionsEnabled /t REG
 
 :: Google Chrome
 reg add "HKCU\Software\Policies\Google\Chrome" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d secure /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsTemplates /t REG_SZ /d "https://cloudflare-dns.com/dns-query" /f >nul 2>&1
 reg add "HKCU\Software\Policies\Google\Chrome" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Google\Chrome" /v BackgroundModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
@@ -2124,10 +2126,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAge
 set "HOSTS=%windir%\System32\drivers\etc\hosts"
 echo.>> "%HOSTS%"
 echo # --- Copilot Block --->> "%HOSTS%"
-echo 0.0.0.0 copilot.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 copilot-telemetry.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 windows.ai.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 bingapis.com>> "%HOSTS%"
 echo 0.0.0.0 msedge.api.cdp.microsoft.com>> "%HOSTS%"
 echo 0.0.0.0 edge.microsoft.com>> "%HOSTS%"
 echo # --- End Copilot Block --->> "%HOSTS%"
