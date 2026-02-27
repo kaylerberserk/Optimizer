@@ -425,12 +425,21 @@ echo 0.0.0.0 statsfe1.ws.microsoft.com>> "%HOSTS%"
 echo 0.0.0.0 feedback.microsoft-hohm.com>> "%HOSTS%"
 echo 0.0.0.0 feedback.windows.com>> "%HOSTS%"
 echo 0.0.0.0 feedback.search.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 settings-win.data.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 self.events.data.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 v10.vortex-win.data.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 onecollector.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 diagnostics.support.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 watsonc.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 ds.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 storeedgefd.dsx.mp.microsoft.com>> "%HOSTS%"
+echo 0.0.0.0 v10.events.data.microsoft.com>> "%HOSTS%"
 echo # --- End Telemetry Block --->> "%HOSTS%"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines de telemetrie bloques via hosts
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie bloques via hosts
 
 :HOSTS_DONE
 
-:: 1.5 - Services optimises Version SAFE 2026
+:: 1.5 - Services optimises Version SAFE
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services - Mode SAFE (compatible usages mixtes)...
 
 :: Services inutiles -> DISABLED
@@ -531,18 +540,40 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Les nouveaux peripheriques ne trouveront 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des tweaks privacy supplementaires...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Privacy renforcee (DeviceName OFF, Pubs Ciblees OFF, Bing Search OFF)
+
+:: Privacy avancee
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Privacy avancee...
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v DisableDeviceDiagnosticData /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Diagnostics\DiagTrack" /v UploadPermission /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Handwriting" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\TabletPC" /v PreventHandwritingDataSharing /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PerfTrack" /v Disabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Diagnostics\PerfTrack" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Privacy avancee appliquee
+
+:: Pare-feu telemetrie
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation pare-feu telemetrie...
+netsh advfirewall firewall add rule name="Block MS Telemetry Out" dir=out action=block remoteip=20.42.65.0/24,51.104.0.0/16,52.108.0.0/16,104.43.0.0/16,13.107.0.0/16 protocol=any >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Pare-feu telemetrie actif (Update + Store preserves)
 
 :: Batterie - Energy Saver
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
 :: 1.7 - Navigateurs
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation des navigateurs...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation navigateurs ...
 reg add "HKCU\Software\Microsoft\Edge\Main" /v EnablePreload /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Google\Chrome\Prerender" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v UserFeedbackAllowed /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v StartupBoostEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v StartupBoostEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v SleepingTabsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v EfficiencyModeEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
 
 :: 1.8 - Desactivation du stockage reserve
@@ -2199,7 +2230,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_D
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
 winget uninstall "Windows web experience Pack" --silent --accept-source-agreements >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Widgets desactives
-:: Recall & AI (2025-2026)
+:: Recall & AI
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de Recall et fonctions IA...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v DisableAIDataAnalysis /t REG_DWORD /d 1 /f >nul 2>&1
