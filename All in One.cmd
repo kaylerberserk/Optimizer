@@ -561,19 +561,22 @@ powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nu
 
 :: 1.7 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation navigateurs ...
-reg add "HKCU\Software\Microsoft\Edge\Main" /v EnablePreload /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Google\Chrome\Prerender" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Microsoft\Edge" /v UserFeedbackAllowed /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Google\Chrome" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
+:: Microsoft Edge
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v StartupBoostEnabled /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Google\Chrome" /v StartupBoostEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
-reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v SleepingTabsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v EfficiencyModeEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v UserFeedbackAllowed /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v BackgroundModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v EdgeCollectionsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+
+:: Google Chrome
+reg add "HKCU\Software\Policies\Google\Chrome" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d automatic /f >nul 2>&1
 reg add "HKCU\Software\Policies\Google\Chrome" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v BackgroundModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
 
 :: 1.8 - Desactivation du stockage reserve
