@@ -624,6 +624,8 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du fichier d'echange pour arret rapide...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v ClearPageFileAtShutdown /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagefileEncryption /t REG_DWORD /d 1 /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagingExecutive /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v SystemPages /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichier d'echange optimise
 
 :: 2.2 - Prefetch/SysMain
@@ -632,8 +634,9 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v SfTracingState /t REG_DWORD /d 0 /f >nul 2>&1
 :: Activer Superfetch et Prefetcher pour chargement ultra-rapide des applications
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableSuperfetch /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 3 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 1 /f >nul 2>&1
 sc config SysMain start= auto >nul 2>&1
+sc start SysMain >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetch actif, SuperFetch optimise pour les jeux
 
 :: 2.3 - FTH OFF
@@ -646,19 +649,10 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire amelior
 powershell -Command "Enable-MMAgent -MemoryCompression" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire activee
 
-:: 2.5 - SvcHost - Reduction du nombre de processus svchost.exe
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation SvcHost selon la RAM disponible...
-for /f %%M in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1KB)" 2^>nul') do set "RAM_KB=%%M"
-if defined RAM_KB (
-    if !RAM_KB! GEQ 8388608 (
-        reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d !RAM_KB! /f >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
-    ) else (
-        echo %COLOR_YELLOW%[!]%COLOR_RESET% RAM insuffisante pour optimisation SvcHost ^(moins de 8Go^)
-    )
-) else (
-    echo %COLOR_YELLOW%[!]%COLOR_RESET% Impossible de detecter la RAM - SvcHost non modifie
-)
+:: 2.5 - SvcHost - Valeur par defaut (3670016 KB)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration SvcHost valeur par defaut...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d 3670016 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost configure valeur par defaut
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -717,17 +711,17 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
 
 :: 3.5 - DirectStorage / NVMe avance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation DirectStorage et I/O NVMe...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\stornvme\Parameters\Device" /v FUA /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise (FUA off, I/O prioritaire)
+:: Laisser le controleur materiel NVMe gerer son propre cache FUA
+reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise (FUA deleguee au controleur NVMe)
 
-:: 3.6 - Desactivation de la defragmentation automatique sur SSD
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la defragmentation automatique sur SSD...
-powershell -NoProfile -Command "Get-PhysicalDisk | Where-Object { $_.MediaType -eq 'SSD' } | ForEach-Object { $disk = $_; Get-Volume | Where-Object { $_.DriveLetter } | ForEach-Object { $drive = $_.DriveLetter + ':'; $task = 'Microsoft\\Windows\\Defrag\\ScheduledDefrag'; Disable-ScheduledTask -TaskName $task -ErrorAction SilentlyContinue } }" >nul 2>&1
-:: Desactiver la defragmentation planifiee pour tous les disques
-schtasks /Change /TN "Microsoft\Windows\Defrag\ScheduledDefrag" /Disable >nul 2>&1
-:: Configurer le service de defragmentation en manuel
-sc config defragsvc start= demand >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Defragmentation automatique desactivee (optimise pour SSD)
+:: 3.6 - Defragmentation automatique geree par Windows (TRIM automatique)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de la defragmentation automatique...
+:: Windows 11 detecte automatiquement les SSD et effectue du TRIM au lieu de defragmentation
+:: Il est important de NE PAS desactiver cette tache pour maintenir le TRIM automatique
+schtasks /Change /TN "Microsoft\Windows\Defrag\ScheduledDefrag" /Enable >nul 2>&1
+sc config defragsvc start= auto >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Defragmentation automatique preservee (TRIM automatique actif pour SSD)
 
 echo.
 echo.
@@ -964,6 +958,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour faible latence...
 :: LSO IPv4/IPv6 + RSC IPv4/IPv6 (desactiver avec gestion des noms FR/EN)
 powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $props = Get-NetAdapterAdvancedProperty -Name $adapter; $lsoProps = $props | Where-Object { $_.DisplayName -like '*Large Send*' -or $_.DisplayName -like '*Grand envoi*' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; $rscProps = $props | Where-Object { $_.DisplayName -like '*Recv Segment*' -or $_.DisplayName -like '*RSC*' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } } }" >nul 2>&1
 
+:: Ne pas forcer le pilote reseau a outrepasser l'auto-negociation du cable (evite le Packet Loss)
+for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+  reg delete "%%K" /v "*WaitAutoNegComplete" /f >nul 2>&1
+)
+
 echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC configuree - LSO/RSC off
 
 :: 5.11 - QoS Fortnite DSCP 46
@@ -1052,12 +1051,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% DMA Remapping desactive - Reduction de la la
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableInputDelayOptimization /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 6.6 - Files et priorites clavier/souris
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
+:: 6.6 - Priorites clavier/souris
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites et files clavier/souris optimisees
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites clavier/souris optimisees
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
