@@ -1052,11 +1052,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableIn
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBufferedInput /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: 6.6 - Priorites clavier/souris
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites clavier/souris optimisees
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites et files clavier/souris optimisees
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
