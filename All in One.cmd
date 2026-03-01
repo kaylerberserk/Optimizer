@@ -646,22 +646,14 @@ reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire ameliorees
 
-:: 2.4 - Enable memory compression
-powershell -Command "Enable-MMAgent -MemoryCompression" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire activee
-
-:: 2.5 - SvcHost - Reduction du nombre de processus svchost.exe
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation SvcHost selon la RAM disponible...
-for /f %%M in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1KB)" 2^>nul') do set "RAM_KB=%%M"
-if defined RAM_KB (
-    if !RAM_KB! GEQ 8388608 (
-        reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d !RAM_KB! /f >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost optimise - Moins de processus en arriere-plan
-    ) else (
-        echo %COLOR_YELLOW%[!]%COLOR_RESET% RAM insuffisante pour optimisation SvcHost ^(moins de 8Go^)
-    )
+:: 2.4 - Desactiver compression memoire (16Go+ RAM recommande)
+for /f %%r in ('powershell -NoProfile -c "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB)"') do set RAM_GB=%%r
+if !RAM_GB! GEQ 16 (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% RAM !RAM_GB!Go detectee - Desactivation compression memoire...
+    powershell -NoProfile -c "Disable-MMAgent -MemoryCompression" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee (chargement assets plus rapide)
 ) else (
-    echo %COLOR_YELLOW%[!]%COLOR_RESET% Impossible de detecter la RAM - SvcHost non modifie
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% RAM !RAM_GB!Go - Compression memoire conservee
 )
 
 echo.
