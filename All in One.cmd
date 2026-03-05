@@ -102,6 +102,18 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- NETTOYAGE ---%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsolètes (legacy cleanup)%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- NETTOYAGE ---%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsolètes (legacy cleanup)%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Optimisations Systeme%COLOR_RESET% %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Optimisations Memoire%COLOR_RESET%
 echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Optimisations Disques%COLOR_RESET% %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Optimisations GPU%COLOR_RESET%
 echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESET%  %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_GREEN%Optimisations Clavier/Souris%COLOR_RESET%
@@ -128,25 +140,26 @@ echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COL
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 12345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
+choice /C 012345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [0-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
 
 :: Gestion des choix (du plus grand au plus petit pour errorlevel)
-if errorlevel 16 goto :END_SCRIPT
-if errorlevel 15 goto :OUTIL_CHRIS_TITUS
-if errorlevel 14 goto :OUTIL_ACTIVATION
-if errorlevel 13 goto :MENU_GESTION_WINDOWS
-if errorlevel 12 goto :CREER_POINT_RESTAURATION
-if errorlevel 11 goto :NETTOYAGE_AVANCE_WINDOWS
-if errorlevel 10 goto :TOUT_OPTIMISER_LAPTOP
-if errorlevel 9 goto :TOUT_OPTIMISER_DESKTOP
-if errorlevel 8 goto :DESACTIVER_PROTECTIONS_SECURITE
-if errorlevel 7 goto :TOGGLE_ECONOMIES_ENERGIE
-if errorlevel 6 goto :OPTIMISATIONS_PERIPHERIQUES
-if errorlevel 5 goto :OPTIMISATIONS_RESEAU
-if errorlevel 4 goto :OPTIMISATIONS_GPU
-if errorlevel 3 goto :OPTIMISATIONS_DISQUES
-if errorlevel 2 goto :OPTIMISATIONS_MEMOIRE
-if errorlevel 1 goto :OPTIMISATIONS_SYSTEME
+if errorlevel 17 goto :END_SCRIPT
+if errorlevel 16 goto :OUTIL_CHRIS_TITUS
+if errorlevel 15 goto :OUTIL_ACTIVATION
+if errorlevel 14 goto :MENU_GESTION_WINDOWS
+if errorlevel 13 goto :CREER_POINT_RESTAURATION
+if errorlevel 12 goto :NETTOYAGE_AVANCE_WINDOWS
+if errorlevel 11 goto :TOUT_OPTIMISER_LAPTOP
+if errorlevel 10 goto :TOUT_OPTIMISER_DESKTOP
+if errorlevel 9 goto :DESACTIVER_PROTECTIONS_SECURITE
+if errorlevel 8 goto :TOGGLE_ECONOMIES_ENERGIE
+if errorlevel 7 goto :OPTIMISATIONS_PERIPHERIQUES
+if errorlevel 6 goto :OPTIMISATIONS_RESEAU
+if errorlevel 5 goto :OPTIMISATIONS_GPU
+if errorlevel 4 goto :OPTIMISATIONS_DISQUES
+if errorlevel 3 goto :OPTIMISATIONS_MEMOIRE
+if errorlevel 2 goto :OPTIMISATIONS_SYSTEME
+if errorlevel 1 goto :CLEANUP_OLD_TWEAKS
 goto :MENU_PRINCIPAL
 
 :MENU_GESTION_WINDOWS
@@ -190,6 +203,128 @@ if errorlevel 2 goto :TOGGLE_UAC
 if errorlevel 1 goto :TOGGLE_DEFENDER
 goto :MENU_GESTION_WINDOWS
 
+:CLEANUP_OLD_TWEAKS
+cls
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%     SECTION 0 : NETTOYAGE DES TWEAKS OBSOLETES     %COLOR_RESET%
+echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Suppression des tweaks legacy qui peuvent causer des problemes.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+
+:: 0.1 - Kernel legacy tweaks
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks kernel obsolètes...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MaximumSharedReadyQueueSize /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v SplitLargeCaches /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v EnableIdleThreadBalancing /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisablePreemptionThreshold /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v EnableIdlePerformanceState /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v AmdCpuBackoffTime /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v XMMIZeroingEnable /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v ConfigureSystem /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DebugPollTimeout /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DpcWatchdogProfilePeriod /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DynamicProcessorAffinity /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MaxDynamicTickDuration /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v IdealDpcRate /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DpcTimeout /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DpcWatchdogPeriod /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MaximumDpcQueueDepth /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v UnlimitDpcQueue /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v ThreadDpcEnable /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v SerializeTimerExpiration /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks kernel nettoyes
+
+:: 0.2 - Communications legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks communications...
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Communications" /v NonDefaultCommsDevice /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks communications nettoyes
+
+:: 0.3 - Desktop legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks desktop...
+reg delete "HKCU\Control Panel\Desktop" /v ForegroundApplicationBoostLevel /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks desktop nettoyes
+
+:: 0.4 - TCP legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks TCP...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v GlobalMaxTcpWindowSize /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpMaxDupAcks /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxConnectionsPerServer /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpTimedWaitDelay /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v CongestionAlgorithm /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v TimerResolution /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v MaxOutstandingSends /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks TCP nettoyes
+
+:: 0.5 - BCD legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks BCD...
+bcdedit /deletevalue useplatformtick >nul 2>&1
+bcdedit /deletevalue useplatformclock >nul 2>&1
+bcdedit /deletevalue x2apicpolicy >nul 2>&1
+bcdedit /deletevalue uselegacyapicmode >nul 2>&1
+bcdedit /deletevalue usephysicaldestination >nul 2>&1
+bcdedit /deletevalue usefirmwarepcisettings >nul 2>&1
+bcdedit /deletevalue configaccesspolicy >nul 2>&1
+bcdedit /deletevalue MSI >nul 2>&1
+bcdedit /deletevalue tscsyncpolicy >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks BCD nettoyes
+
+:: 0.6 - PCI legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks PCI...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks PCI nettoyes
+
+:: 0.7 - PriorityControl legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks PriorityControl...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ0Priority /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ForegroundBoost /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostType /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks PriorityControl nettoyes
+
+:: 0.8 - Memory Management legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Memory Management...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v IoPageLockLimit /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Memory Management nettoyes
+
+:: 0.9 - FTH legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FTH obsolètes...
+reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FTH nettoyes
+
+:: 0.10 - MMCSS legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks MMCSS obsolètes...
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks MMCSS nettoyes
+
+:: 0.11 - Graphics Drivers legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Graphics Drivers obsolètes...
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Graphics Drivers nettoyes
+
+:: 0.12 - FileSystem legacy
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FileSystem obsolètes...
+reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FileSystem nettoyes
+
+echo.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Nettoyage des tweaks obsolètes termine.
+echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :MENU_PRINCIPAL
+)
+
 :OPTIMISATIONS_SYSTEME
 cls
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
@@ -205,17 +340,12 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration des priorites CPU et de la planification...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions" /v CpuPriorityClass /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\csrss.exe\PerfOptions" /v IoPriority /t REG_DWORD /d 3 /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ0Priority /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ForegroundBoost /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostType /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
 :: 1.2 - Profil Gaming MMCSS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 2 /f >nul 2>&1
@@ -628,7 +758,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagefileEncryption /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisablePagingExecutive /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v SystemPages /t REG_DWORD /d 0 /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v IoPageLockLimit /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Fichier d'echange optimise
 
 :: 2.2 - Prefetch/SysMain
@@ -714,8 +843,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
 
 :: 3.5 - DirectStorage / NVMe avance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation DirectStorage et I/O NVMe...
-:: Laisser le controleur materiel NVMe gerer son propre cache FUA
-reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise (FUA deleguee au controleur NVMe)
 
 :: 3.6 - Defragmentation automatique geree par Windows (TRIM automatique)
@@ -778,6 +905,10 @@ reg add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOut
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\Startup" /v "SendTelemetryData" /t REG_DWORD /d 0 /f >nul 2>&1
 sc config NvTelemetryContainer start= disabled >nul 2>&1
 sc stop NvTelemetryContainer >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\NvTelemetry" /v "NvTelemetry" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\FTS" /v "EnableRID44231" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\FTS" /v "EnableRID64640" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\FTS" /v "EnableRID66610" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Telemetrie NVIDIA desactivee
 
 :: 4.4 - Desactivation AMD telemetry et ULPS
@@ -804,7 +935,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
 :: 4.8 - Desactivation de la preemption GPU
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la preemption GPU pour reduire la latence...
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU desactivee
 
 :: 4.9 - NVIDIA Profile Inspector
@@ -908,6 +1038,7 @@ powershell -NoProfile -NoLogo -Command "try{Set-NetTCPSetting -SettingName Inter
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "DisableTaskOffload" /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Par interface
 for /f "tokens=*" %%I in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" 2^>nul') do (
@@ -1376,6 +1507,10 @@ powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee
 powercfg /S SCHEME_CURRENT >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a558fe8" /v Attributes /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe desactivee
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "DisableASPM" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "DisableDynamicPstate" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "PowerMizerEnable" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "RMForcedMaxPerf" /t REG_DWORD /d 1 /f >nul 2>&1
 
 
 echo.
@@ -2536,6 +2671,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette option va appliquer toutes les optimis
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
 
+call :CLEANUP_OLD_TWEAKS call
 call :INSTALLER_VISUAL_REDIST call
 
 cls
@@ -2654,6 +2790,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Certaines economies d'energie seront conserv
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
 
+call :CLEANUP_OLD_TWEAKS call
 call :INSTALLER_VISUAL_REDIST call
 
 cls
