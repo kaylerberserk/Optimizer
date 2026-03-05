@@ -209,7 +209,7 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ0Priori
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ForegroundBoost /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostType /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites CPU configurees
 
 :: 1.2 - Profil Gaming MMCSS
