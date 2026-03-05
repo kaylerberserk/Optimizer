@@ -104,13 +104,13 @@ echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_BLUE%--- NETTOYAGE ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsolètes (legacy cleanup)%COLOR_RESET%
+echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsoletes (legacy cleanup)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_BLUE%--- NETTOYAGE ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsolètes (legacy cleanup)%COLOR_RESET%
+echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsoletes (legacy cleanup)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -214,7 +214,7 @@ echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 
 :: 0.1 - Kernel legacy tweaks
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks kernel obsolètes...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks kernel...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MaximumSharedReadyQueueSize /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v SplitLargeCaches /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v EnableIdleThreadBalancing /f >nul 2>&1
@@ -294,28 +294,28 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Managem
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Memory Management nettoyes
 
 :: 0.9 - FTH legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FTH obsolètes...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FTH...
 reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FTH nettoyes
 
 :: 0.10 - MMCSS legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks MMCSS obsolètes...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks MMCSS...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks MMCSS nettoyes
 
 :: 0.11 - Graphics Drivers legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Graphics Drivers obsolètes...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Graphics Drivers...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Graphics Drivers nettoyes
 
 :: 0.12 - FileSystem legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FileSystem obsolètes...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FileSystem...
 reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FileSystem nettoyes
 
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Nettoyage des tweaks obsolètes termine.
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Nettoyage des tweaks obsoletes termine.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 if "%~1"=="call" (
@@ -2671,9 +2671,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette option va appliquer toutes les optimis
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
 
-call :CLEANUP_OLD_TWEAKS call
-call :INSTALLER_VISUAL_REDIST call
-
 cls
 echo.
 echo %COLOR_CYAN%-------------------------------------------------------------------------------%COLOR_RESET%
@@ -2743,6 +2740,8 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 :DESKTOP_IA_NON
 
 cls
+call :CLEANUP_OLD_TWEAKS call
+call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2789,9 +2788,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Cette option va appliquer toutes les optimis
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Certaines economies d'energie seront conservees pour la batterie.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Cela peut prendre plusieurs minutes.
 echo.
-
-call :CLEANUP_OLD_TWEAKS call
-call :INSTALLER_VISUAL_REDIST call
 
 cls
 echo.
@@ -2862,12 +2858,12 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 :LAPTOP_IA_NON
 
 cls
+call :CLEANUP_OLD_TWEAKS call
+call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
 call :OPTIMISATIONS_GPU call
-call :OPTIMISATIONS_RESEAU call
-call :OPTIMISATIONS_PERIPHERIQUES call
 :: Note: DESACTIVER_ECONOMIES_ENERGIE NON appele pour Laptop (preserve la batterie)
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
