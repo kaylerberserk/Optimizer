@@ -2945,8 +2945,8 @@ echo %STYLE_BOLD%%COLOR_WHITE%                 NETTOYAGE DE WINDOWS AVANCE%COLOR
 echo %COLOR_CYAN%===============================================================================%COLOR_RESET%
 echo.
 
-:: Initialiser la barre de progression (19 etapes)
-set /a CLEAN_TOTAL=19
+:: Initialiser la barre de progression (15 etapes)
+set /a CLEAN_TOTAL=15
 set /a CLEAN_STEP=0
 
 :: ETAPE 1
@@ -2979,9 +2979,9 @@ del /s /q /f "%SystemRoot%\memory.dmp" >nul 2>&1
 set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Rapports d'erreurs"
 rd /s /q "C:\ProgramData\Microsoft\Windows\WER" >nul 2>&1
-md "C:\ProgramData\Microsoft\Windows\WER" >nul 2>&1
+md "C:\Windows\WER" >nul 2>&1
 
-:: ETAPE 6
+:: ETAPE ProgramData\Microsoft\6
 set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Update"
 net stop wuauserv >nul 2>&1
@@ -3019,34 +3019,15 @@ powershell -NoProfile -Command "Get-ChildItem -Path \"$env:LOCALAPPDATA\Packages
 
 :: ETAPE 11
 set /a CLEAN_STEP+=1
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache des miniatures"
-del /f /s /q "%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache*.db" >nul 2>&1
-
-:: ETAPE 12
-set /a CLEAN_STEP+=1
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache des navigateurs"
-if exist "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cache" >nul 2>&1
-if exist "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache" rd /s /q "%LOCALAPPDATA%\Google\Chrome\User Data\Default\Code Cache" >nul 2>&1
-for /d %%p in ("%LOCALAPPDATA%\Mozilla\Firefox\Profiles\*") do rd /s /q "%%p\cache2" >nul 2>&1
-if exist "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" rd /s /q "%LOCALAPPDATA%\BraveSoftware\Brave-Browser\User Data\Default\Cache" >nul 2>&1
-
-:: ETAPE 13
-set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache DNS"
 ipconfig /flushdns >nul 2>&1
 
-:: ETAPE 14
-set /a CLEAN_STEP+=1
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache NVIDIA"
-if exist "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%LOCALAPPDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
-if exist "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" rd /s /q "%PROGRAMDATA%\NVIDIA Corporation\NV_Cache" >nul 2>&1
-
-:: ETAPE 15
+:: ETAPE 12
 set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
 for /f "tokens=*" %%G in ('wevtutil el 2^>nul') do wevtutil cl "%%G" >nul 2>&1
 
-:: ETAPE 16
+:: ETAPE 13
 set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Dossier Windows.old"
 if exist "%SystemDrive%\Windows.old" (
@@ -3055,17 +3036,12 @@ if exist "%SystemDrive%\Windows.old" (
     rd /s /q "%SystemDrive%\Windows.old" >nul 2>&1
 )
 
-:: ETAPE 17
-set /a CLEAN_STEP+=1
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Anciens pilotes dupliques"
-powershell -NoProfile -Command "pnputil /enum-drivers 2>$null | Select-String 'oem\d+\.inf' -AllMatches | ForEach-Object { $_.Matches.Value } | Sort-Object -Unique | ForEach-Object { pnputil /delete-driver $_ /force 2>$null }" >nul 2>&1
-
-:: ETAPE 18
+:: ETAPE 14
 set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation disque (TRIM/Defrag)"
 defrag C: /O /H >nul 2>&1
 
-:: ETAPE 19
+:: ETAPE 15
 set /a CLEAN_STEP+=1
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
@@ -3094,7 +3070,8 @@ echo.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour finaliser.
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Redemarrer maintenant ? (O/N): %COLOR_RESET%"
-if errorlevel 1 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
+if errorlevel 2 goto :MENU_PRINCIPAL
+shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
 goto :MENU_PRINCIPAL
 
 
@@ -3496,36 +3473,20 @@ pause
 goto :MENU_PRINCIPAL
 
 :PROGRESS_BAR
-:: ===========================================================================
-:: Affiche une barre de progression
-:: Parametres: %1 = current, %2 = total, %3 = description (optionnel)
-:: ===========================================================================
-setlocal
-set "PROG_CURRENT=%~1"
-set "PROG_TOTAL=%~2"
-set "PROG_DESC=%~3"
-set "PROG_CHAR=#"
-set "PROG_EMPTY=."
-set "PROG_WIDTH=30"
+set "PCURRENT=%~1"
+set "PTOTAL=%~2"
+set "PDESC=%~3"
 
-:: Calcul du pourcentage
-set /a PROG_PERCENT=PROG_CURRENT*100/PROG_TOTAL 2>nul
-if %PROG_PERCENT% gtr 100 set "PROG_PERCENT=100"
+set /a PCALC=%PCURRENT%*100/%PTOTAL% 2>nul
+set /a PFILL=PCALC*20/100
 
-:: Calcul des caracteres remplis
-set /a PROG_FILLED=PROG_PERCENT*PROG_WIDTH/100
-set /a PROG_EMPTY_COUNT=PROG_WIDTH-PROG_FILLED
+set "PBAR="
+for /l %%i in (1,1,20) do (
+    if %%i LEQ %PFILL% set "PBAR=!PBAR!#"
+    if %%i GTR %PFILL% set "PBAR=!PBAR!."
+)
 
-:: Construction de la barre
-set "PROG_BAR="
-for /l %%i in (1,1,%PROG_FILLED%) do set "PROG_BAR=!PROG_BAR!%PROG_CHAR%"
-for /l %%i in (1,1,%PROG_EMPTY_COUNT%) do set "PROG_BAR=!PROG_BAR!%PROG_EMPTY%"
-
-:: Affichage sur la meme ligne
-<nul set /p "=!ESC![2K!ESC![1G%COLOR_YELLOW%[%PROG_BAR%]%COLOR_RESET% %PROG_PERCENT%%% (%PROG_CURRENT%/%PROG_TOTAL%) %PROG_DESC%!ESC![0K"
-if %PROG_CURRENT% equ %PROG_TOTAL% echo.
-
-endlocal
+<nul set /p ="!ESC![2K!ESC![1G!COLOR_CYAN![!PBAR!] !COLOR_YELLOW!!PCALC!%% !COLOR_CYAN!!PCURRENT!/!PTOTAL! !COLOR_WHITE!!PDESC!!COLOR_RESET!"
 exit /b
 
 :PROGRESS_INIT
