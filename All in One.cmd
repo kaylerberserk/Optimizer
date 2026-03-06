@@ -297,12 +297,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks MMCSS...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks MMCSS nettoyes
 
-:: 0.11 - Graphics Drivers legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Graphics Drivers...
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Graphics Drivers nettoyes
-
-:: 0.12 - FileSystem legacy
+:: 0.11 - FileSystem legacy
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FileSystem...
 reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FileSystem nettoyes
@@ -927,9 +922,10 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.8 - Desactivation de la preemption GPU
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la preemption GPU pour reduire la latence...
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU desactivee
+:: 4.8 - Activation de la preemption GPU
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la preemption GPU pour reduire la latence...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 
 :: 4.9 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
@@ -2734,8 +2730,8 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 :DESKTOP_IA_NON
 
 cls
-call :CLEANUP_OLD_TWEAKS call
 call :INSTALLER_VISUAL_REDIST call
+call :CLEANUP_OLD_TWEAKS call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2852,8 +2848,8 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 :LAPTOP_IA_NON
 
 cls
-call :CLEANUP_OLD_TWEAKS call
 call :INSTALLER_VISUAL_REDIST call
+call :CLEANUP_OLD_TWEAKS call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
