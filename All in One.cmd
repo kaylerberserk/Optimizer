@@ -653,15 +653,12 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Interruptions MSI activees
 
 :: Desactivation des Co-installateurs tiers (Razer/Logitech Popup)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Co-installateurs et recherche pilotes auto...
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\DriverSearching" /v SearchOrderConfig /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Device Installer" /v DisableCoInstallers /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Popups Razer/Logitech bloques
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Les nouveaux peripheriques ne trouveront pas automatiquement leurs pilotes
 
 :: Privacy Supplementaire
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des tweaks privacy supplementaires...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowDeviceNameInTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v TailoredExperiencesWithDiagnosticDataEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: Privacy avancee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Privacy avancee...
