@@ -31,10 +31,6 @@ set "DESACTIVER_SECURITE=0"
 set "DESACTIVER_DEFENDER=0"
 set "DESACTIVER_ANIMATIONS=0"
 set "DESACTIVER_IA=0"
-set "VCINSTALL=0"
-set "VCSKIP=0"
-set "PROGRESS_CURRENT=0"
-set "PROGRESS_TOTAL=0"
 
 :: Variables Hardware
 set "HW_OS=Detection..."
@@ -155,7 +151,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 choice /C 012345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [0-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
 
-:: Gestion des choix (du plus grand au plus petit pour errorlevel)
+:: Gestion des choix (Ordre decroissant imperatif pour la syntaxe 'if errorlevel X' qui signifie >= X)
 if errorlevel 17 goto :END_SCRIPT
 if errorlevel 16 goto :OUTIL_CHRIS_TITUS
 if errorlevel 15 goto :OUTIL_ACTIVATION
@@ -194,11 +190,11 @@ echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Gerer les Animations Windows%CO
 echo %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Gerer Copilot / Widgets / Recall (Windows 11)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- APPLICATIONS MICROSOFT ---%COLOR_RESET%
-echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
-echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
+echo %COLOR_YELLOW%[5]%COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
+echo %COLOR_YELLOW%[6]%COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- RUNTIMES ET DEPENDANCES ---%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Installer les Visual C++ Redistributables%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_GREEN%Installer les Visual C++ Redistributables%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
@@ -206,6 +202,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 choice /C 1234567M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-7, M]: %COLOR_RESET%"
+:: Gestion des choix (Ordre decroissant imperatif pour la syntaxe 'if errorlevel X' qui signifie >= X)
 if errorlevel 8 goto :MENU_PRINCIPAL
 if errorlevel 7 goto :INSTALLER_VISUAL_REDIST
 if errorlevel 6 goto :DESINSTALLER_EDGE
@@ -947,9 +944,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 
 :: 4.9 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
-set "HAS_NVIDIA=0"
-for /f %%i in ('powershell -NoProfile -Command "if((Get-CimInstance Win32_VideoController).Name -match 'NVIDIA'){Write-Output 1}else{Write-Output 0}"') do set "HAS_NVIDIA=%%i"
-
 if "!HAS_NVIDIA!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
     set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
@@ -958,9 +952,14 @@ if "!HAS_NVIDIA!"=="1" (
     if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
     
     :: Telecharger NVIDIA Profile Inspector
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de NVIDIA Profile Inspector...
     powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-    if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
+    if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
+        for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
+            echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Fichier NVIDIA Profile Inspector corrompu ou incomplet
+            del "!NPI_DIR!\nvidiaProfileInspector.exe"
+            goto :NPI_DONE
+        )
+    ) else (
         echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
         goto :NPI_DONE
     )
@@ -968,7 +967,13 @@ if "!HAS_NVIDIA!"=="1" (
     :: Telecharger le profil optimise
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
     powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-    if not exist "!NPI_DIR!\Kaylers_profile.nip" (
+    if exist "!NPI_DIR!\Kaylers_profile.nip" (
+        for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
+            echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Profil NVIDIA corrompu ou incomplet
+            del "!NPI_DIR!\Kaylers_profile.nip"
+            goto :NPI_DONE
+        )
+    ) else (
         echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
         goto :NPI_DONE
     )
@@ -989,7 +994,9 @@ if "!HAS_NVIDIA!"=="1" (
 )
 
 :NPI_DONE
+:: Fin des optimisations specifiques NVIDIA
 echo.
+
 
 :: 4.10 - Game Mode Windows 11 24H2/25H2
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation Game Mode Windows 11 24H2/25H2...
@@ -1042,20 +1049,12 @@ netsh int tcp set global dca=enabled >nul 2>&1
 netsh int tcp set global timestamps=disabled >nul 2>&1
 powershell -NoProfile -NoLogo -Command "try{Set-NetTCPSetting -SettingName Internet -InitialRtoMs 2000}catch{}" >nul 2>&1
 
-:: 5.3 - Optimisations TCP registre
+:: 5.3 - Optimisations TCP (Frequence ACK et NoDelay)
+:: Ces parametres sont configures globalement puis affines par interface via PowerShell ci-dessous (5.7)
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "DisableTaskOffload" /t REG_DWORD /d 1 /f >nul 2>&1
-
-:: Par interface
-for /f "tokens=*" %%I in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces" 2^>nul') do (
-  reg add "%%I" /v TcpAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%I" /v TCPNoDelay /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%I" /v TcpDelAckTicks /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "%%I" /v DelayedAckFrequency /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%I" /v DelayedAckTicks /t REG_DWORD /d 1 /f >nul 2>&1
-)
 
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization" /v DODownloadMode /t REG_DWORD /d 0 /f >nul 2>&1
 
@@ -1247,7 +1246,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% GPU Power Management optimise
 
 :: 7.2 - NIC Energy Saving Ethernet et WiFi
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d''énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''économie d''énergie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue } catch {} }" >nul 2>&1
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d''énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''économie d''énergie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch{}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 1 -ErrorAction SilentlyContinue } catch{} }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Ethernet + WiFi)
 
 
@@ -1328,7 +1327,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v Hiberbo
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide desactive - Redemarrages propres
 
 :: 7.7 - Desactivation de l'hibernation PC Bureau uniquement
-if "%IS_LAPTOP%"=="0" (
+if "!IS_LAPTOP!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation ^(PC Bureau^)...
     powercfg /hibernate off >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Hibernation desactivee - Espace disque libere
@@ -1337,7 +1336,7 @@ if "%IS_LAPTOP%"=="0" (
 )
 
 :: 7.8 - USB Selective Suspend (Optimisation latence)
-if "%IS_LAPTOP%"=="0" (
+if "!IS_LAPTOP!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
     powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
     powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
@@ -1384,13 +1383,18 @@ if exist "%STR_EXE%" (
 )
 
 :: Telecharger SetTimerResolution.exe
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de SetTimerResolution.exe...
 powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-if not exist "%STR_EXE%" (
+if exist "%STR_EXE%" (
+    for %%A in ("%STR_EXE%") do if %%~zA LSS 5000 (
+        echo %COLOR_RED%[-]%COLOR_RESET% Erreur : SetTimerResolution.exe corrompu ou incomplet
+        del "%STR_EXE%"
+        goto :STR_DONE
+    )
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution installe dans %SystemRoot%
+) else (
     echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de SetTimerResolution
     goto :STR_DONE
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution installe dans %SystemRoot%
 
 :STR_SHORTCUT
 :: Verifier si raccourci existe deja
@@ -1400,9 +1404,13 @@ if exist "%STR_STARTUP%" (
 )
 
 :: Telecharger le raccourci
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Creation du raccourci de demarrage...
 powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/Optimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe%%20-%%20Raccourci.lnk' -OutFile '%STR_STARTUP%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
 if exist "%STR_STARTUP%" (
+    for %%A in ("%STR_STARTUP%") do if %%~zA LSS 100 (
+        echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Raccourci SetTimerResolution corrompu
+        del "%STR_STARTUP%"
+        goto :STR_DONE
+    )
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci ajoute au demarrage automatique
 ) else (
     echo %COLOR_YELLOW%[!]%COLOR_RESET% Impossible de creer le raccourci - creation manuelle recommandee
@@ -1595,7 +1603,6 @@ if exist "%STR_STARTUP%" (
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution n'etait pas dans le demarrage
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution supprime du demarrage automatique
 
 :: 8. Restaurer optimisations CPU (Intel Hybrid + AMD Core Parking)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Restauration des optimisations CPU...
@@ -3399,25 +3406,19 @@ set /a VCSKIP+=1
 :: VC++ 2015-2022 x86
 set /a VC_STEP+=1
 call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x86"
-if %VC2015X86%==1 goto :skip2015x86
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2015x86.exe" start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2015x86
-:skip2015x86
-set /a VCSKIP+=1
+if %VC2015X86%==0 (
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2015x86.exe" start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
+)
 :done2015x86
 
 :: VC++ 2015-2022 x64
 set /a VC_STEP+=1
 call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x64"
-if %VC2015X64%==1 goto :skip2015x64
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2015x64.exe" start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2015x64
-:skip2015x64
-set /a VCSKIP+=1
+if %VC2015X64%==0 (
+    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+    if exist "%VCREDIST_DIR%\vc2015x64.exe" start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
+)
 :done2015x64
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification des installations...
@@ -3521,8 +3522,6 @@ exit /b
 
 
 :REFRESH_INTERNET_STATUS
-set "HAS_INTERNET=0"
-for /f %%i in ('powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $endpoints = @('https://www.google.com','https://www.microsoft.com','https://cloudflare.com'); foreach($url in $endpoints){ try { $r = Invoke-WebRequest -Uri $url -Method Head -TimeoutSec 3 -UseBasicParsing; if($r.StatusCode -ge 200 -and $r.StatusCode -lt 400){ Write-Output 1; exit } } catch {} } Write-Output 0"') do set "HAS_INTERNET=%%i"
 exit /b
 
 :END_SCRIPT
