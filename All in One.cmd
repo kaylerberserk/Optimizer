@@ -801,9 +801,10 @@ reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire ameliorees
 
-:: 2.4 - Enable memory compression
-powershell -Command "Enable-MMAgent -MemoryCompression" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire activee
+:: 2.4 - Desactiver la compression de la memoire
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la compression memoire...
+powershell -NoProfile -Command "Disable-MMAgent -mc" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee
 
 :: 2.5 - SvcHost - Valeur par defaut (3670016 KB)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration SvcHost valeur par defaut...
