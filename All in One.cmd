@@ -937,10 +937,20 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
-:: 4.8 - Activation de la preemption GPU
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la preemption GPU pour reduire la latence...
+:: 4.8 - Activation et raffinement de la preemption GPU
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la preemption GPU (Hardware Scheduling)...
+:: Activation globale du Scheduler
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
+:: Desactivation des preemptions intermediaires pour reduire l'input lag
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v ComputePreemption /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v DisableCudaContextPreemption /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableAsyncMidBufferPreemption /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableCEPreemption /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidBufferPreemption /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidBufferPreemptionForHighTdrTimeout /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidGfxPreemption /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidGfxPreemptionVGPU /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU et Hardware Scheduling optimises
 
 :: 4.9 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
@@ -1027,8 +1037,8 @@ echo %COLOR_WHITE%  et ameliorer la stabilite de la connexion en jeu.%COLOR_RESE
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la pile TCP/IP pour faible latence...
-:: 5.1 - Pas de throttling reseau par MMCSS
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
+:: 5.1 - Optimisation du throttling reseau par MMCSS
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
 
 :: 5.2 - Pile TCP/UDP moderne CUBIC et BBR2
 netsh int tcp set heuristics disabled >nul 2>&1
@@ -1195,8 +1205,10 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v EnableBu
 :: 6.6 - Priorites clavier/souris
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v KeyboardDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v MouseDataQueueSize /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorites et files clavier/souris optimisees
 
 echo.
@@ -1503,10 +1515,11 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
     reg add "%%K" /v "S5WakeOnLan" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "WakeOnLink" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "WolShutdownLinkSpeed" /t REG_SZ /d 2 /f >nul 2>&1
-    :: Optimisations latence (Intel, Realtek, Killer)
+    :: Optimisations latence (Valeurs depandantes du driver : Intel, Realtek, Killer)
+    :: *InterruptModerationRate : 1=Minimal/Off, 2=Low, 3=Medium, 4=High, 5=Extreme
     reg add "%%K" /v "*FlowControl" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "*InterruptModeration" /t REG_SZ /d 1 /f >nul 2>&1
-    reg add "%%K" /v "*InterruptModerationRate" /t REG_SZ /d 1 /f >nul 2>&1
+    reg add "%%K" /v "*InterruptModerationRate" /t REG_SZ /d 3 /f >nul 2>&1
     reg add "%%K" /v "ITR" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "EnableLLI" /t REG_SZ /d 1 /f >nul 2>&1
     reg add "%%K" /v "EnableDownShift" /t REG_SZ /d 0 /f >nul 2>&1
