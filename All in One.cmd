@@ -2023,6 +2023,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreen
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 2 /f >nul 2>&1
 echo.
 call :FINISH_ACTION "UAC" "active" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_UAC
 
 :DESACTIVER_UAC_SECTION
@@ -2201,7 +2202,8 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentW
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
 set "HOSTS=%windir%\System32\drivers\etc\hosts"
 powershell -NoProfile -c "(Get-Content '%HOSTS%') | Where-Object { $_ -notmatch 'copilot\.microsoft\.com|windows\.ai\.microsoft\.com|copilot-telemetry\.microsoft\.com|Copilot Block' } | Set-Content '%HOSTS%'" >nul 2>&1
-call :FINISH_IA_ACTION "Copilot" "active"
+call :FINISH_IA_ACTION "Copilot" "active" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_COPILOT
 
 :DESACTIVER_COPILOT
@@ -2233,7 +2235,8 @@ if errorlevel 1 (
     echo 0.0.0.0 edge.microsoft.com>> "%HOSTS%"
     echo # --- End Copilot Block --->> "%HOSTS%"
 )
-call :FINISH_IA_ACTION "Copilot" "desactive"
+call :FINISH_IA_ACTION "Copilot" "desactive" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_COPILOT
 
 :ACTIVER_WIDGETS
@@ -2246,7 +2249,8 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour les Widgets...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f >nul 2>&1
-call :FINISH_IA_ACTION "Widgets" "active"
+call :FINISH_IA_ACTION "Widgets" "active" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_COPILOT
 
 :DESACTIVER_WIDGETS
@@ -2259,7 +2263,8 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des restrictions pour les Widgets...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
-call :FINISH_IA_ACTION "Widgets" "desactive"
+call :FINISH_IA_ACTION "Widgets" "desactive" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_COPILOT
 
 :ACTIVER_RECALL
@@ -2284,7 +2289,8 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\
 reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 1 /f >nul 2>&1
-call :FINISH_IA_ACTION "Recall" "active"
+call :FINISH_IA_ACTION "Recall" "active" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_COPILOT
 
 :DESACTIVER_RECALL
@@ -2311,7 +2317,8 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableImageInsights /t REG_DWORD /d 1 /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
-call :FINISH_IA_ACTION "Recall" "desactive"
+call :FINISH_IA_ACTION "Recall" "desactive" "%~1"
+if "%~1"=="call" exit /b
 goto :TOGGLE_COPILOT
 
 :DESACTIVER_TOUT_COPILOT
@@ -2342,8 +2349,10 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWork
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableImageInsights /t REG_DWORD /d 1 /f >nul 2>&1
+
 if "%~1"=="call" (
   exit /b
 )
@@ -2364,7 +2373,7 @@ if errorlevel 1 shutdown /r /t 5 /c "Redemarrage apres modification"
 exit /b
 
 :FINISH_IA_ACTION
-call :FINISH_ACTION %1 %2
+call :FINISH_ACTION %1 %2 "%~3"
 exit /b
 
 :DESINSTALLER_ONEDRIVE
@@ -2737,6 +2746,7 @@ call :DESACTIVER_ECONOMIES_ENERGIE call
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
+if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_COPILOT call
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2857,6 +2867,8 @@ call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
 call :OPTIMISATIONS_GPU call
+call :OPTIMISATIONS_RESEAU call
+call :OPTIMISATIONS_PERIPHERIQUES call
 :: Note: DESACTIVER_ECONOMIES_ENERGIE NON appele pour Laptop (preserve la batterie)
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
