@@ -564,8 +564,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie bloques via hosts
 
 :HOSTS_DONE
 
-:: 1.5 - Services optimises Version SAFE
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services - Mode SAFE (compatible usages mixtes)...
+:: 1.5 - Services optimises
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services
 
 :: 1 - Services vitaux -> AUTOMATIQUE
 for %%S in (
