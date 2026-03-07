@@ -567,30 +567,18 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie bloques via hosts
 :: 1.5 - Services optimises Version SAFE
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services - Mode SAFE (compatible usages mixtes)...
 
-:: Services inutiles -> DISABLED
+:: 1 - Services vitaux -> AUTOMATIQUE
 for %%S in (
-    AJRouter
-    DiagTrack
-    dmwappushservice
-    lfsvc
-    NetTcpPortSharing
-    RemoteAccess
-    RemoteRegistry
-    RetailDemo
-    shpamsvc
-    ssh-agent
-    uhssvc
-    UevAgentService
-    WMPNetworkSvc
-    SystemSuggestions
-    Fax
-    DialogBlockingService
+    W32Time
+    WpnService
 ) do (
-  sc config %%S start= disabled >nul 2>&1
+  sc config %%S start= auto >nul 2>&1
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Services telemetrie/legacy desactives
+:: WpnUserService necessite powershell car c'est un service par utilisateur
+powershell -NoProfile -Command "Set-Service WpnUserService -StartupType Automatic" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services vitaux et synchronisation en Automatique
 
-:: Services occasionnels/inutiles -> MANUAL
+:: 2 - Services occasionnels et utiles -> MANUEL (demand)
 for %%S in (
     ALG
     AppVClient
@@ -598,31 +586,63 @@ for %%S in (
     CDPUserSvc
     CertPropSvc
     GraphicsPerfSvc
+    icssvc
     IKEEXT
+    MapsBroker
     MSDTC
     MSiSCSI
-    MapsBroker
     NaturalAuthentication
     NcaSvc
+    NcbService
+    NgcSvc
+    NgcCtnrSvc
     PeerDistSvc
+    PhoneSvc
     PNRPAutoReg
     PNRPsvc
     RpcLocator
+    SCardSvr
+    ScDeviceEnum
     SstpSvc
+    stisvc
     TroubleshootingSvc
-    WFDSConMgrSvc
     tzautoupdate
+    WFDSConMgrSvc
+    WiaRpc
 ) do (
   sc config %%S start= demand >nul 2>&1
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Services occasionnels en mode Manuel
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services utiles et occasionnels en mode Manuel
 
-:: W32Time en AUTO pour synchronisation horaire immediate
-sc config W32Time start= auto >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% W32Time en demarrage automatique (synchro horaire)
+:: 3 - Services inutiles et telemetrie -> DESACTIVES
+for %%S in (
+    AJRouter
+    AxInstSV
+    CscService
+    DiagTrack
+    dmwappushservice
+    DialogBlockingService
+    Fax
+    lfsvc
+    lltdsvc
+    NetTcpPortSharing
+    RemoteAccess
+    RemoteRegistry
+    RetailDemo
+    SEMgrSvc
+    shpamsvc
+    ssh-agent
+    SystemSuggestions
+    uhssvc
+    UevAgentService
+    WalletService
+    WMPNetworkSvc
+) do (
+  sc config %%S start= disabled >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Services telemetrie et legacy desactives
 
 :: Services critiques laisses intacts : Bluetooth, Hello, RDP, Spooler, PlugPlay
-
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services optimises (Bluetooth/VPN/Hello/RDP preserves)
 
 :: 1.6 - Optimisations demarrage et systeme
@@ -1005,8 +1025,6 @@ if "!HAS_NVIDIA!"=="1" (
 
 :NPI_DONE
 :: Fin des optimisations specifiques NVIDIA
-echo.
-
 
 :: 4.10 - Game Mode Windows 11 24H2/25H2
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation Game Mode Windows 11 24H2/25H2...
