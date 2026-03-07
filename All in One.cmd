@@ -958,19 +958,9 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HAGS active - Latence GPU reduite
 
 :: 4.8 - Activation et raffinement de la preemption GPU
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la preemption GPU (Hardware Scheduling)...
-:: Activation globale du Scheduler
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la preemption GPU (Hardware Scheduling)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
-:: Desactivation des preemptions intermediaires pour reduire l'input lag
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v ComputePreemption /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v DisableCudaContextPreemption /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableAsyncMidBufferPreemption /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableCEPreemption /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidBufferPreemption /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidBufferPreemptionForHighTdrTimeout /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidGfxPreemption /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Power" /v EnableMidGfxPreemptionVGPU /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU et Hardware Scheduling optimises
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 
 :: 4.9 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
@@ -1056,7 +1046,7 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la pile TCP/IP pour faible latence...
 :: 5.1 - Optimisation du throttling reseau par MMCSS
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 0xffffffff /f >nul 2>&1
 
 :: 5.2 - Pile TCP/UDP moderne CUBIC et BBR2
 netsh int tcp set heuristics disabled >nul 2>&1
@@ -1067,6 +1057,7 @@ netsh int ip set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int tcp set global rss=enabled rsc=disabled ecncapability=disabled >nul 2>&1
 netsh int udp set global uso=enabled ero=disabled >nul 2>&1
+netsh int ip set global taskoffload=disabled >nul 2>&1
 netsh int ip set global sourceroutingbehavior=drop >nul 2>&1
 netsh int ip set global icmpredirects=disabled >nul 2>&1
 netsh int ipv6 set global neighborcachelimit=4096 >nul 2>&1
