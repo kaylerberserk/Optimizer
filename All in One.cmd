@@ -194,7 +194,7 @@ echo %COLOR_YELLOW%[5]%COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
 echo %COLOR_YELLOW%[6]%COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- RUNTIMES ET DEPENDANCES ---%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_GREEN%Installer les Visual C++ Redistributables%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_GREEN%Installer Runtimes (Visual C++ + DirectX June 2010)%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
@@ -517,7 +517,9 @@ if not errorlevel 1 (
 )
 
 :: Ajouter les blocages
+attrib -r "%HOSTS%" >nul 2>&1
 echo.>> "%HOSTS%"
+echo # Telemetry Block Start >> "%HOSTS%"
 echo # --- Telemetry Block (Optimizer Script) --->> "%HOSTS%"
 echo 0.0.0.0 vortex.data.microsoft.com>> "%HOSTS%"
 echo 0.0.0.0 vortex-win.data.microsoft.com>> "%HOSTS%"
@@ -562,6 +564,7 @@ echo 0.0.0.0 v10.events.data.microsoft.com>> "%HOSTS%"
 echo # --- End Telemetry Block --->> "%HOSTS%"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie bloques via hosts
 
+attrib +r "%HOSTS%" >nul 2>&1
 :HOSTS_DONE
 
 :: 1.5 - Services optimises
@@ -574,8 +577,8 @@ for %%S in (
 ) do (
   sc config %%S start= auto >nul 2>&1
 )
-:: WpnUserService necessite powershell car c'est un service par utilisateur
-powershell -NoProfile -Command "Set-Service WpnUserService -StartupType Automatic" >nul 2>&1
+:: WpnUserService necessite powershell/wildcards car c'est un service par utilisateur
+powershell -NoProfile -Command "Get-Service WpnUserService* | Set-Service -StartupType Automatic" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services vitaux et synchronisation en Automatique
 
 :: 2 - Services occasionnels et utiles -> MANUEL (demand)
@@ -583,7 +586,6 @@ for %%S in (
     ALG
     AppVClient
     BDESVC
-    CDPUserSvc
     CertPropSvc
     GraphicsPerfSvc
     icssvc
@@ -612,6 +614,8 @@ for %%S in (
 ) do (
   sc config %%S start= demand >nul 2>&1
 )
+:: CDPUserSvc est un service par utilisateur
+powershell -NoProfile -Command "Get-Service CDPUserSvc* | Set-Service -StartupType Manual" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services utiles et occasionnels en mode Manuel
 
 :: 3 - Services inutiles et telemetrie -> DESACTIVES
@@ -651,6 +655,16 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v S
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableInventory /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableUAR /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v AITEnable /t REG_DWORD /d 0 /f >nul 2>&1
+ 
+:: Win8 Scaling (Visual Clarity) - Desktop Only
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du Scaling Windows (Win8 DPI Scaling)...
+    reg add "HKCU\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 96 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Win8 Scaling active ^(Mode 1:1 force^)
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Win8 Scaling ignore sur Laptop ^(conserve le scaling par defaut^)
+)
 
 :: Activer les sauvegardes automatiques du registre (desactive depuis W10 1803)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager" /v EnablePeriodicBackup /t REG_DWORD /d 1 /f >nul 2>&1
@@ -729,7 +743,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du stockage reserve Windows...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Stockage reserve desactive (~7Go recuperes apres redemarrage)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Stockage reserve desactive ^(~7Go recuperes apres redemarrage^)
 
 :: 1.9 - Affichage du code erreur BSoD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de l'affichage des codes erreur BSoD...
@@ -744,11 +758,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Touche F1 (aide) desactivee
 
 :: 1.11 - Desactivation audio enhancements (latence audio)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des ameliorations audio...
-for /f "tokens=*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}" /s /v "DriverDesc" 2^>nul ^| findstr /i "HKEY"') do (
-  reg add "%%a" /v "FxNonDestructiveSoftMixer" /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "%%a" /v "FxRender" /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "%%a" /v "DisableAudioEndpointDucking" /t REG_DWORD /d 1 /f >nul 2>&1
-)
+powershell -NoProfile -Command "$path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}'; Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM'); reg add \"$p\" /v 'FxNonDestructiveSoftMixer' /t REG_DWORD /d 0 /f; reg add \"$p\" /v 'FxRender' /t REG_DWORD /d 0 /f; reg add \"$p\" /v 'DisableAudioEndpointDucking' /t REG_DWORD /d 1 /f } " >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Optimisation des periphériques de rendu audio (PowerShell)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Audio" /v DisableAudioEnhancement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio" /v ImmersiveAudio /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Ameliorations audio desactivees - Latence reduite
@@ -802,9 +813,9 @@ reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire ameliorees
 
 :: 2.4 - Desactiver la compression de la memoire
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la compression memoire...
-powershell -NoProfile -Command "Disable-MMAgent -mc" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire desactivee
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la compression memoire (MMAgent)...
+powershell -NoProfile -Command "try { Disable-MMAgent -mc -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporté sur cette version' }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire traitee
 
 :: 2.5 - SvcHost - Valeur par defaut (3670016 KB)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration SvcHost valeur par defaut...
@@ -859,7 +870,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "$ssd=Get-PhysicalDisk|?{
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Commande TRIM executee sur les SSD
 
 :: 3.4 - Optimisation pilote NVMe natif et Boost Speed Windows 11
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du nouveau pilote NVMe natif (Win 11 25H2)...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du nouveau pilote NVMe natif ^(Win 11 25H2^)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
@@ -868,7 +879,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe active
 
 :: 3.5 - DirectStorage / NVMe avance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation DirectStorage et I/O NVMe...
-echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise (FUA deleguee au controleur NVMe)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage optimise ^(FUA deleguee au controleur NVMe^)
 
 :: 3.6 - Defragmentation automatique geree par Windows (TRIM automatique)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de la defragmentation automatique...
@@ -876,7 +887,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de la defragmentation automatiq
 :: Il est important de NE PAS desactiver cette tache pour maintenir le TRIM automatique
 schtasks /Change /TN "Microsoft\Windows\Defrag\ScheduledDefrag" /Enable >nul 2>&1
 sc config defragsvc start= auto >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Defragmentation automatique preservee (TRIM automatique actif pour SSD)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Defragmentation automatique preservee ^(TRIM automatique actif pour SSD^)
 
 echo.
 echo.
@@ -1187,6 +1198,11 @@ reg add "HKCU\Control Panel\Mouse" /v MouseThreshold2 /t REG_SZ /d "0" /f >nul 2
 reg add "HKCU\Control Panel\Mouse" /v MouseDelay /t REG_SZ /d "0" /f >nul 2>&1
 reg add "HKCU\Control Panel\Mouse" /v SnapToDefaultButton /t REG_SZ /d "0" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Acceleration souris desactivee - Mouvement 1:1 actif
+ 
+:: RawMouseThrottle (Background Polling)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage du polling rate souris en arriere-plan...
+reg add "HKCU\Control Panel\Mouse" /v RawMouseThrottleEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% RawMouseThrottle desactive
 
 :: 6.2 - Clavier optimise
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la reactivite clavier...
@@ -1364,9 +1380,9 @@ if "!IS_LAPTOP!"=="0" (
     powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
     powercfg /S SCHEME_CURRENT >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale (Selective Suspend OFF)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale ^(Selective Suspend OFF^)
 ) else (
-    echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve (PC Portable detecte)
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% USB Selective Suspend conserve ^(PC Portable detecte^)
 )
 
 :: 7.9 - Configuration generale du systeme d'alimentation
@@ -1508,6 +1524,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
     reg add "%%K" /v "*EEE" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "*SelectiveSuspend" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "*WakeOnMagicPacket" /t REG_SZ /d 0 /f >nul 2>&1
+    reg add "%%K" /v "*ModernStandbyWoLMagicPacket" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "EnableGreenEthernet" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "ULPMode" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "*WakeOnPattern" /t REG_SZ /d 0 /f >nul 2>&1
@@ -1525,6 +1542,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
     reg add "%%K" /v "S5WakeOnLan" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "WakeOnLink" /t REG_SZ /d 0 /f >nul 2>&1
     reg add "%%K" /v "WolShutdownLinkSpeed" /t REG_SZ /d 2 /f >nul 2>&1
+    reg add "%%K" /v "SipsEnabled" /t REG_SZ /d 0 /f >nul 2>&1
     :: Optimisations latence (Valeurs depandantes du driver : Intel, Realtek, Killer)
     :: *InterruptModerationRate : 1=Minimal/Off, 2=Low, 3=Medium, 4=High, 5=Extreme
     reg add "%%K" /v "*FlowControl" /t REG_SZ /d 0 /f >nul 2>&1
@@ -1550,6 +1568,53 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "DisableDynamicPstate" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "PowerMizerEnable" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" /v "RMForcedMaxPerf" /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: 7.21b - Desactivation economies d'energie sur TOUS les devices (HID/PCI/USB)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation economies d'energie sur TOUS les peripheriques (HID, PCI, USB)...
+powershell -NoProfile -Command ^
+  "$buses = @('HID','PCI','USB'); ^
+  foreach ($bus in $buses) { ^
+    $dpKeys = Get-ChildItem -Path ('HKLM:\SYSTEM\ControlSet001\Enum\' + $bus) -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' }; ^
+    foreach ($k in $dpKeys) { ^
+      $p = $k.Name; ^
+      cmd /c ('reg add \"' + $p + '\" /v EnhancedPowerManagementEnabled /t REG_DWORD /d 0 /f >nul 2>&1'); ^
+      cmd /c ('reg add \"' + $p + '\" /v SelectiveSuspendEnabled /t REG_BINARY /d 00 /f >nul 2>&1'); ^
+      cmd /c ('reg add \"' + $p + '\" /v SelectiveSuspendOn /t REG_DWORD /d 0 /f >nul 2>&1'); ^
+      cmd /c ('reg add \"' + $p + '\" /v WaitWakeEnabled /t REG_DWORD /d 0 /f >nul 2>&1'); ^
+    }; ^
+    $wdfKeys = Get-ChildItem -Path ('HKLM:\SYSTEM\ControlSet001\Enum\' + $bus) -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'WDF' }; ^
+    foreach ($k in $wdfKeys) { ^
+      $p = $k.Name; ^
+      cmd /c ('reg add \"' + $p + '\" /v IdleInWorkingState /t REG_DWORD /d 0 /f >nul 2>&1'); ^
+    }; ^
+  }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Power savings desactivees sur tous les devices HID, PCI et USB
+ 
+:: 7.22 - Optimisations Stockage NVMe
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation des pilotes NVMe...
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v "735209102" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v "1853569164" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v "156965516" /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Pilotes NVMe optimises
+:: SafeBoot fix pour le nouveau driver NVMe
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\SafeBoot\Network\{75416E63-5912-4DFA-AE8F-3EFACCAFFB14}" /ve /t REG_SZ /d "Storage disks" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\SafeBoot\Minimal\{75416E63-5912-4DFA-AE8F-3EFACCAFFB14}" /ve /t REG_SZ /d "Storage disks" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% SafeBoot NVMe configure
+ 
+:: 7.23 - Bridage Energie (Power Throttling)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling global...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Power Throttling desactive
+
+:: 7.23b - Desactivation Windows Platform Binary Table (WPBT)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation WPBT (anti bloatware OEM firmware)...
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% WPBT desactive
+ 
+:: 7.24 - Nettoyage des protocoles reseau (Bindings)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protocoles reseau inutiles (Bindings)...
+powershell -NoProfile -Command "$adapters = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr', 'ms_server', 'ms_msclient'); foreach ($id in $adapters) { Disable-NetAdapterBinding -Name '*' -ComponentID $id -ErrorAction SilentlyContinue }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Bindings reseau nettoyes (LLDP, LLTDIO, etc.)
 
 
 echo.
@@ -1871,9 +1936,20 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Mitigations CPU desactivees
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Conservation du HVCI/CFG (requis pour Valorant, Fortnite, etc.)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 :: CFG doit rester ACTIVE pour Vanguard (Valorant)
-:: powershell -NoProfile -Command "Set-ProcessMitigation -System -Disable CFG"
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% HVCI/CFG conserves (compatibilite anti-cheat)
+ 
+:: Vulnerable Driver Blocklist (WinSux)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation CI Policy (Driver Blocklist)...
+reg add "HKLM\System\ControlSet001\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Blocklist de pilotes vulnérables désactivée
+ 
+:: USB Polling / WHQL Settings
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Debridage du polling rate USB (WHQL Settings)...
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /t REG_DWORD /d 1 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Debridage USB active (Desktop uniquement)
+)
 
 echo.
 call :FINISH_ACTION "Protections Securite" "desactivees" "%~1"
@@ -1911,6 +1987,7 @@ sc config Sense start= demand >nul 2>&1
 sc config WdBoot start= boot >nul 2>&1
 sc config WdFilter start= boot >nul 2>&1
 sc config SecurityHealthService start= demand >nul 2>&1
+sc config camsvc start= demand >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1918,10 +1995,12 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD 
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\camsvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 sc start WinDefend >nul 2>&1
 sc start WdNisSvc >nul 2>&1
 sc start Sense >nul 2>&1
 sc start SecurityHealthService >nul 2>&1
+sc start camsvc >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la protection en temps reel...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /f >nul 2>&1
@@ -1929,22 +2008,29 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protecti
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableOnAccessProtection /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender\Real-Time Protection" /v DisableAsyncScanOnOpen /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des politiques Windows Defender...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiVirus /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableBlockAtFirstSeen /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender" /v VerifiedAndReputableTrustModeEnabled /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender" /v SmartLockerMode /f >nul 2>&1
+reg add "HKLM\System\ControlSet001\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 1 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de SmartScreen...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Warn" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v EnableWebContentEvaluation /t REG_DWORD /d 1 /f >nul 2>&1
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des taches planifiees Defender...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des taches planifiees Defender et ExploitGuard...
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Enable >nul 2>&1
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Enable >nul 2>&1
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Update" /Enable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Enable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Verification" /Enable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\ExploitGuard\ExploitGuard MDM policy Refresh" /Enable >nul 2>&1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services Defender restaures
 
@@ -1968,6 +2054,7 @@ sc stop WinDefend >nul 2>&1
 sc stop WdNisSvc >nul 2>&1
 sc stop Sense >nul 2>&1
 sc stop SecurityHealthService >nul 2>&1
+sc stop camsvc >nul 2>&1
 sc config WinDefend start= disabled >nul 2>&1
 sc config WdNisSvc start= disabled >nul 2>&1
 sc config Sense start= disabled >nul 2>&1
@@ -1975,6 +2062,7 @@ sc config WdBoot start= disabled >nul 2>&1
 sc config WdFilter start= disabled >nul 2>&1
 sc config WdNisDrv start= disabled >nul 2>&1
 sc config SecurityHealthService start= disabled >nul 2>&1
+sc config camsvc start= disabled >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
@@ -1982,6 +2070,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD 
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\camsvc" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la protection en temps reel...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1989,12 +2078,23 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection"
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableScriptScanning /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableOnAccessProtection /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Real-Time Protection" /v DisableAsyncScanOnOpen /t REG_DWORD /d 1 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des politiques Windows Defender...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiVirus /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows Defender" /v DisableAntiSpyware /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableBlockAtFirstSeen /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows Defender" /v VerifiedAndReputableTrustModeEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows Defender" /v SmartLockerMode /t REG_DWORD /d 0 /f >nul 2>&1
+ 
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees Defender et ExploitGuard...
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Update" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cache Maintenance" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Verification" /Disable >nul 2>&1
+schtasks /Change /TN "Microsoft\Windows\ExploitGuard\ExploitGuard MDM policy Refresh" /Disable >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de SmartScreen...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2758,7 +2858,6 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 
 cls
 call :INSTALLER_VISUAL_REDIST call
-call :CLEANUP_OLD_TWEAKS call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -2885,7 +2984,6 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 
 cls
 call :INSTALLER_VISUAL_REDIST call
-call :CLEANUP_OLD_TWEAKS call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
 call :OPTIMISATIONS_DISQUES call
@@ -3125,7 +3223,7 @@ goto :MENU_PRINCIPAL
 :INSTALLER_VISUAL_REDIST
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES VISUAL C++ REDISTRIBUTABLES%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES RUNTIMES (Visual C++ + DirectX)%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -3508,10 +3606,60 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Verification terminee - %COLOR_GREEN%%VCINST
 if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
 if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
 
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DE DIRECTX RUNTIME (JUNE 2010)%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :INSTALLER_DIRECTX call
+
 if "%~1"=="call" exit /b
 echo.
 pause
 goto :MENU_PRINCIPAL
+
+:INSTALLER_DIRECTX
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de l'installation de DirectX...
+
+:: Detection de DirectX June 2010 (XAudio2_7.dll est un bon indicateur)
+set "DX_INSTALLED=0"
+if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
+
+if "%DX_INSTALLED%"=="1" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX June 2010 est deja installe sur ce systeme.
+    exit /b
+)
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Preparation de l'installation...
+set "DX_TEMP=%TEMP%\DirectXInstall"
+if exist "%DX_TEMP%" rd /s /q "%DX_TEMP%" >nul 2>&1
+mkdir "%DX_TEMP%"
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de DirectX Redist June 2010 (95 Mo)...
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile '%DX_TEMP%\directx_redist.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }"
+if errorlevel 1 (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% Echec du telechargement. Verifiez votre connexion.
+    rd /s /q "%DX_TEMP%" >nul 2>&1
+    exit /b
+)
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Extraction des fichiers...
+:: Utiliser l'extracteur integre de DirectX si possible, ou fallback
+"%DX_TEMP%\directx_redist.exe" /Q /T:"%DX_TEMP%" >nul 2>&1
+
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation silencieuse en cours...
+if exist "%DX_TEMP%\DXSETUP.exe" (
+    start /wait "" "%DX_TEMP%\DXSETUP.exe" /silent
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX June 2010 installe avec succes.
+) else (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% Une erreur est survenue lors de l'extraction.
+)
+
+:: Nettoyage
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des fichiers temporaires...
+rd /s /q "%DX_TEMP%" >nul 2>&1
+
+exit /b
 
 :PROGRESS_BAR
 set "PCURRENT=%~1"
