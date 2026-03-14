@@ -2109,11 +2109,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v EnableSmartScreen /
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Off" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v EnableWebContentEvaluation /t REG_DWORD /d 0 /f >nul 2>&1
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des taches planifiees Defender...
-schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Disable >nul 2>&1
-schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Scheduled Scan" /Disable >nul 2>&1
-schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Update" /Disable >nul 2>&1
-
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services Defender desactives
 
 echo.
@@ -3235,10 +3230,6 @@ echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES RUNTIMES (Visual C++ + DirectX)%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-:: Initialiser les compteurs
-set VCINSTALL=0
-set VCSKIP=0
-
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions installees...
 
 :: ===========================================================================
@@ -3398,7 +3389,6 @@ echo.
 set /a VC_TOTAL=12
 set /a VC_STEP=0
 set /a VCINSTALL=0
-set /a VCSKIP=0
 
 :: Creer un dossier temporaire pour les installations
 set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
@@ -3413,7 +3403,6 @@ if exist "%VCREDIST_DIR%\vc2005x86.exe" start /wait "" "%VCREDIST_DIR%\vc2005x86
 set /a VCINSTALL+=1
 goto :done2005x86
 :skip2005x86
-set /a VCSKIP+=1
 :done2005x86
 
 :: VC++ 2005 x64
@@ -3425,7 +3414,6 @@ if exist "%VCREDIST_DIR%\vc2005x64.exe" start /wait "" "%VCREDIST_DIR%\vc2005x64
 set /a VCINSTALL+=1
 goto :done2005x64
 :skip2005x64
-set /a VCSKIP+=1
 :done2005x64
 
 :: VC++ 2008 x86
@@ -3437,7 +3425,6 @@ if exist "%VCREDIST_DIR%\vc2008x86.exe" start /wait "" "%VCREDIST_DIR%\vc2008x86
 set /a VCINSTALL+=1
 goto :done2008x86
 :skip2008x86
-set /a VCSKIP+=1
 :done2008x86
 
 :: VC++ 2008 x64
@@ -3449,7 +3436,6 @@ if exist "%VCREDIST_DIR%\vc2008x64.exe" start /wait "" "%VCREDIST_DIR%\vc2008x64
 set /a VCINSTALL+=1
 goto :done2008x64
 :skip2008x64
-set /a VCSKIP+=1
 :done2008x64
 
 :: VC++ 2010 x86
@@ -3461,7 +3447,6 @@ if exist "%VCREDIST_DIR%\vc2010x86.exe" start /wait "" "%VCREDIST_DIR%\vc2010x86
 set /a VCINSTALL+=1
 goto :done2010x86
 :skip2010x86
-set /a VCSKIP+=1
 :done2010x86
 
 :: VC++ 2010 x64
@@ -3473,7 +3458,6 @@ if exist "%VCREDIST_DIR%\vc2010x64.exe" start /wait "" "%VCREDIST_DIR%\vc2010x64
 set /a VCINSTALL+=1
 goto :done2010x64
 :skip2010x64
-set /a VCSKIP+=1
 :done2010x64
 
 :: VC++ 2012 x86
@@ -3485,7 +3469,6 @@ if exist "%VCREDIST_DIR%\vc2012x86.exe" start /wait "" "%VCREDIST_DIR%\vc2012x86
 set /a VCINSTALL+=1
 goto :done2012x86
 :skip2012x86
-set /a VCSKIP+=1
 :done2012x86
 
 :: VC++ 2012 x64
@@ -3497,7 +3480,6 @@ if exist "%VCREDIST_DIR%\vc2012x64.exe" start /wait "" "%VCREDIST_DIR%\vc2012x64
 set /a VCINSTALL+=1
 goto :done2012x64
 :skip2012x64
-set /a VCSKIP+=1
 :done2012x64
 
 :: VC++ 2013 x86
@@ -3509,7 +3491,6 @@ if exist "%VCREDIST_DIR%\vc2013x86.exe" start /wait "" "%VCREDIST_DIR%\vc2013x86
 set /a VCINSTALL+=1
 goto :done2013x86
 :skip2013x86
-set /a VCSKIP+=1
 :done2013x86
 
 :: VC++ 2013 x64
@@ -3521,7 +3502,6 @@ if exist "%VCREDIST_DIR%\vc2013x64.exe" start /wait "" "%VCREDIST_DIR%\vc2013x64
 set /a VCINSTALL+=1
 goto :done2013x64
 :skip2013x64
-set /a VCSKIP+=1
 :done2013x64
 
 :: VC++ 2015-2022 x86
@@ -3531,7 +3511,6 @@ if %VC2015X86%==0 (
     powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
     if exist "%VCREDIST_DIR%\vc2015x86.exe" start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
 )
-:done2015x86
 
 :: VC++ 2015-2022 x64
 set /a VC_STEP+=1
@@ -3540,7 +3519,6 @@ if %VC2015X64%==0 (
     powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
     if exist "%VCREDIST_DIR%\vc2015x64.exe" start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
 )
-:done2015x64
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification des installations...
 
