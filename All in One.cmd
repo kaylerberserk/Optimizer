@@ -31,6 +31,7 @@ set "DESACTIVER_SECURITE=0"
 set "DESACTIVER_DEFENDER=0"
 set "DESACTIVER_ANIMATIONS=0"
 set "DESACTIVER_IA=0"
+set "DESACTIVER_UAC=0"
 
 :: Variables Hardware
 set "HW_OS=Detection..."
@@ -2879,6 +2880,24 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 :DESKTOP_IA_NON
 
 cls
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver le Controle de Compte Utilisateur (UAC) ?%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ne plus demander de confirmation (Oui/Non) pour les actions admin
+echo       %COLOR_YELLOW%Reduit la securite en permettant aux applis de s'executer sans alerte%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver l'UAC (recommande)
+echo.
+set "DESACTIVER_UAC=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver l'UAC ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :DESKTOP_UAC_NON
+if errorlevel 1 set "DESACTIVER_UAC=1"
+:DESKTOP_UAC_NON
+
+
+cls
 call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
@@ -2891,6 +2910,7 @@ if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
 if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_COPILOT call
+if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION call
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2912,6 +2932,9 @@ if "%DESACTIVER_ANIMATIONS%"=="1" (
 )
 if "%DESACTIVER_IA%"=="1" (
   echo %COLOR_RED%[INFO]%COLOR_RESET% %COLOR_WHITE%Les fonctionnalites IA de Windows ont ete desactivees.%COLOR_RESET%
+)
+if "%DESACTIVER_UAC%"=="1" (
+  echo %COLOR_RED%[INFO]%COLOR_RESET% %COLOR_WHITE%Le Controle de Compte Utilisateur (UAC) a ete desactive.%COLOR_RESET%
 )
 echo.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
@@ -3005,6 +3028,24 @@ if errorlevel 1 set "DESACTIVER_IA=1"
 :LAPTOP_IA_NON
 
 cls
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous desactiver le Controle de Compte Utilisateur (UAC) ?%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ne plus demander de confirmation (Oui/Non) pour les actions admin
+echo       %COLOR_YELLOW%Reduit la securite en permettant aux applis de s'executer sans alerte%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver l'UAC (recommande)
+echo.
+set "DESACTIVER_UAC=0"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Desactiver l'UAC ? [O/N]: %COLOR_RESET%"
+if errorlevel 2 goto :LAPTOP_UAC_NON
+if errorlevel 1 set "DESACTIVER_UAC=1"
+:LAPTOP_UAC_NON
+
+
+cls
 call :INSTALLER_VISUAL_REDIST call
 call :OPTIMISATIONS_SYSTEME call
 call :OPTIMISATIONS_MEMOIRE call
@@ -3017,6 +3058,7 @@ if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE call
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION call
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION call
 if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_COPILOT call
+if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION call
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3038,6 +3080,9 @@ if "%DESACTIVER_ANIMATIONS%"=="1" (
 )
 if "%DESACTIVER_IA%"=="1" (
   echo %COLOR_RED%[INFO]%COLOR_RESET% %COLOR_WHITE%Les fonctionnalites IA de Windows ont ete desactivees.%COLOR_RESET%
+)
+if "%DESACTIVER_UAC%"=="1" (
+  echo %COLOR_RED%[INFO]%COLOR_RESET% %COLOR_WHITE%Le Controle de Compte Utilisateur (UAC) a ete desactive.%COLOR_RESET%
 )
 echo.
 echo %COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
