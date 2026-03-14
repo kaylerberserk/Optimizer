@@ -658,7 +658,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v AITEnable /t REG
  
 :: Win8 Scaling (Visual Clarity) - Desktop Only
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du Scaling Windows (Win8 DPI Scaling)...
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du Scaling Windows ^(Win8 DPI Scaling^)...
     reg add "HKCU\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 96 /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Win8 Scaling active ^(Mode 1:1 force^)
@@ -1942,19 +1942,27 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% HVCI/CFG conserves (compatibilite anti-cheat
 :: Vulnerable Driver Blocklist (WinSux)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation CI Policy (Driver Blocklist)...
 reg add "HKLM\System\ControlSet001\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Blocklist de pilotes vulnérables désactivée
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Blocklist de pilotes vulnerables desactivee
  
 :: USB Polling / WHQL Settings
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Debridage du polling rate USB (WHQL Settings)...
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Debridage du polling rate USB ^(WHQL Settings^)...
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Debridage USB active (Desktop uniquement)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Debridage USB active ^(Desktop uniquement^)
 )
 
 echo.
-call :FINISH_ACTION "Protections Securite" "desactivees" "%~1"
-if "%~1"=="call" exit /b
-goto :MENU_PRINCIPAL
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Protections de securite desactivees.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est recommande pour appliquer les modifications.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+if "%~1"=="call" (
+  exit /b
+) else (
+  pause
+  goto :MENU_PRINCIPAL
+)
 
 :TOGGLE_DEFENDER
 cls
@@ -3287,10 +3295,6 @@ if %VC2013X86%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
     if not errorlevel 1 set VC2013X86=1
 )
-if %VC2013X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
-    if not errorlevel 1 set VC2013X86=1
-)
 
 :: --- VC++ 2012 (v11) - Detection DLL + Registry ---
 :: DLL: msvcp110.dll, msvcr110.dll
@@ -3300,10 +3304,6 @@ if exist "%SystemRoot%\SysWOW64\msvcp110.dll" set VC2012X86=1
 if %VC2012X64%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
     if not errorlevel 1 set VC2012X64=1
-)
-if %VC2012X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
-    if not errorlevel 1 set VC2012X86=1
 )
 if %VC2012X86%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
@@ -3323,10 +3323,6 @@ if %VC2010X86%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
     if not errorlevel 1 set VC2010X86=1
 )
-if %VC2010X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2010X86=1
-)
 
 :: --- VC++ 2008 (v9) - Detection DLL + Registry + WinSxS ---
 :: DLL: msvcp90.dll, msvcr90.dll
@@ -3336,10 +3332,6 @@ if exist "%SystemRoot%\SysWOW64\msvcp90.dll" set VC2008X86=1
 if %VC2008X64%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
     if not errorlevel 1 set VC2008X64=1
-)
-if %VC2008X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2008X86=1
 )
 if %VC2008X86%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
@@ -3363,10 +3355,6 @@ if exist "%SystemRoot%\SysWOW64\msvcp80.dll" set VC2005X86=1
 if %VC2005X64%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
     if not errorlevel 1 set VC2005X64=1
-)
-if %VC2005X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2005X86=1
 )
 if %VC2005X86%==0 (
     type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
