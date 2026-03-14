@@ -655,6 +655,16 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v S
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableInventory /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v DisableUAR /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v AITEnable /t REG_DWORD /d 0 /f >nul 2>&1
+ 
+:: Win8 Scaling (Visual Clarity) - Desktop Only
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation du Scaling Windows ^(Win8 DPI Scaling^)...
+    reg add "HKCU\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 96 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Win8 Scaling active ^(Mode 1:1 force^)
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Win8 Scaling ignore sur Laptop ^(conserve le scaling par defaut^)
+)
 
 :: Activer les sauvegardes automatiques du registre (desactive depuis W10 1803)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager" /v EnablePeriodicBackup /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1375,6 +1385,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du systeme d'alimentation...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
+
+:: RawMouseThrottle (Background Polling)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage du polling rate souris en arriere-plan...
+reg add "HKCU\Control Panel\Mouse" /v RawMouseThrottleEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% RawMouseThrottle desactive
 
 :: 7.10 - Desactivation des Timer Coalescing et DPC
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des Timer Coalescing et optimisation DPC...
@@ -3674,6 +3689,17 @@ set "IS_LAPTOP=0"
 for /f %%i in ('powershell -NoProfile -Command "if(Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue){Write-Output 1} else {Write-Output 0}"') do (
     if %%i equ 1 set "IS_LAPTOP=1"
 )
+if /i "%HW_OS%"=="Detection..." for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
+if /i "%HW_CPU%"=="Detection..." for /f "tokens=2 delims==" %%i in ('wmic cpu get Name /value 2^>nul ^| find "="') do set "HW_CPU=%%i"
+if /i "%HW_GPU%"=="Detection..." for /f "tokens=2 delims==" %%i in ('wmic path win32_VideoController get Name /value 2^>nul ^| find "="') do (
+    if not defined HW_GPU set "HW_GPU=%%i"
+)
+if /i "%HW_RAM%"=="Detection..." for /f %%i in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 0)"') do set "HW_RAM=%%i"
+if /i "%HW_OS%"=="Detection..." set "HW_OS=Windows"
+if /i "%HW_CPU%"=="Detection..." set "HW_CPU=CPU inconnu"
+if not defined HW_GPU set "HW_GPU=GPU inconnu"
+if /i "%HW_GPU%"=="Detection..." set "HW_GPU=GPU inconnu"
+if /i "%HW_RAM%"=="Detection..." set "HW_RAM=?"
 exit /b
 
 
