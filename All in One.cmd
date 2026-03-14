@@ -411,16 +411,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression des papiers peints desactivee
 
 :: 1.4 - Telemetrie et vie privee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie et des traceurs...
-:: Services de telemetrie
-sc stop DiagTrack >nul 2>&1 & sc config DiagTrack start= disabled >nul 2>&1
-sc stop dmwappushservice >nul 2>&1 & sc config dmwappushservice start= disabled >nul 2>&1
-sc stop diagnosticshub.standardcollector.service >nul 2>&1 & sc config diagnosticshub.standardcollector.service start= disabled >nul 2>&1
-sc config RetailDemo start= disabled >nul 2>&1
-sc stop WerSvc >nul 2>&1 & sc config WerSvc start= disabled >nul 2>&1
-sc config AJRouter start= disabled >nul 2>&1
-sc config RemoteRegistry start= disabled >nul 2>&1
-sc config RemoteAccess start= disabled >nul 2>&1
-
 :: Registre : telemetrie et publicites
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v AllowTelemetry /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v MaxTelemetryAllowed /t REG_DWORD /d 0 /f >nul 2>&1
@@ -580,8 +570,10 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services
 for %%S in (
     W32Time
     WpnService
+    SysMain
+    defragsvc
 ) do (
-  sc config %%S start= auto >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 )
 :: WpnUserService necessite powershell/wildcards car c'est un service par utilisateur
 powershell -NoProfile -Command "Get-Service WpnUserService* | Set-Service -StartupType Automatic" >nul 2>&1
@@ -602,6 +594,7 @@ for %%S in (
     NaturalAuthentication
     NcaSvc
     NcbService
+    camsvc
     NgcSvc
     NgcCtnrSvc
     PeerDistSvc
@@ -617,8 +610,12 @@ for %%S in (
     tzautoupdate
     WFDSConMgrSvc
     WiaRpc
+    dmwappushservice
+    SystemSuggestions
+    uhssvc
+    WerSvc
 ) do (
-  sc config %%S start= demand >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 )
 :: CDPUserSvc est un service par utilisateur
 powershell -NoProfile -Command "Get-Service CDPUserSvc* | Set-Service -StartupType Manual" >nul 2>&1
@@ -630,7 +627,7 @@ for %%S in (
     AxInstSV
     CscService
     DiagTrack
-    dmwappushservice
+    diagnosticshub.standardcollector.service
     DialogBlockingService
     Fax
     lfsvc
@@ -642,13 +639,11 @@ for %%S in (
     SEMgrSvc
     shpamsvc
     ssh-agent
-    SystemSuggestions
-    uhssvc
     UevAgentService
     WalletService
     WMPNetworkSvc
 ) do (
-  sc config %%S start= disabled >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services telemetrie et legacy desactives
 
@@ -808,8 +803,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 :: Activer Superfetch et Prefetcher pour chargement ultra-rapide des applications
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableSuperfetch /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 1 /f >nul 2>&1
-sc config SysMain start= auto >nul 2>&1
-sc start SysMain >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Prefetch actif, SuperFetch optimise pour les jeux
 
 :: 2.3 - FTH OFF
@@ -892,7 +885,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de la defragmentation automatiq
 :: Windows 11 detecte automatiquement les SSD et effectue du TRIM au lieu de defragmentation
 :: Il est important de NE PAS desactiver cette tache pour maintenir le TRIM automatique
 schtasks /Change /TN "Microsoft\Windows\Defrag\ScheduledDefrag" /Enable >nul 2>&1
-sc config defragsvc start= auto >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Defragmentation automatique preservee ^(TRIM automatique actif pour SSD^)
 
 echo.
@@ -2026,7 +2018,7 @@ sc config Sense start= demand >nul 2>&1
 sc config WdBoot start= boot >nul 2>&1
 sc config WdFilter start= boot >nul 2>&1
 sc config SecurityHealthService start= demand >nul 2>&1
-sc config camsvc start= demand >nul 2>&1
+
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2034,12 +2026,13 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD 
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\camsvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+
 sc start WinDefend >nul 2>&1
 sc start WdNisSvc >nul 2>&1
 sc start Sense >nul 2>&1
 sc start SecurityHealthService >nul 2>&1
-sc start camsvc >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\dmwappushservice" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la protection en temps reel...
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /f >nul 2>&1
@@ -2093,7 +2086,6 @@ sc stop WinDefend >nul 2>&1
 sc stop WdNisSvc >nul 2>&1
 sc stop Sense >nul 2>&1
 sc stop SecurityHealthService >nul 2>&1
-sc stop camsvc >nul 2>&1
 sc config WinDefend start= disabled >nul 2>&1
 sc config WdNisSvc start= disabled >nul 2>&1
 sc config Sense start= disabled >nul 2>&1
@@ -2101,7 +2093,6 @@ sc config WdBoot start= disabled >nul 2>&1
 sc config WdFilter start= disabled >nul 2>&1
 sc config WdNisDrv start= disabled >nul 2>&1
 sc config SecurityHealthService start= disabled >nul 2>&1
-sc config camsvc start= disabled >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Sense" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdBoot" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdFilter" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
@@ -2109,7 +2100,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisDrv" /v Start /t REG_DWORD 
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WdNisSvc" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\WinDefend" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\SecurityHealthService" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\camsvc" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la protection en temps reel...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /t REG_DWORD /d 1 /f >nul 2>&1
