@@ -259,7 +259,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks desktop nettoyes
 :: 0.4 - TCP legacy
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks TCP...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v GlobalMaxTcpWindowSize /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpWindowSize /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpMaxDupAcks /f >nul 2>&1
@@ -280,7 +279,6 @@ bcdedit /deletevalue uselegacyapicmode >nul 2>&1
 bcdedit /deletevalue usephysicaldestination >nul 2>&1
 bcdedit /deletevalue usefirmwarepcisettings >nul 2>&1
 bcdedit /deletevalue configaccesspolicy >nul 2>&1
-bcdedit /deletevalue MSI >nul 2>&1
 bcdedit /deletevalue tscsyncpolicy >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks BCD nettoyes
 
@@ -302,17 +300,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Memory Management...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v IoPageLockLimit /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Memory Management nettoyes
 
-:: 0.9 - FTH legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FTH...
-reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FTH nettoyes
-
-:: 0.10 - MMCSS legacy
+:: 0.9 - MMCSS legacy
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks MMCSS...
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks MMCSS nettoyes
 
-:: 0.11 - FileSystem legacy
+:: 0.10 - FileSystem legacy
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FileSystem...
 reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FileSystem nettoyes
@@ -760,7 +753,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Touche F1 (aide) desactivee
 :: 1.11 - Desactivation audio enhancements (latence audio)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des ameliorations audio...
 powershell -NoProfile -Command "$path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}'; Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.Name.Replace('HKEY_LOCAL_MACHINE', 'HKLM'); reg add \"$p\" /v 'FxNonDestructiveSoftMixer' /t REG_DWORD /d 0 /f; reg add \"$p\" /v 'FxRender' /t REG_DWORD /d 0 /f; reg add \"$p\" /v 'DisableAudioEndpointDucking' /t REG_DWORD /d 1 /f } " >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Optimisation des periphériques de rendu audio (PowerShell)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Optimisation des peripheriques de rendu audio (PowerShell)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Audio" /v DisableAudioEnhancement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio" /v ImmersiveAudio /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Ameliorations audio desactivees - Latence reduite
@@ -813,7 +806,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire amelior
 
 :: 2.4 - Desactiver la compression de la memoire
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la compression memoire (MMAgent)...
-powershell -NoProfile -Command "try { Disable-MMAgent -mc -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporté sur cette version' }" >nul 2>&1
+powershell -NoProfile -Command "try { Disable-MMAgent -mc -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire traitee
 
 :: 2.5 - SvcHost - Valeur par defaut (3670016 KB)
@@ -1277,7 +1270,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% GPU Power Management optimise
 
 :: 7.2 - NIC Energy Saving Ethernet et WiFi
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d''énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''économie d''énergie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Désactivé' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Activé' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch{}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 3 -ErrorAction SilentlyContinue } catch{} }" >nul 2>&1
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Desactive' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Moderation interruption' -DisplayValue 'Active' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 1 -ErrorAction SilentlyContinue } catch{}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 3 -ErrorAction SilentlyContinue } catch{} }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Ethernet + WiFi)
 
 
@@ -1755,7 +1748,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 
 :: 11. Restaurer les economies d'energie reseau (NIC - Ethernet et WiFi)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation des economies d'energie reseau (NIC)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet à économie d''énergie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''économie d''énergie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Modération interruption' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 0 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 0 -ErrorAction SilentlyContinue } catch {} }" >nul 2>&1
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Moderation interruption' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModeration' -RegistryValue 0 -ErrorAction SilentlyContinue } catch {}; try { Set-NetAdapterAdvancedProperty -Name $adapter -RegistryKeyword '*InterruptModerationRate' -RegistryValue 0 -ErrorAction SilentlyContinue } catch {} }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC restaurees (Ethernet + WiFi)
 
 :: 8. Restaurer les parametres processeur par defaut
@@ -3252,283 +3245,60 @@ goto :MENU_PRINCIPAL
 :INSTALLER_VISUAL_REDIST
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES RUNTIMES (Visual C++ + DirectX)%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES RUNTIMES Visual C++%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions installees...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Detection des versions installees (V14 - 2015-2022)...
 
-:: ===========================================================================
-:: DETECTION ROBUSTE MULTI-NIVEAUX
-:: Methode 1: Verification des DLL (le plus fiable)
-:: Methode 2: Registry Uninstall keys (fallback)
-:: Methode 3: Registry WinSxS (assembly side-by-side)
-:: ===========================================================================
-
-set VC2005X86=0
-set VC2005X64=0
-set VC2008X86=0
-set VC2008X64=0
-set VC2010X86=0
-set VC2010X64=0
-set VC2012X86=0
-set VC2012X64=0
-set VC2013X86=0
-set VC2013X64=0
+:: Initialisation
 set VC2015X86=0
 set VC2015X64=0
 
-:: ===========================================================================
-:: OPTIMISATION REGISTRE : Export unique pour accelerer la detection
-:: ===========================================================================
+:: Detection DLL
+if exist "%SystemRoot%\System32\vcruntime140.dll" set VC2015X64=1
+if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86=1
+
+:: Fallback registry pour les versions manquantes
 set "REG_DUMP=%TEMP%\vc_uninstall_dump.txt"
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s > "%REG_DUMP%" 2>nul
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s >> "%REG_DUMP%" 2>nul
 
-:: --- VC++ 2015-2022 (v14) - Detection DLL + Registry ---
-:: DLL: vcruntime140.dll, msvcp140.dll (System32 pour x64, SysWOW64 pour x86)
-if exist "%SystemRoot%\System32\vcruntime140.dll" set VC2015X64=1
-if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86=1
-:: Fallback registry pour les versions 2015/2017/2019/2022
-if %VC2015X64%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
-    if not errorlevel 1 set VC2015X64=1
-)
-if %VC2015X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2015X86=1
-)
-
-:: --- VC++ 2013 (v12) - Detection DLL + Registry ---
-:: DLL: msvcp120.dll, msvcr120.dll
-if exist "%SystemRoot%\System32\msvcp120.dll" set VC2013X64=1
-if exist "%SystemRoot%\SysWOW64\msvcp120.dll" set VC2013X86=1
-:: Fallback registry
-if %VC2013X64%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
-    if not errorlevel 1 set VC2013X64=1
-)
-if %VC2013X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2013" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
-    if not errorlevel 1 set VC2013X86=1
-)
-
-:: --- VC++ 2012 (v11) - Detection DLL + Registry ---
-:: DLL: msvcp110.dll, msvcr110.dll
-if exist "%SystemRoot%\System32\msvcp110.dll" set VC2012X64=1
-if exist "%SystemRoot%\SysWOW64\msvcp110.dll" set VC2012X86=1
-:: Fallback registry
-if %VC2012X64%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
-    if not errorlevel 1 set VC2012X64=1
-)
-if %VC2012X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2012" | findstr /I /C:"x86" /C:"X86" /C:"Minimum" >nul 2>&1
-    if not errorlevel 1 set VC2012X86=1
-)
-
-:: --- VC++ 2010 (v10) - Detection DLL + Registry ---
-:: DLL: msvcp100.dll, msvcr100.dll
-if exist "%SystemRoot%\System32\msvcp100.dll" set VC2010X64=1
-if exist "%SystemRoot%\SysWOW64\msvcp100.dll" set VC2010X86=1
-:: Fallback registry
-if %VC2010X64%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
-    if not errorlevel 1 set VC2010X64=1
-)
-if %VC2010X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2010" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2010X86=1
-)
-
-:: --- VC++ 2008 (v9) - Detection DLL + Registry + WinSxS ---
-:: DLL: msvcp90.dll, msvcr90.dll
-if exist "%SystemRoot%\System32\msvcp90.dll" set VC2008X64=1
-if exist "%SystemRoot%\SysWOW64\msvcp90.dll" set VC2008X86=1
-:: Fallback registry
-if %VC2008X64%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
-    if not errorlevel 1 set VC2008X64=1
-)
-if %VC2008X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2008" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2008X86=1
-)
-:: Fallback WinSxS (assembly side-by-side pour 2008)
-if %VC2008X86%==0 (
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc90" >nul 2>&1
-    if not errorlevel 1 set VC2008X86=1
-)
-if %VC2008X64%==0 (
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc90" >nul 2>&1
-    if not errorlevel 1 set VC2008X64=1
-)
-
-:: --- VC++ 2005 (v8) - Detection DLL + Registry + WinSxS ---
-:: DLL: msvcp80.dll, msvcr80.dll
-if exist "%SystemRoot%\System32\msvcp80.dll" set VC2005X64=1
-if exist "%SystemRoot%\SysWOW64\msvcp80.dll" set VC2005X86=1
-:: Fallback registry
-if %VC2005X64%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x64" /C:"X64" >nul 2>&1
-    if not errorlevel 1 set VC2005X64=1
-)
-if %VC2005X86%==0 (
-    type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2005" | findstr /I /C:"x86" /C:"X86" >nul 2>&1
-    if not errorlevel 1 set VC2005X86=1
-)
-:: Fallback WinSxS (assembly side-by-side pour 2005)
-if %VC2005X86%==0 (
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc80" >nul 2>&1
-    if not errorlevel 1 set VC2005X86=1
-)
-if %VC2005X64%==0 (
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc80" >nul 2>&1
-    if not errorlevel 1 set VC2005X64=1
-)
+if %VC2015X64%==0 type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x64" /C:"X64" >nul 2>&1 && set VC2015X64=1
+if %VC2015X86%==0 type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1 && set VC2015X86=1
 
 :: Compter combien sont deja installes
-set /a VCINSTALLED_COUNT=%VC2005X86%+%VC2005X64%+%VC2008X86%+%VC2008X64%+%VC2010X86%+%VC2010X64%+%VC2012X86%+%VC2012X64%+%VC2013X86%+%VC2013X64%+%VC2015X86%+%VC2015X64%
+set /a VCINSTALLED_COUNT=%VC2015X86%+%VC2015X64%
 
 echo.
-echo %COLOR_WHITE%Versions detectees:%COLOR_RESET% %COLOR_GREEN%%VCINSTALLED_COUNT%/12%COLOR_RESET%
+echo %COLOR_WHITE%Versions detectees (V14):%COLOR_RESET% %COLOR_GREEN%%VCINSTALLED_COUNT%/2%COLOR_RESET%
 
 :: Si tout est deja installe, afficher message et retourner
-if not %VCINSTALLED_COUNT%==12 goto :VCREDIST_INSTALL
-
-echo.
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions sont deja installees.
-if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
-if "%~1"=="call" exit /b
-echo.
-pause
-goto :MENU_PRINCIPAL
+if %VCINSTALLED_COUNT%==2 (
+    echo.
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Toutes les versions V14 sont deja installees.
+    if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
+    if "%~1"=="call" exit /b
+    echo.
+    pause
+    goto :MENU_PRINCIPAL
+)
 
 :VCREDIST_INSTALL
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Installation des versions manquantes...
-set /a VC_TO_INSTALL=12-VCINSTALLED_COUNT
+set /a VC_TO_INSTALL=2-VCINSTALLED_COUNT
 echo %COLOR_WHITE%Packages a installer:%COLOR_RESET% %COLOR_YELLOW%%VC_TO_INSTALL%%COLOR_RESET%
 echo.
 
-:: Initialiser la barre de progression (12 packages au total)
-set /a VC_TOTAL=12
+:: Initialiser la barre de progression (2 packages au total)
+set /a VC_TOTAL=2
 set /a VC_STEP=0
 set /a VCINSTALL=0
 
 :: Creer un dossier temporaire pour les installations
 set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
 if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
-
-:: VC++ 2005 x86
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2005 x86"
-if %VC2005X86%==1 goto :skip2005x86
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2005x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2005x86.exe" start /wait "" "%VCREDIST_DIR%\vc2005x86.exe" /Q >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2005x86
-:skip2005x86
-:done2005x86
-
-:: VC++ 2005 x64
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2005 x64"
-if %VC2005X64%==1 goto :skip2005x64
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/B/4/8B42259F-5D70-43F4-AC2E-4B208FD8D66A/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2005x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2005x64.exe" start /wait "" "%VCREDIST_DIR%\vc2005x64.exe" /Q >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2005x64
-:skip2005x64
-:done2005x64
-
-:: VC++ 2008 x86
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2008 x86"
-if %VC2008X86%==1 goto :skip2008x86
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2008x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2008x86.exe" start /wait "" "%VCREDIST_DIR%\vc2008x86.exe" /q >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2008x86
-:skip2008x86
-:done2008x86
-
-:: VC++ 2008 x64
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2008 x64"
-if %VC2008X64%==1 goto :skip2008x64
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2008x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2008x64.exe" start /wait "" "%VCREDIST_DIR%\vc2008x64.exe" /q >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2008x64
-:skip2008x64
-:done2008x64
-
-:: VC++ 2010 x86
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2010 x86"
-if %VC2010X86%==1 goto :skip2010x86
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2010x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2010x86.exe" start /wait "" "%VCREDIST_DIR%\vc2010x86.exe" /q >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2010x86
-:skip2010x86
-:done2010x86
-
-:: VC++ 2010 x64
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2010 x64"
-if %VC2010X64%==1 goto :skip2010x64
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/5/165255E7-1014-4D0A-B094-B6A430A6BFFC/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2010x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2010x64.exe" start /wait "" "%VCREDIST_DIR%\vc2010x64.exe" /q >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2010x64
-:skip2010x64
-:done2010x64
-
-:: VC++ 2012 x86
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2012 x86"
-if %VC2012X86%==1 goto :skip2012x86
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2012x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2012x86.exe" start /wait "" "%VCREDIST_DIR%\vc2012x86.exe" /install /quiet /norestart >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2012x86
-:skip2012x86
-:done2012x86
-
-:: VC++ 2012 x64
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2012 x64"
-if %VC2012X64%==1 goto :skip2012x64
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/1/6/B/16B06F60-3B20-4FF2-B699-5E9B7962F9AE/VSU_4/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2012x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2012x64.exe" start /wait "" "%VCREDIST_DIR%\vc2012x64.exe" /install /quiet /norestart >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2012x64
-:skip2012x64
-:done2012x64
-
-:: VC++ 2013 x86
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2013 x86"
-if %VC2013X86%==1 goto :skip2013x86
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe' -OutFile '%VCREDIST_DIR%\vc2013x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2013x86.exe" start /wait "" "%VCREDIST_DIR%\vc2013x86.exe" /install /quiet /norestart >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2013x86
-:skip2013x86
-:done2013x86
-
-:: VC++ 2013 x64
-set /a VC_STEP+=1
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2013 x64"
-if %VC2013X64%==1 goto :skip2013x64
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe' -OutFile '%VCREDIST_DIR%\vc2013x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-if exist "%VCREDIST_DIR%\vc2013x64.exe" start /wait "" "%VCREDIST_DIR%\vc2013x64.exe" /install /quiet /norestart >nul 2>&1
-set /a VCINSTALL+=1
-goto :done2013x64
-:skip2013x64
-:done2013x64
 
 :: VC++ 2015-2022 x86
 set /a VC_STEP+=1
@@ -3549,55 +3319,25 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification des installations...
 
 :: Re-detection des DLLs apres installation
-set VC2005X86_NEW=0
-set VC2005X64_NEW=0
-set VC2008X86_NEW=0
-set VC2008X64_NEW=0
-set VC2010X86_NEW=0
-set VC2010X64_NEW=0
-set VC2012X86_NEW=0
-set VC2012X64_NEW=0
-set VC2013X86_NEW=0
-set VC2013X64_NEW=0
 set VC2015X86_NEW=0
 set VC2015X64_NEW=0
 
-:: Verification DLL + Registry + WinSxS
+:: Verification DLL
 if exist "%SystemRoot%\System32\vcruntime140.dll" set VC2015X64_NEW=1
 if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86_NEW=1
-if exist "%SystemRoot%\System32\msvcp120.dll" set VC2013X64_NEW=1
-if exist "%SystemRoot%\SysWOW64\msvcp120.dll" set VC2013X86_NEW=1
-if exist "%SystemRoot%\System32\msvcp110.dll" set VC2012X64_NEW=1
-if exist "%SystemRoot%\SysWOW64\msvcp110.dll" set VC2012X86_NEW=1
-if exist "%SystemRoot%\System32\msvcp100.dll" set VC2010X64_NEW=1
-if exist "%SystemRoot%\SysWOW64\msvcp100.dll" set VC2010X86_NEW=1
-if exist "%SystemRoot%\System32\msvcp90.dll" set VC2008X64_NEW=1
-if exist "%SystemRoot%\SysWOW64\msvcp90.dll" set VC2008X86_NEW=1
-if exist "%SystemRoot%\System32\msvcp80.dll" set VC2005X64_NEW=1
-if exist "%SystemRoot%\SysWOW64\msvcp80.dll" set VC2005X86_NEW=1
-
-:: Fallback WinSxS pour 2005/2008
-if exist "%SystemRoot%\WinSxS" (
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc90" >nul 2>&1
-    if not errorlevel 1 if %VC2008X86_NEW%==0 set VC2008X86_NEW=1
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc90" >nul 2>&1
-    if not errorlevel 1 if %VC2008X64_NEW%==0 set VC2008X64_NEW=1
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"x86_microsoft.vc80" >nul 2>&1
-    if not errorlevel 1 if %VC2005X86_NEW%==0 set VC2005X86_NEW=1
-    dir "%SystemRoot%\WinSxS" /b 2>nul | findstr /I /C:"amd64_microsoft.vc80" >nul 2>&1
-    if not errorlevel 1 if %VC2005X64_NEW%==0 set VC2005X64_NEW=1
-)
 
 :: Calculer les vrais comptes
-set /a VCINSTALL=%VC2005X86_NEW%+%VC2005X64_NEW%+%VC2008X86_NEW%+%VC2008X64_NEW%+%VC2010X86_NEW%+%VC2010X64_NEW%+%VC2012X86_NEW%+%VC2012X64_NEW%+%VC2013X86_NEW%+%VC2013X64_NEW%+%VC2015X86_NEW%+%VC2015X64_NEW%
+set /a VCINSTALL=%VC2015X86_NEW%+%VC2015X64_NEW%
 
 echo.
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Verification terminee - %COLOR_GREEN%%VCINSTALL%/12%COLOR_RESET% versions presentes
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Verification terminee - %COLOR_GREEN%%VCINSTALL%/2%COLOR_RESET% versions presentes
+timeout /t 3 /nobreak >nul
 
 :: Nettoyage des fichiers temporaires
 if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
 if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
 
+cls
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DE DIRECTX RUNTIME (JUNE 2010)%COLOR_RESET%
@@ -3628,7 +3368,7 @@ if exist "%DX_TEMP%" rd /s /q "%DX_TEMP%" >nul 2>&1
 mkdir "%DX_TEMP%"
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement de DirectX Redist June 2010 (95 Mo)...
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile '%DX_TEMP%\directx_redist.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }"
+powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile '%DX_TEMP%\directx_redist.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }" >nul 2>&1
 if errorlevel 1 (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% Echec du telechargement. Verifiez votre connexion.
     rd /s /q "%DX_TEMP%" >nul 2>&1
@@ -3673,37 +3413,32 @@ exit /b
 
 
 :DETECT_HARDWARE
-:: Detection de l'OS
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "(Get-CimInstance Win32_OperatingSystem).Caption + ' (' + (Get-CimInstance Win32_OperatingSystem).Version + ')'"') do set "HW_OS=%%i"
-
-:: Detection du CPU
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "(Get-CimInstance Win32_Processor).Name.Trim()"') do set "HW_CPU=%%i"
-
-:: Detection du GPU (et HAS_NVIDIA)
-set "HW_GPU="
-set "HAS_NVIDIA=0"
-for /f "tokens=*" %%i in ('powershell -NoProfile -Command "$g=(Get-CimInstance Win32_VideoController).Name; if($g -is [array]){$g -join ' / '}else{$g}"') do set "HW_GPU=%%i"
-echo !HW_GPU! | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
-
-:: Detection de la RAM
-for /f %%i in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1GB, 0)"') do set "HW_RAM=%%i"
-
-:: Detection du type de systeme (Portable)
+:: Initialisation par defaut
+set "HW_OS=Windows"
+set "HW_CPU=CPU Inconnu"
+set "HW_GPU=GPU Inconnu"
+set "HW_RAM=?"
 set "IS_LAPTOP=0"
-for /f %%i in ('powershell -NoProfile -Command "if(Get-CimInstance -ClassName Win32_Battery -ErrorAction SilentlyContinue){Write-Output 1} else {Write-Output 0}"') do (
-    if %%i equ 1 set "IS_LAPTOP=1"
+
+:: Un seul appel PowerShell robuste (conserve le gain de performance sans les problemes de parsing CMD)
+:: Utilise '~' comme delimiteur car il est moins susceptible de causer des problemes que '|'
+for /f "tokens=1-5 delims=~" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$o=Get-CimInstance Win32_OperatingSystem;$c=Get-CimInstance Win32_Processor;$g=@(Get-CimInstance Win32_VideoController)[0].Name;$r=[math]::Round((Get-CimInstance Win32_PhysicalMemory|Measure-Object Capacity -Sum).Sum/1GB,0);if($r -eq 0){$r=[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory/1GB,0)};$b=if(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue){1}else{0}; Write-Output ($o.Caption+' ('+$o.Version+')'+'~'+$c.Name.Trim()+'~'+$g+'~'+$r+'~'+$b)" 2^>nul') do (
+    if not "%%a"=="" set "HW_OS=%%a"
+    if not "%%b"=="" set "HW_CPU=%%b"
+    if not "%%c"=="" set "HW_GPU=%%c"
+    if not "%%d"=="" set "HW_RAM=%%d"
+    if not "%%e"=="" set "IS_LAPTOP=%%e"
 )
-if /i "%HW_OS%"=="Detection..." for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
-if /i "%HW_CPU%"=="Detection..." for /f "tokens=2 delims==" %%i in ('wmic cpu get Name /value 2^>nul ^| find "="') do set "HW_CPU=%%i"
-if /i "%HW_GPU%"=="Detection..." for /f "tokens=2 delims==" %%i in ('wmic path win32_VideoController get Name /value 2^>nul ^| find "="') do (
-    if not defined HW_GPU set "HW_GPU=%%i"
-)
-if /i "%HW_RAM%"=="Detection..." for /f %%i in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 0)"') do set "HW_RAM=%%i"
-if /i "%HW_OS%"=="Detection..." set "HW_OS=Windows"
-if /i "%HW_CPU%"=="Detection..." set "HW_CPU=CPU inconnu"
-if not defined HW_GPU set "HW_GPU=GPU inconnu"
-if /i "%HW_GPU%"=="Detection..." set "HW_GPU=GPU inconnu"
-if /i "%HW_RAM%"=="Detection..." set "HW_RAM=?"
+
+:: Detection NVIDIA securisee (le '(' evite les crashs si HW_GPU contient des caractères speciaux)
+echo(!HW_GPU! | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
+
+:: Fallbacks wmci/ver si PowerShell a vraiment echoue totalement
+if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
+if "%HW_CPU%"=="CPU Inconnu" for /f "tokens=2 delims==" %%i in ('wmic cpu get Name /value 2^>nul ^| find "="') do set "HW_CPU=%%i"
+if "%HW_GPU%"=="GPU Inconnu" for /f "tokens=2 delims==" %%i in ('wmic path win32_VideoController get Name /value 2^>nul ^| find "="') do set "HW_GPU=%%i"
+if "%HW_RAM%"=="?" for /f %%i in ('powershell -NoProfile -Command "[math]::Round((Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory / 1GB, 0)" 2^>nul') do set "HW_RAM=%%i"
+
 exit /b
 
 
