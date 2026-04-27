@@ -2675,7 +2675,6 @@ reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
-dism /online /Disable-Feature /FeatureName:Recall /quiet /norestart >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive
 call :FINISH_IA_ACTION "Recall" "desactive"
 exit /b
