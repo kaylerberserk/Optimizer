@@ -7,10 +7,10 @@ setlocal EnableDelayedExpansion
 reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Definir le titre de la console
-title Script d'Optimisation Windows v%VERSION% - All in One
+title Script d'Optimisation Windows - All in One
 
 :: Verifier PowerShell
-where powershell >nul 2>&1 || (echo [ERREUR] PowerShell absent. && pause && exit /B 1)
+where powershell >nul 2>&1 || (echo [ERREUR] PowerShell est introuvable. Le script ne peut pas continuer. && pause && exit /B 1)
 
 :: Definition du caractere ESC (ASCII 27)
 for /f "delims=" %%a in ('powershell -NoProfile -Command "$([char]27)"') do set "ESC=%%a"
@@ -23,7 +23,6 @@ set "COLOR_MAGENTA=!ESC![35m" & set "COLOR_RESET=!ESC![0m" & set "STYLE_BOLD=!ES
 :: ===========================================================================
 :: INITIALISATION DES VARIABLES GLOBALES
 :: ===========================================================================
-set "VERSION=2026.04"
 set "HAS_INTERNET=0"
 set "IS_LAPTOP=0"
 set "HAS_NVIDIA=0"
@@ -43,18 +42,19 @@ set "HW_RAM=Detection..."
 :: ===========================================================================
 :: CONVENTION DES INDICATEURS ET COULEURS
 :: ===========================================================================
-:: [*]       JAUNE   = Action en cours d'execution
-:: [OK]      VERT    = Action terminee avec succes
-:: [TERMINE] VERT    = Section completee
-:: [INFO]    JAUNE   = Information / Conseil
-:: [^!]       JAUNE   = Avertissement (attention requise)
-:: [-]       ROUGE   = Suppression / Action negative
-:: [ERREUR]  ROUGE   = Erreur critique / Echec
+:: [*]         JAUNE = Action en cours d'execution
+:: [OK]        VERT  = Action terminee avec succes
+:: [TERMINE]   VERT  = Section completee
+:: [INFO]      JAUNE = Information / Conseil
+:: [SKIP]      CYAN  = Action ignoree volontairement / non applicable
+:: [^!]        JAUNE = Avertissement (attention requise)
+:: [-]         ROUGE = Suppression / Action negative
+:: [ERREUR]    ROUGE = Erreur critique / Echec
 :: [ATTENTION] ROUGE = Risque de securite
 :: ===========================================================================
 
 
-:: CHARGEMENT DU SCRIPT (Mode Pro)
+:: CHARGEMENT DU SCRIPT
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE%             INITIALISATION DU SCRIPT D'OPTIMISATION              %COLOR_RESET%
@@ -123,7 +123,7 @@ exit /b
 
 
 :DETECT_HARDWARE
-set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "IS_LAPTOP=0" & set "HAS_NVIDIA=0" & set "HAS_INTEL_GPU=0"
+set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "IS_LAPTOP=0" & set "HAS_NVIDIA=0"
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; if(Get-CimInstance Win32_Battery){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$g=($v|foreach{$_.Name}) -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='BAT:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
@@ -136,7 +136,6 @@ if exist "%TEMP%\hw_info.tmp" (
     del "%TEMP%\hw_info.tmp" >nul 2>&1
 )
 echo %HW_GPU% | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
-echo %HW_GPU% | findstr /i "Intel" >nul && set "HAS_INTEL_GPU=1"
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
 exit /b
 
@@ -160,7 +159,7 @@ exit /b
 :MENU_PRINCIPAL
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%Script d'Optimisation Windows v%VERSION% - All in One%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%Script d'Optimisation Windows - All in One%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -183,15 +182,14 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS GENERALES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[0]%COLOR_RESET% %COLOR_RED%Nettoyer tweaks obsoletes (legacy cleanup)%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Optimisations Systeme%COLOR_RESET%   %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Optimisations Memoire%COLOR_RESET%
 echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Optimisations Disques%COLOR_RESET%   %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Optimisations GPU%COLOR_RESET%
 echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESET%    %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_GREEN%Optimisations Clavier/Souris%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_BLUE%--- PC DE BUREAU UNIQUEMENT ---%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- REGLAGES AVANCES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie (Activer/Restaurer)%COLOR_RESET%
-echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite (Desactiver/Restaurer)%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie%COLOR_RESET%
+echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite ^(Desactiver/Restaurer^)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -210,26 +208,25 @@ echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COL
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 012345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [0-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
+choice /C 12345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
 
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
-if %errorlevel% EQU 17 goto :END_SCRIPT
-if %errorlevel% EQU 16 goto :OUTIL_CHRIS_TITUS
-if %errorlevel% EQU 15 goto :OUTIL_ACTIVATION
-if %errorlevel% EQU 14 goto :MENU_GESTION_WINDOWS
-if %errorlevel% EQU 13 goto :CREER_POINT_RESTAURATION
-if %errorlevel% EQU 12 goto :NETTOYAGE_AVANCE_WINDOWS
-if %errorlevel% EQU 11 goto :TOUT_OPTIMISER_LAPTOP
-if %errorlevel% EQU 10 goto :TOUT_OPTIMISER_DESKTOP
-if %errorlevel% EQU 9  goto :TOGGLE_PROTECTIONS_SECURITE
-if %errorlevel% EQU 8  goto :TOGGLE_ECONOMIES_ENERGIE
-if %errorlevel% EQU 7  goto :OPTIMISATIONS_PERIPHERIQUES
-if %errorlevel% EQU 6  goto :OPTIMISATIONS_RESEAU
-if %errorlevel% EQU 5  goto :OPTIMISATIONS_GPU
-if %errorlevel% EQU 4  goto :OPTIMISATIONS_DISQUES
-if %errorlevel% EQU 3  goto :OPTIMISATIONS_MEMOIRE
-if %errorlevel% EQU 2  goto :OPTIMISATIONS_SYSTEME
-if %errorlevel% EQU 1  goto :CLEANUP_OLD_TWEAKS
+if %errorlevel% EQU 16 goto :END_SCRIPT
+if %errorlevel% EQU 15 goto :OUTIL_CHRIS_TITUS
+if %errorlevel% EQU 14 goto :OUTIL_ACTIVATION
+if %errorlevel% EQU 13 goto :MENU_GESTION_WINDOWS
+if %errorlevel% EQU 12 goto :CREER_POINT_RESTAURATION
+if %errorlevel% EQU 11 goto :NETTOYAGE_AVANCE_WINDOWS
+if %errorlevel% EQU 10 goto :TOUT_OPTIMISER_LAPTOP
+if %errorlevel% EQU 9  goto :TOUT_OPTIMISER_DESKTOP
+if %errorlevel% EQU 8  goto :TOGGLE_PROTECTIONS_SECURITE
+if %errorlevel% EQU 7  goto :TOGGLE_ECONOMIES_ENERGIE
+if %errorlevel% EQU 6  goto :OPTIMISATIONS_PERIPHERIQUES
+if %errorlevel% EQU 5  goto :OPTIMISATIONS_RESEAU
+if %errorlevel% EQU 4  goto :OPTIMISATIONS_GPU
+if %errorlevel% EQU 3  goto :OPTIMISATIONS_DISQUES
+if %errorlevel% EQU 2  goto :OPTIMISATIONS_MEMOIRE
+if %errorlevel% EQU 1  goto :OPTIMISATIONS_SYSTEME
 goto :MENU_PRINCIPAL
 
 :MENU_GESTION_WINDOWS
@@ -422,11 +419,11 @@ goto :MENU_PRINCIPAL
 
 :AFFICHER_RESUME_OPTIMISATION
 :: Parametres: %~1 = mode ("DESKTOP" ou "LAPTOP")
-set "MODE=%~1"
+set "RESUME_MODE=%~1"
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-if "%MODE%"=="DESKTOP" (
+if "%RESUME_MODE%"=="DESKTOP" (
     echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION DESKTOP TERMINEE AVEC SUCCES%COLOR_RESET%
 ) else (
     echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION LAPTOP TERMINEE AVEC SUCCES%COLOR_RESET%
@@ -434,128 +431,39 @@ if "%MODE%"=="DESKTOP" (
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Toutes les optimisations ont ete appliquees.%COLOR_RESET%
-if "%MODE%"=="DESKTOP" (
+if "%RESUME_MODE%"=="DESKTOP" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan de performances "Ultimate Performance" active.%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[#]%COLOR_RESET% %COLOR_WHITE%Les economies d'energie ont ete preservees pour la batterie.%COLOR_RESET%
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les economies d'energie ont ete preservees pour la batterie.%COLOR_RESET%
 )
-echo %COLOR_CYAN%[#]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, GPU et disques terminees.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, GPU et disques terminees.%COLOR_RESET%
 echo.
-set "SUM_TAG=[INFO]"
 if "%DESACTIVER_SECURITE%"=="1" (
-  echo %COLOR_RED%!SUM_TAG!%COLOR_RESET% %COLOR_WHITE%Les protections de securite ont ete desactivees.%COLOR_RESET%
+  echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Les protections de securite ont ete desactivees.%COLOR_RESET%
 )
 if "%DESACTIVER_DEFENDER%"=="1" (
-  echo %COLOR_RED%!SUM_TAG!%COLOR_RESET% %COLOR_WHITE%Windows Defender a ete desactive.%COLOR_RESET%
+  echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Windows Defender a ete desactive.%COLOR_RESET%
 )
 if "%DESACTIVER_ANIMATIONS%"=="1" (
-  echo %COLOR_RED%!SUM_TAG!%COLOR_RESET% %COLOR_WHITE%Les animations Windows ont ete desactivees.%COLOR_RESET%
+  echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les animations Windows ont ete desactivees.%COLOR_RESET%
 )
 if "%DESACTIVER_IA%"=="1" (
-  echo %COLOR_RED%!SUM_TAG!%COLOR_RESET% %COLOR_WHITE%Les fonctionnalites IA de Windows ont ete desactivees.%COLOR_RESET%
+  echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les fonctionnalites IA de Windows ont ete desactivees.%COLOR_RESET%
 )
 if "%DESACTIVER_UAC%"=="1" (
-  echo %COLOR_RED%!SUM_TAG!%COLOR_RESET% %COLOR_WHITE%Le Controle de Compte Utilisateur ^(UAC^) a ete desactive.%COLOR_RESET%
+  echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Le Controle de Compte Utilisateur ^(UAC^) a ete desactive.%COLOR_RESET%
 )
 echo.
-echo %COLOR_RED%!SUM_TAG!%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer votre PC maintenant ? [O/N]: %COLOR_RESET%"
-if %errorlevel% EQU 2 exit /b
+if %errorlevel% EQU 2 (
+    set "RESUME_MODE="
+    exit /b
+)
 if %errorlevel% EQU 1 shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
-exit /b
-
-:CLEANUP_OLD_TWEAKS
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% SECTION 0 : NETTOYAGE DES TWEAKS OBSOLETES%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Suppression des tweaks legacy qui peuvent causer des problemes.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-
-:: 0.1 - Kernel legacy tweaks
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks kernel...
-for %%V in (MaximumSharedReadyQueueSize SplitLargeCaches EnableIdleThreadBalancing DisablePreemptionThreshold EnableIdlePerformanceState AmdCpuBackoffTime XMMIZeroingEnable ConfigureSystem DebugPollTimeout DpcWatchdogProfilePeriod DynamicProcessorAffinity MaxDynamicTickDuration IdealDpcRate) do (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v %%V /f >nul 2>&1
-)
-for %%V in (DpcTimeout DpcWatchdogPeriod MaximumDpcQueueDepth UnlimitDpcQueue ThreadDpcEnable SerializeTimerExpiration) do (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v %%V /f >nul 2>&1
-)
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks kernel nettoyes
-
-:: 0.2 - Communications legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks communications...
-reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Communications" /v NonDefaultCommsDevice /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks communications nettoyes
-
-:: 0.3 - Desktop legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks desktop...
-reg delete "HKCU\Control Panel\Desktop" /v ForegroundApplicationBoostLevel /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks desktop nettoyes
-
-:: 0.4 - TCP legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks TCP...
-for %%V in (GlobalMaxTcpWindowSize DefaultTTL SackOpts TcpMaxDupAcks MaxConnectionsPerServer MaxUserPort TcpTimedWaitDelay CongestionAlgorithm) do (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v %%V /f >nul 2>&1
-)
-for %%V in (TimerResolution MaxOutstandingSends) do (
-    reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v %%V /f >nul 2>&1
-)
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks TCP nettoyes
-
-:: 0.5 - BCD legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks BCD...
-bcdedit /set useplatformclock no >nul 2>&1
-bcdedit /set useplatformtick yes >nul 2>&1
-bcdedit /set disabledynamictick yes >nul 2>&1
-bcdedit /deletevalue x2apicpolicy >nul 2>&1
-bcdedit /deletevalue uselegacyapicmode >nul 2>&1
-bcdedit /deletevalue usephysicaldestination >nul 2>&1
-bcdedit /deletevalue usefirmwarepcisettings >nul 2>&1
-bcdedit /deletevalue configaccesspolicy >nul 2>&1
-bcdedit /deletevalue tscsyncpolicy >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks BCD nettoyes
-
-:: 0.6 - PCI legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks PCI...
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PnP\Pci" /v DeviceInterruptRoutingPolicy /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks PCI nettoyes
-
-:: 0.7 - PriorityControl legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks PriorityControl...
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ0Priority /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v IRQ8Priority /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ForegroundBoost /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadBoostType /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks PriorityControl nettoyes
-
-:: 0.8 - Memory Management legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks Memory Management...
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v IoPageLockLimit /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks Memory Management nettoyes
-
-:: 0.9 - MMCSS legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks MMCSS...
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks MMCSS nettoyes
-
-:: 0.10 - FileSystem legacy
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des tweaks FileSystem...
-reg delete "HKLM\System\CurrentControlSet\Control\FileSystem" /v "FUA" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Tweaks FileSystem nettoyes
-
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Nettoyage des tweaks obsoletes termine.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-if "%SKIP_PAUSE%"=="0" (
-    pause
-    goto :MENU_PRINCIPAL
-)
+set "RESUME_MODE="
 exit /b
 
 :OPTIMISATIONS_SYSTEME
@@ -870,7 +778,7 @@ if "!IS_LAPTOP!"=="0" (
     reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 96 /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Win8 Scaling active ^(Mode 1:1 force^)
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Win8 Scaling ignore sur Laptop ^(conserve le scaling par defaut^)
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Win8 Scaling ignore sur laptop ^(conserve le scaling par defaut^)
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Optimisations demarrage et stockage terminees
 
@@ -1069,10 +977,19 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Support des chemins longs active
 
 :: 3.3 - TRIM sur volumes SSD
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Execution du TRIM sur les disques SSD detectes...
-echo %COLOR_CYAN%[INFO]%COLOR_RESET% Operation synchrone : le script attend la fin du TRIM avant de continuer.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ssd = Get-PhysicalDisk | Where-Object { $_.MediaType -eq 'SSD' }; if ($ssd) { $volumes = Get-Volume | Where-Object { $_.DriveLetter -and ($_.FileSystem -match 'NTFS|ReFS') }; foreach ($vol in $volumes) { Optimize-Volume -DriveLetter $vol.DriveLetter -ReTrim -ErrorAction SilentlyContinue } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Commande TRIM executee sur les SSD
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de l'etat du TRIM sur les disques SSD...
+set "TRIM_STATUS="
+for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -eq 'SSD' }; if(-not $ssds){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and ($_.FileSystem -match 'NTFS|ReFS') }; $done=$false; foreach($v in $vols){ $d=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue | Get-Disk -ErrorAction SilentlyContinue; if($d.MediaType -eq 'SSD'){ Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction SilentlyContinue | Out-Null; $done=$true } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"') do set "TRIM_STATUS=%%a"
+if "%TRIM_STATUS%"=="TRIM_DONE" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% TRIM execute sur les volumes SSD ^(dernier passage memorise pour 30 jours^)
+) else (
+    if "%TRIM_STATUS%"=="SKIP_RECENT" (
+        echo %COLOR_CYAN%[SKIP]%COLOR_RESET% TRIM ignore ^(deja execute il y a moins de 30 jours^)
+    ) else (
+        echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Aucun volume SSD detecte pour l'operation TRIM
+    )
+)
+set "TRIM_STATUS="
 
 :: 3.4 - Optimisation pilote NVMe et DirectStorage
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du boost NVMe et DirectStorage...
@@ -1344,7 +1261,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protocoles reseau inutiles
 powershell -NoProfile -Command "$bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); $nics = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }; foreach ($nic in $nics) { foreach ($id in $bindingIds) { Disable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Bindings reseau nettoyes (LLDP, LLTDIO, etc.)
 
-:: 5.12 - Desactivation NetBIOS over TCP/IP (WINS)
+:: 5.13 - Desactivation NetBIOS over TCP/IP (WINS)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de NetBIOS over TCP/IP...
 for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" /s ^| findstr /i /r "\\Tcpip_.*$" 2^>nul') do (
   reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
@@ -1661,7 +1578,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v Minimu
 :: DisableTsx - Intel Transactional Synchronization Extensions (Intel uniquement, pas AMD)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v GlobalTimerResolutionRequests /t REG_DWORD /d 1 /f >nul 2>&1
-bcdedit /set disabledynamictick yes >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2037,7 +1953,7 @@ echo %COLOR_WHITE%  - Ces cles de registre sont sensibles : erreur = instabilite
 echo %COLOR_WHITE%  - Indique surtout pour bench/jeux competitifs sur machine isolee et comprise.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%"
-if %errorlevel% EQU 2 goto :MENU_PRINCIPAL
+if %errorlevel% EQU 2 goto :TOGGLE_PROTECTIONS_SECURITE
 )
 
 :: 8.1 - Desactivation des protections Kernel SEHOP Exception Chain 
@@ -2230,7 +2146,7 @@ if "%SKIP_PAUSE%"=="0" (
     echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : DESACTIVER WINDOWS DEFENDER%COLOR_RESET%
     echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
     echo.
-    echo %COLOR_RED%[INFO]%COLOR_RESET% ATTENTION: Desactiver Windows Defender expose votre systeme a des risques.
+    echo %COLOR_RED%[ATTENTION]%COLOR_RESET% Desactiver Windows Defender expose votre systeme a des risques.
     choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%"
     if %errorlevel% EQU 2 exit /b
 )
@@ -2601,8 +2517,9 @@ reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo
 reg delete "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
-set "HOSTS=%windir%\System32\drivers\etc\hosts"
+set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 powershell -NoProfile -c "(Get-Content '%HOSTS%') | Where-Object { $_ -notmatch 'copilot\.microsoft\.com|windows\.ai\.microsoft\.com|copilot-telemetry\.microsoft\.com|Copilot Block' } | Set-Content '%HOSTS%'" >nul 2>&1
+set "HOSTS="
 call :FINISH_IA_ACTION "Copilot" "active"
 exit /b
 
@@ -2640,7 +2557,7 @@ reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
-set "HOSTS=%windir%\System32\drivers\etc\hosts"
+set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 findstr /i "Copilot Block" "%HOSTS%" >nul 2>&1
 if %errorlevel% NEQ 0 (
     echo.>> "%HOSTS%"
@@ -2649,6 +2566,7 @@ if %errorlevel% NEQ 0 (
     echo 0.0.0.0 edge.microsoft.com>> "%HOSTS%"
     echo # --- End Copilot Block --->> "%HOSTS%"
 )
+set "HOSTS="
 call :FINISH_IA_ACTION "Copilot" "desactive"
 exit /b
 
@@ -2953,13 +2871,13 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 echo %COLOR_WHITE%Pourquoi demander confirmation :%COLOR_RESET%
-echo %COLOR_WHITE%- Edge est le moteur WebView2 pour nombre d'applis Windows ^(Widgets, Store, aide^).%COLOR_RESET%
-echo %COLOR_WHITE%- Le retirer peut casser des applis qui s'appuient sur le runtime integre.%COLOR_RESET%
+echo %COLOR_WHITE%- Ce script retire Edge mais preserve WebView2.%COLOR_RESET%
+echo %COLOR_WHITE%- Les applis qui utilisent WebView2 continuent generalement de fonctionner.%COLOR_RESET%
 echo %COLOR_WHITE%- Windows Update peut tenter de reinstaller un navigateur de base ; comportement variable selon version.%COLOR_RESET%
-echo %COLOR_WHITE%- Utile pour allegement / preference ; risque de compatibilite reel sur certaines configs.%COLOR_RESET%
+echo %COLOR_WHITE%- Quelques fonctions Windows peuvent toutefois preferer Edge sur certaines versions.%COLOR_RESET%
 echo.
-echo %COLOR_RED%[^!] ATTENTION:%COLOR_RESET% La desinstallation de Microsoft Edge peut entrainer des problemes
-echo %COLOR_RED%de compatibilite avec certaines applications Windows.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%La desinstallation d'Edge est surtout un choix de preference / allegement.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le risque de compatibilite est plus limite tant que WebView2 reste present.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desinstaller Microsoft Edge ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 goto :MENU_GESTION_WINDOWS
@@ -2981,12 +2899,13 @@ echo %COLOR_WHITE%- Mots de passe sauvegardes%COLOR_RESET%
 echo %COLOR_WHITE%- Extensions et themes%COLOR_RESET%
 echo %COLOR_WHITE%- Parametres et preferences%COLOR_RESET%
 echo.
+set "SUPPR_DATA=0"
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de supprimer les donnees utilisateur Edge ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 (
-    set "SUPPR_DATA=NON"
+    set "SUPPR_DATA=0"
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Les donnees utilisateur seront preservees.
 ) else (
-    set "SUPPR_DATA=OUI"
+    set "SUPPR_DATA=1"
     echo %COLOR_YELLOW%[^!]%COLOR_RESET% Les donnees utilisateur seront supprimees.
 )
 
@@ -3030,7 +2949,7 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft E
 reg delete "HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\Microsoft Edge" /f >nul 2>&1
 
 :: Gestion conditionnelle des donnees utilisateur
-if "%SUPPR_DATA%"=="OUI" (
+if "%SUPPR_DATA%"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Suppression des donnees utilisateur Edge...
     if exist "%LOCALAPPDATA%\Microsoft\Edge" rd "%LOCALAPPDATA%\Microsoft\Edge" /s /q >nul 2>&1
     if exist "%APPDATA%\Microsoft\Edge" rd "%APPDATA%\Microsoft\Edge" /s /q >nul 2>&1
@@ -3089,7 +3008,7 @@ if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
     ) else (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% Microsoft Edge desinstalle avec succes !
         echo %COLOR_GREEN%[OK]%COLOR_RESET% Icone supprimee de la barre des taches !
-        if "%SUPPR_DATA%"=="OUI" (
+        if "%SUPPR_DATA%"=="1" (
             echo %COLOR_GREEN%[OK]%COLOR_RESET% Donnees utilisateur supprimees.
         ) else (
             echo %COLOR_GREEN%[OK]%COLOR_RESET% Donnees utilisateur conservees.
@@ -3100,10 +3019,11 @@ if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo  %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Microsoft Edge a ete desinstalle completement.%COLOR_RESET%
-if "%SUPPR_DATA%"=="NON" (
+if "%SUPPR_DATA%"=="0" (
     echo  %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Vos favoris, mots de passe et historique ont ete preserves.%COLOR_RESET%
 )
 echo  %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'icone Edge a ete supprimee de la barre des taches.%COLOR_RESET%
+set "SUPPR_DATA="
 call :FINISH_ACTION "Microsoft Edge" "desinstalle" "call"
 goto :MENU_GESTION_WINDOWS
 
@@ -3181,8 +3101,8 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 :: Analyse espace initial
-for /f %%a in ('powershell -nologo -command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set space_before_mb=%%a
-if not defined space_before_mb set "space_before_mb=0"
+for /f %%a in ('powershell -nologo -command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
+if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
 
 echo %COLOR_YELLOW%[^!] AVERTISSEMENT%COLOR_RESET%
 echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, caches,%COLOR_RESET%
@@ -3322,10 +3242,10 @@ cleanmgr /sagerun:%SAGEID% /d C: >nul 2>&1
 powershell -NoProfile -Command "$waitCount=0; while((Get-Process cleanmgr -ErrorAction SilentlyContinue) -and ($waitCount -lt 120)){ Start-Sleep -s 1; $waitCount++ }" >nul 2>&1
 
 :: Calcul final (PowerShell pour la precision des decimales)
-for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%space_before_mb% * 1024 * 1024; $after=(Get-PSDrive C).Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output \"$beforeGB $afterGB $freedGB\""') do (
-    set "space_before_gb=%%a"
-    set "space_after_gb=%%b"
-    set "space_freed_gb=%%c"
+for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive C).Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output \"$beforeGB $afterGB $freedGB\""') do (
+    set "SPACE_BEFORE_GB=%%a"
+    set "SPACE_AFTER_GB=%%b"
+    set "SPACE_FREED_GB=%%c"
 )
 
 echo.
@@ -3333,14 +3253,26 @@ echo %COLOR_CYAN%===============================================================
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Nettoyage de Windows termine.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%space_before_gb% Go%COLOR_RESET%
-echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%space_after_gb% Go%COLOR_RESET%
-echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%space_freed_gb% Go%COLOR_RESET%
+echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%SPACE_BEFORE_GB% Go%COLOR_RESET%
+echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%SPACE_AFTER_GB% Go%COLOR_RESET%
+echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%SPACE_FREED_GB% Go%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[^!]%COLOR_RESET% Un redemarrage est recommande pour finaliser.
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-if %errorlevel% EQU 2 goto :MENU_PRINCIPAL
+if %errorlevel% EQU 2 (
+    set "SAGEID="
+    set "SPACE_BEFORE_MB="
+    set "SPACE_BEFORE_GB="
+    set "SPACE_AFTER_GB="
+    set "SPACE_FREED_GB="
+    goto :MENU_PRINCIPAL
+)
+set "SAGEID="
+set "SPACE_BEFORE_MB="
+set "SPACE_BEFORE_GB="
+set "SPACE_AFTER_GB="
+set "SPACE_FREED_GB="
 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
 goto :MENU_PRINCIPAL
 
