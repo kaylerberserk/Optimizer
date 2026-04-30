@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 cls
 :: Forcer l'encodage UTF-8 pour la prise en charge des accents dans la console
 chcp 65001 >nul
@@ -1323,15 +1323,15 @@ if "%IS_LAPTOP%"=="1" (
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
- reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "ThreadPriority" /t REG_DWORD /d 15 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres souris et files d'attente HID optimises
 
 :: 6.2 - Clavier optimise
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la reactivite clavier...
- reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 15 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 31 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
-reg add "HKCU\Control Panel\Keyboard" /v "KeyboardDelay" /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Control Panel\Keyboard" /v "KeyboardSpeed" /t REG_SZ /d "31" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdhid\Parameters" /v ThreadPriority /t REG_DWORD /d 31 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdhid\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Clavier et files d'attente optimises - Delai minimal
 
 :: 6.3 - Accessibilite OFF
