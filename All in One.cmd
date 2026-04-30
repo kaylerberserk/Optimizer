@@ -1,4 +1,5 @@
-﻿@echo off
+@echo off
+cls
 :: Forcer l'encodage UTF-8 pour la prise en charge des accents dans la console
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
@@ -15,10 +16,13 @@ where powershell >nul 2>&1 || (echo [ERREUR] PowerShell est introuvable. Le scri
 :: Definition du caractere ESC (ASCII 27)
 for /f "delims=" %%a in ('powershell -NoProfile -Command "$([char]27)"') do set "ESC=%%a"
 
+:: Si powershell echoue, on utilise une alternative (backspace hack ou escape direct si possible)
+if not defined ESC set "ESC= "
+
 :: Couleurs et Styles
-set "COLOR_GREEN=!ESC![32m" & set "COLOR_YELLOW=!ESC![33m" & set "COLOR_RED=!ESC![31m"
-set "COLOR_CYAN=!ESC![36m"  & set "COLOR_WHITE=!ESC![37m"  & set "COLOR_BLUE=!ESC![34m"
-set "COLOR_MAGENTA=!ESC![35m" & set "COLOR_RESET=!ESC![0m" & set "STYLE_BOLD=!ESC![1m"
+set "COLOR_GREEN=%ESC%[32m" & set "COLOR_YELLOW=%ESC%[33m" & set "COLOR_RED=%ESC%[31m"
+set "COLOR_CYAN=%ESC%[36m"  & set "COLOR_WHITE=%ESC%[37m"  & set "COLOR_BLUE=%ESC%[34m"
+set "COLOR_MAGENTA=%ESC%[35m" & set "COLOR_RESET=%ESC%[0m" & set "STYLE_BOLD=%ESC%[1m"
 
 :: ===========================================================================
 :: INITIALISATION DES VARIABLES GLOBALES
