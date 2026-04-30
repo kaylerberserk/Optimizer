@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 cls
 :: Forcer l'encodage UTF-8 pour la prise en charge des accents dans la console
 chcp 65001 >nul
