@@ -1,4 +1,4 @@
-@echo off
+ï»¿@echo off
 :: Forcer l'encodage UTF-8 pour la prise en charge des accents dans la console
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
@@ -1095,7 +1095,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 
 :: 4.8 - Optimisation de la priorite DWM (Desktop Window Manager)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la priorite DWM (Fluidite Bureau/Jeu)...
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\dwm.exe\PerfOptions" /v "CpuPriorityClass" /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorite DWM optimisee
 
 :: 4.9 - NVIDIA Profile Inspector
@@ -3424,7 +3423,7 @@ echo %COLOR_WHITE%  Cette section supprime les applications preinstallees inutil
 echo %COLOR_WHITE%  tout en preservant les outils essentiels (Calculatrice, Store, Photos, Notes).%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont supprimes : News, Solitaire, Skype, People, Family, Candy Crush, Your Phone, Assistance, Maps, Office, Feedback...
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, Météo, Musique, Vidéo, Calculatrice, Store, Photos, Notes, etc.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, Mï¿½tï¿½o, Musique, Vidï¿½o, Calculatrice, Store, Photos, Notes, etc.
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Voulez-vous supprimer les bloatwares ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 goto :MENU_GESTION_WINDOWS
