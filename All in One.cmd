@@ -1322,16 +1322,13 @@ if "%IS_LAPTOP%"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Acceleration souris desactivee - Mouvement 1:1 actif
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres souris et files d'attente HID optimises
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsolutePointerAsAbsolute" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsoluteAsRelative" /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres souris et HID optimises
 
 :: 6.2 - Clavier optimise
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la reactivite clavier...
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v ThreadPriority /t REG_DWORD /d 31 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdhid\Parameters" /v ThreadPriority /t REG_DWORD /d 31 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdhid\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Clavier et files d'attente optimises - Delai minimal
 
 :: 6.3 - Accessibilite OFF
