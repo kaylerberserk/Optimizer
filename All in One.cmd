@@ -635,44 +635,18 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\ReadyBoot" /v Star
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Taches de telemetrie desactivees
 
 :: Blocage telemetrie via hosts
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Ajout des blocages telemetrie dans le fichier hosts...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Gestion du blocage telemetrie dans le fichier hosts...
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
-:: Supprimer TOUTES les anciennes entrees telemetrie (ancien format sans marqueurs + nouveau format avec marqueurs)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Nettoyage des anciennes entrees telemetrie dans hosts...
-findstr /i /v /c:"telemetry" /c:"watson" /c:"vortex" /c:"v10.events" /c:"metaservices" /c:"choice.microsoft" /c:"settings-sandbox" /c:"statsfe" /c:"corpext" /c:"compatexchange" /c:"feedback" /c:"settings-win" /c:"self.events" /c:"onecollector" /c:"diagnostics.support" "%HOSTS%" > "%HOSTS%.tmp" 2>nul
-if not exist "%HOSTS%.tmp" (
-    echo %COLOR_YELLOW%[^!]%COLOR_RESET% Erreur lors du nettoyage du fichier hosts - fichier peut etre en lecture seule
-    copy /y "%HOSTS%" "%HOSTS%.tmp" >nul 2>&1
-)
-findstr /i /v /c:"storeedgefd" /c:"ds.microsoft.com" "%HOSTS%.tmp" > "%HOSTS%.clean" 2>nul
-if not exist "%HOSTS%.clean" (
-    echo %COLOR_YELLOW%[^!]%COLOR_RESET% Erreur lors du second nettoyage - conservation du fichier actuel
-    copy /y "%HOSTS%.tmp" "%HOSTS%.clean" >nul 2>&1
-)
-copy /y "%HOSTS%.clean" "%HOSTS%" >nul 2>&1
-if %errorlevel% NEQ 0 (
-    echo %COLOR_YELLOW%[^!]%COLOR_RESET% Erreur lors de la copie - verification des permissions
-    attrib -r "%HOSTS%" >nul 2>&1
-    copy /y "%HOSTS%.clean" "%HOSTS%" >nul 2>&1
-)
-del "%HOSTS%.tmp" "%HOSTS%.clean" >nul 2>&1
+:: Utilisation de PowerShell pour ajouter ou mettre a jour UNIQUEMENT le bloc de telemetrie
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb=\"$s`r`n# --- Telemetry Block ---`r`n0.0.0.0 vortex.data.microsoft.com`r`n0.0.0.0 vortex-win.data.microsoft.com`r`n0.0.0.0 v10.vortex-win.data.microsoft.com`r`n0.0.0.0 v10.events.data.microsoft.com`r`n0.0.0.0 telecommand.telemetry.microsoft.com`r`n0.0.0.0 oca.telemetry.microsoft.com`r`n0.0.0.0 watson.telemetry.microsoft.com`r`n0.0.0.0 watsonc.microsoft.com`r`n# --- End Telemetry Block ---`r`n$e\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } [System.IO.File]::WriteAllText($h, $c) }" >nul 2>&1
 
-:: Ajouter le nouveau bloc
-echo.>> "%HOSTS%"
-echo # Telemetry Block Start>> "%HOSTS%"
-echo # --- Telemetry Block --->> "%HOSTS%"
-echo 0.0.0.0 vortex.data.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 vortex-win.data.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 v10.vortex-win.data.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 v10.events.data.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 telecommand.telemetry.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 oca.telemetry.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 watson.telemetry.microsoft.com>> "%HOSTS%"
-echo 0.0.0.0 watsonc.microsoft.com>> "%HOSTS%"
-echo # --- End Telemetry Block --->> "%HOSTS%"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie bloques via hosts
+if %errorlevel% EQU 0 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie mis a jour (entrees existantes preservees)
+) else (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% Echec de la mise a jour du fichier hosts
+)
 attrib +r "%HOSTS%" >nul 2>&1
 
 :: 1.6 - Services optimises
