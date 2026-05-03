@@ -274,7 +274,7 @@ if %errorlevel% EQU 9  goto :SUPPRIMER_BLOATWARES
 if %errorlevel% EQU 8  goto :INSTALLER_VISUAL_REDIST
 if %errorlevel% EQU 7  goto :DESINSTALLER_EDGE
 if %errorlevel% EQU 6  goto :DESINSTALLER_ONEDRIVE
-if %errorlevel% EQU 5  goto :TOGGLE_COPILOT
+if %errorlevel% EQU 5  goto :MENU_IA_WIDGETS_RECALL
 if %errorlevel% EQU 4  goto :TOGGLE_ANIMATIONS
 if %errorlevel% EQU 3  goto :TOGGLE_VBS_HVCI
 if %errorlevel% EQU 2  goto :TOGGLE_UAC
@@ -417,7 +417,7 @@ if "%CURRENT_OPT_MODE%"=="DESKTOP" call :DESACTIVER_ECONOMIES_ENERGIE
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION
-if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_COPILOT
+if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
 if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
 call :AFFICHER_RESUME_OPTIMISATION %CURRENT_OPT_MODE%
@@ -1295,6 +1295,7 @@ if "%IS_LAPTOP%"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Acceleration souris desactivee - Mouvement 1:1 actif
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsolutePointerAsAbsolute" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsoluteAsRelative" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres souris et HID optimises
@@ -2255,14 +2256,14 @@ echo %COLOR_WHITE%- La desactivation supprime ces invites : un malware peut agir
 echo %COLOR_WHITE%- Ce script desactive aussi des avertissements SmartScreen / marquage zone Internet.%COLOR_RESET%
 echo %COLOR_WHITE%- Reserve aux bancs de test ou utilisateurs conscients du risque.%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[^!]%COLOR_RESET% LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC et les avertissements lies ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 exit /b
 )
 cls
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %STYLE_BOLD%Desactivation complete de l'UAC et des avertissements...%COLOR_RESET%
-if "%SKIP_PAUSE%"=="1" echo %COLOR_YELLOW%[^!]%COLOR_RESET% LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.
+if "%SKIP_PAUSE%"=="1" echo %COLOR_YELLOW%[!]%COLOR_RESET% LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.
 if "%SKIP_PAUSE%"=="1" echo.
 
 :: UAC OFF = plus de demande Oui/Non (Peut impacter certaines apps Store)
@@ -2338,7 +2339,7 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v D
 bcdedit /set bootuxdisabled off >nul 2>&1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows activees.
-echo %COLOR_YELLOW%[^!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 if "%SKIP_PAUSE%"=="0" pause
 exit /b
 
@@ -2351,8 +2352,8 @@ echo %COLOR_CYAN%===============================================================
 echo.
 echo %COLOR_WHITE%Pourquoi une derniere confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%- Les animations consomment un peu de GPU/CPU ; les couper peut fluidifier un PC faible.%COLOR_RESET%
-echo %COLOR_WHITE%- Cela modifie le registre utilisateur et bcdedit ^(animation du logo au demarrage^).%COLOR_RESET%
-echo %COLOR_WHITE%- L'interface parait plus "seche" ^(transparence, barres des taches, menus^).%COLOR_RESET%
+echo %COLOR_WHITE%- Cela modifie le registre utilisateur et bcdedit (animation du logo au demarrage).%COLOR_RESET%
+echo %COLOR_WHITE%- L'interface parait plus "seche" (transparence, barres des taches, menus).%COLOR_RESET%
 echo %COLOR_WHITE%- Un redemarrage est necessaire pour tout voir ; reversible via le menu Activer.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment desactiver les animations ? [O/N]: %COLOR_RESET%"
@@ -2396,11 +2397,11 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Disa
 bcdedit /set bootuxdisabled on >nul 2>&1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Animations Windows desactivees.
-echo %COLOR_YELLOW%[^!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est requis pour appliquer les modifications.
 if "%SKIP_PAUSE%"=="0" pause
 exit /b
 
-:TOGGLE_COPILOT
+:MENU_IA_WIDGETS_RECALL
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% GERER COPILOT / WIDGETS / RECALL (WINDOWS 11)%COLOR_RESET%
@@ -2429,33 +2430,33 @@ echo.
 choice /C 123456DM /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-6, D, M]: %COLOR_RESET%"
 if %errorlevel% EQU 8 goto :MENU_GESTION_WINDOWS
 if %errorlevel% EQU 7 (
-  call :DESACTIVER_TOUT_COPILOT
-  goto :TOGGLE_COPILOT
+  call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
+  goto :MENU_IA_WIDGETS_RECALL
 )
 if %errorlevel% EQU 6 (
-  call :DESACTIVER_RECALL
-  goto :TOGGLE_COPILOT
+  call :DESACTIVER_RECALL_SECTION
+  goto :MENU_IA_WIDGETS_RECALL
 )
 if %errorlevel% EQU 5 (
-  call :ACTIVER_RECALL
-  goto :TOGGLE_COPILOT
+  call :ACTIVER_RECALL_SECTION
+  goto :MENU_IA_WIDGETS_RECALL
 )
 if %errorlevel% EQU 4 (
-  call :DESACTIVER_WIDGETS
-  goto :TOGGLE_COPILOT
+  call :DESACTIVER_WIDGETS_SECTION
+  goto :MENU_IA_WIDGETS_RECALL
 )
 if %errorlevel% EQU 3 (
-  call :ACTIVER_WIDGETS
-  goto :TOGGLE_COPILOT
+  call :ACTIVER_WIDGETS_SECTION
+  goto :MENU_IA_WIDGETS_RECALL
 )
 if %errorlevel% EQU 2 (
-  call :DESACTIVER_COPILOT
-  goto :TOGGLE_COPILOT
+  call :DESACTIVER_COPILOT_SECTION
+  goto :MENU_IA_WIDGETS_RECALL
 )
-call :ACTIVER_COPILOT
-goto :TOGGLE_COPILOT
+call :ACTIVER_COPILOT_SECTION
+goto :MENU_IA_WIDGETS_RECALL
 
-:ACTIVER_COPILOT
+:ACTIVER_COPILOT_SECTION
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2476,12 +2477,14 @@ reg delete "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /f >nul 2
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
-powershell -NoProfile -c "(Get-Content '%HOSTS%') | Where-Object { $_ -notmatch 'copilot\.microsoft\.com|windows\.ai\.microsoft\.com|copilot-telemetry\.microsoft\.com|Copilot Block' } | Set-Content '%HOSTS%'" >nul 2>&1
+attrib -r "%HOSTS%" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace '(?s)\r?\n?' + [regex]::Escape($s) + '.*?' + [regex]::Escape($e), ''; [System.IO.File]::WriteAllText($h, $c) } }" >nul 2>&1
+attrib +r "%HOSTS%" >nul 2>&1
 set "HOSTS="
 call :FINISH_IA_ACTION "Copilot" "active"
 exit /b
 
-:DESACTIVER_COPILOT
+:DESACTIVER_COPILOT_SECTION
 if "%SKIP_PAUSE%"=="0" (
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2516,19 +2519,14 @@ reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
-findstr /i "Copilot Block" "%HOSTS%" >nul 2>&1
-if %errorlevel% NEQ 0 (
-    echo.>> "%HOSTS%"
-    echo # --- Copilot Block --->> "%HOSTS%"
-    echo 0.0.0.0 msedge.api.cdp.microsoft.com>> "%HOSTS%"
-    echo 0.0.0.0 edge.microsoft.com>> "%HOSTS%"
-    echo # --- End Copilot Block --->> "%HOSTS%"
-)
+attrib -r "%HOSTS%" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=\"$s`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 windows.ai.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n0.0.0.0 edge.microsoft.com`r`n$e\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } [System.IO.File]::WriteAllText($h, $c) }" >nul 2>&1
+attrib +r "%HOSTS%" >nul 2>&1
 set "HOSTS="
 call :FINISH_IA_ACTION "Copilot" "desactive"
 exit /b
 
-:ACTIVER_WIDGETS
+:ACTIVER_WIDGETS_SECTION
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2541,7 +2539,7 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Ta
 call :FINISH_IA_ACTION "Widgets" "active"
 exit /b
 
-:DESACTIVER_WIDGETS
+:DESACTIVER_WIDGETS_SECTION
 if "%SKIP_PAUSE%"=="0" (
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2549,7 +2547,7 @@ echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : DESACTIVER LES WIDGETS%COLOR_RESET
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%Pourquoi une confirmation :%COLOR_RESET%
-echo %COLOR_WHITE%- Les widgets ^(meteo, actus^) utilisent le panneau lateral et du reseau en arriere-plan.%COLOR_RESET%
+echo %COLOR_WHITE%- Les widgets (meteo, actus) utilisent le panneau lateral et du reseau en arriere-plan.%COLOR_RESET%
 echo %COLOR_WHITE%- La desactivation masque ce flux : utile pour perf / distraction, moins pour veille info.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment desactiver les Widgets ? [O/N]: %COLOR_RESET%"
@@ -2567,14 +2565,13 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Ta
 call :FINISH_IA_ACTION "Widgets" "desactive"
 exit /b
 
-:ACTIVER_RECALL
+:ACTIVER_RECALL_SECTION
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DE RECALL%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-:: IA.1 - Recall : Restauration
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour Recall...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "TurnOffSavingSnapshots" /f >nul 2>&1
@@ -2594,7 +2591,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall reactive
 call :FINISH_IA_ACTION "Recall" "active"
 exit /b
 
-:DESACTIVER_RECALL
+:DESACTIVER_RECALL_SECTION
 if "%SKIP_PAUSE%"=="0" (
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2602,8 +2599,8 @@ echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : DESACTIVER RECALL / ANALYSE IA%COL
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%Pourquoi une confirmation :%COLOR_RESET%
-echo %COLOR_WHITE%- Recall peut enregistrer l'activite ecran pour recherche semantique ^(fort impact confidentialite^).%COLOR_RESET%
-echo %COLOR_WHITE%- Desactiver coupe ces fonctions et des politiques IA associees ^(snapshots, insights^).%COLOR_RESET%
+echo %COLOR_WHITE%- Recall peut enregistrer l'activite ecran pour recherche semantique (fort impact confidentialite).%COLOR_RESET%
+echo %COLOR_WHITE%- Desactiver coupe ces fonctions et des politiques IA associees (snapshots, insights).%COLOR_RESET%
 echo %COLOR_WHITE%- Indique si vous privilegiez la vie privee plutot que les outils de recherche integree.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Recall et restrictions IA liees ? [O/N]: %COLOR_RESET%"
@@ -2615,7 +2612,6 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DE RECALL%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-:: IA.2 - Recall : Desactivation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des restrictions pour Recall et l'IA...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "TurnOffSavingSnapshots" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2637,11 +2633,11 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Recall desactive
 call :FINISH_IA_ACTION "Recall" "desactive"
 exit /b
 
-:DESACTIVER_TOUT_COPILOT
+:DESACTIVER_TOUT_IA_WIDGETS_RECALL
 if "%SKIP_PAUSE%"=="0" (
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : TOUT DESACTIVER ^(COPILOT + WIDGETS + RECALL / IA^)%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : TOUT DESACTIVER (COPILOT + WIDGETS + RECALL / IA)%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%Pourquoi une confirmation :%COLOR_RESET%
@@ -2649,7 +2645,7 @@ echo %COLOR_WHITE%- Cette action cumule Copilot, barre lateral widgets, et polit
 echo %COLOR_WHITE%- Effet combine : moins de taches et de trafic reseau lies a ces fonctionnalites.%COLOR_RESET%
 echo %COLOR_WHITE%- Vous perdez l'assistant, le flux actus et les outils bases sur l'analyse locale/cloud.%COLOR_RESET%
 echo.
-choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de tout desactiver ^(Copilot + Widgets + Recall/IA^) ? [O/N]: %COLOR_RESET%"
+choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de tout desactiver (Copilot + Widgets + Recall/IA) ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 exit /b
 )
 cls
@@ -2658,35 +2654,12 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-:: IA.3 - Desactivation totale (Copilot + Widgets + Recall)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de Copilot...%COLOR_RESET%
-reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v "TurnOffWindowsCopilot" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v "TurnOffWindowsCopilot" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowCopilotButton" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v "IsCopilotAvailable" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v "CopilotDisabledReason" /t REG_SZ /d "FeatureIsDisabled" /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat" /v "IsUserEligible" /t REG_DWORD /d 0 /f >nul 2>&1
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des Widgets...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v "AllowNewsAndInterests" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarDa" /t REG_DWORD /d 0 /f >nul 2>&1
-
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de Recall et fonctions IA...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "TurnOffSavingSnapshots" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowRecallEnablement" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowAIGameFeatures" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowClickToDo" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentWorkspaces" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableRemoteAgentConnectors" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageInsights" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-dism /online /Disable-Feature /FeatureName:Recall /quiet /norestart >nul 2>&1
-
+set "SKIP_PAUSE_TEMP=%SKIP_PAUSE%"
+set "SKIP_PAUSE=1"
+call :DESACTIVER_COPILOT_SECTION
+call :DESACTIVER_WIDGETS_SECTION
+call :DESACTIVER_RECALL_SECTION
+set "SKIP_PAUSE=%SKIP_PAUSE_TEMP%"
 call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
 exit /b
 
@@ -2698,7 +2671,7 @@ exit /b
 setlocal DisableDelayedExpansion
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Action terminee : %~1 %~2.%COLOR_RESET%
-echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
+echo %COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "%SKIP_PAUSE%"=="1" (
   endlocal
@@ -2722,7 +2695,7 @@ echo.
 echo %COLOR_WHITE%Pourquoi demander confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%- OneDrive synchronise Documents/Bureau/Images vers le cloud Microsoft.%COLOR_RESET%
 echo %COLOR_WHITE%- Le desinstaller coupe la sync et les liens vers le nuage ; Office peut perdre l'auto-save cloud.%COLOR_RESET%
-echo %COLOR_WHITE%- Les chemins du dossier OneDrive ^(%USERPROFILE%\OneDrive^) seront supprimes si presents.%COLOR_RESET%
+echo %COLOR_WHITE%- Les chemins du dossier OneDrive (%USERPROFILE%\OneDrive) seront supprimes si presents.%COLOR_RESET%
 echo %COLOR_WHITE%- Pratique pour liberer ressources et vie privee ; gardez une copie locale avant de valider.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% La suite arretera OneDrive, nettoiera registre et raccourcis, puis desinstallera.
@@ -2863,7 +2836,7 @@ if %errorlevel% EQU 2 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Les donnees utilisateur seront preservees.
 ) else (
     set "SUPPR_DATA=1"
-    echo %COLOR_YELLOW%[^!]%COLOR_RESET% Les donnees utilisateur seront supprimees.
+    echo %COLOR_YELLOW%[!]%COLOR_RESET% Les donnees utilisateur seront supprimees.
 )
 
 echo.
@@ -3214,7 +3187,7 @@ echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%SPACE_BEFORE_GB% 
 echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%SPACE_AFTER_GB% Go%COLOR_RESET%
 echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%SPACE_FREED_GB% Go%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[^!]%COLOR_RESET% Un redemarrage est recommande pour finaliser.
+echo %COLOR_YELLOW%[!]%COLOR_RESET% Un redemarrage est recommande pour finaliser.
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 (
@@ -3420,7 +3393,7 @@ echo %STYLE_BOLD%%COLOR_WHITE% AU REVOIR! %COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Merci d'avoir utilise le script d'optimisation! %COLOR_RESET%
-echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%N'oubliez pas de redemarrer votre PC pour finaliser tout.%COLOR_RESET%
+echo %COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%N'oubliez pas de redemarrer votre PC pour finaliser tout.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 timeout /t 3 /nobreak >nul
