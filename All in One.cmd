@@ -1413,8 +1413,6 @@ powershell -NoProfile -Command "Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControl
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Registre + Pilotes)
 
 
-:ULTIMATE_DONE
-
 :: 7.3 - Parametres avances du plan d'alimentation (user standard)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration avancee du plan d'alimentation...
 
@@ -1525,7 +1523,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v Hiberbo
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Demarrage rapide desactive - Redemarrages propres
 
 :: 7.7 - Hibernation
- echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation...
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de l'hibernation...
 powercfg /hibernate off >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Hibernation desactivee - Espace disque libere
 
@@ -1587,8 +1585,6 @@ if exist "%STR_EXE%" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution active immediatement
 )
 
-
-:STR_DONE
 
 :: 7.12 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
@@ -2717,7 +2713,7 @@ start explorer.exe
 timeout /t 3 /nobreak >nul
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Deconnexion des comptes OneDrive...
-powershell -Command "try { Import-Module -Name Microsoft.PowerShell.Management -Force; Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts' -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue } } catch {}" >nul 2>&1
+powershell -NoProfile -Command "try { Import-Module -Name Microsoft.PowerShell.Management -Force; Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts' -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue } } catch {}" >nul 2>&1
 
 :: Commande pour desinstaller OneDrive
 if exist "%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe" (
@@ -2790,7 +2786,7 @@ del "%UserProfile%\Desktop\OneDrive.lnk" /f /q >nul 2>&1
 del "%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /f /q >nul 2>&1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nettoyage complet de OneDrive termine.%COLOR_RESET%
-call :FINISH_ACTION "OneDrive" "desinstalle" "call"
+call :FINISH_ACTION "OneDrive" "desinstalle"
 goto :MENU_GESTION_WINDOWS
 
 :DESINSTALLER_EDGE
@@ -2954,7 +2950,7 @@ if "%SUPPR_DATA%"=="0" (
 )
 echo  %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'icone Edge a ete supprimee de la barre des taches.%COLOR_RESET%
 set "SUPPR_DATA="
-call :FINISH_ACTION "Microsoft Edge" "desinstalle" "call"
+call :FINISH_ACTION "Microsoft Edge" "desinstalle"
 goto :MENU_GESTION_WINDOWS
 
 
@@ -3110,7 +3106,7 @@ net start cryptsvc >nul 2>&1
 :: ETAPE 7
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Corbeille"
-powershell -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
+powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
 
 :: ETAPE 8
 set /a "CLEAN_STEP+=1"
