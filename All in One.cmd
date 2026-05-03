@@ -492,7 +492,12 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Planification CPU configuree
 
-:: 1.2 - Profil Gaming MMCSS
+:: 1.2 - Gestion de la memoire (MMAgent)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la gestion memoire (Compression OFF)...
+powershell -NoProfile -Command "Disable-MMAgent -MemoryCompression" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression de memoire desactivee (Charge CPU reduite)
+
+:: 1.3 - Profil Gaming MMCSS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
@@ -501,7 +506,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil gaming (MMCSS) configure
 
-:: 1.3 - Interface Windows
+:: 1.4 - Interface Windows
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de l'interface Windows...
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowTaskViewButton" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowCortanaButton" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -525,7 +530,7 @@ reg add "HKU\.DEFAULT\Control Panel\Keyboard" /v "InitialKeyboardIndicators" /t 
 reg add "HKCU\Control Panel\Keyboard" /v "InitialKeyboardIndicators" /t REG_SZ /d "2" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 1.4 - Telemetrie et vie privee
+:: 1.5 - Telemetrie et vie privee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie et des publicites...
 reg add "HKCU\Software\Microsoft\InputPersonalization" /v "RestrictImplicitInkCollection" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\InputPersonalization" /v "RestrictImplicitTextCollection" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -541,7 +546,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v DisableThum
 reg add "HKCU\Control Panel\Desktop" /v JPEGImportQuality /t REG_DWORD /d 100 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interface et privacy de base optimisees
 
-:: 1.5 - Telemetrie systeme et vie privee approfondie
+:: 1.6 - Telemetrie systeme et vie privee approfondie
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie et des traceurs...
 :: Registre : telemetrie et publicites
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v "AllowTelemetry" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -649,7 +654,7 @@ if %errorlevel% EQU 0 (
 )
 attrib +r "%HOSTS%" >nul 2>&1
 
-:: 1.6 - Services optimises
+:: 1.7 - Services optimises
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services
 
 :: 1 - Services vitaux -> AUTOMATIQUE
@@ -736,7 +741,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Services telemetrie et legacy desactives
 :: Services critiques laisses intacts : Bluetooth, Hello, RDP, Spooler, PlugPlay
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Services optimises (Bluetooth/VPN/Hello/RDP preserves)
 
-:: 1.7 - Optimisations demarrage et systeme
+:: 1.8 - Optimisations demarrage et systeme
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisations systeme diverses...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v "StartupDelayInMSec" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableInventory" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -762,12 +767,12 @@ if "!IS_LAPTOP!"=="0" (
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Optimisations demarrage et stockage terminees
 
-:: 1.8 - Activation MSI Mode Universel (Latence Peripheriques)
+:: 1.9 - Activation MSI Mode Universel (Latence Peripheriques)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du MSI Mode pour tous les peripheriques compatibles...
 powershell -NoProfile -Command "Get-PnpDevice | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Interruptions MSI activees sur tout le materiel compatible
 
-:: 1.8 - Utilitaires et Bloatwares (Automatique)
+:: 1.10 - Utilitaires et Bloatwares (Automatique)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Ajout de "Devenir Proprietaire" au menu contextuel...
 reg add "HKCR\*\shell\runas" /ve /t REG_SZ /d "Devenir Proprietaire" /f >nul 2>&1
 reg add "HKCR\*\shell\runas" /v "NoWorkingDirectory" /t REG_SZ /d "" /f >nul 2>&1
@@ -806,7 +811,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Pare-feu telemetrie actif (Update + Store pr
 :: Batterie - Energy Saver
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
-:: 1.9 - Navigateurs
+:: 1.11 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation navigateurs ...
 :: Microsoft Edge
 reg add "HKLM\Software\Policies\Microsoft\Edge" /v HideFirstRunExperience /t REG_DWORD /d 1 /f >nul 2>&1
@@ -829,25 +834,25 @@ reg add "HKCU\Software\Policies\Google\Chrome" /v HardwareAccelerationModeEnable
 reg add "HKCU\Software\Policies\Google\Chrome" /v BackgroundModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Navigateurs optimises
 
-:: 1.10 - Desactivation du stockage reserve
+:: 1.12 - Desactivation du stockage reserve
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du stockage reserve Windows...
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Stockage reserve desactive ^(~7Go recuperes apres redemarrage^)
 
-:: 1.11 - Affichage du code erreur BSoD
+:: 1.13 - Affichage du code erreur BSoD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de l'affichage des codes erreur BSoD...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v DisplayParameters /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Codes erreur BSoD visibles (diagnostic facilite)
 
-:: 1.12 - Desactivation de l'aide F1
+:: 1.14 - Desactivation de l'aide F1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la touche F1 (aide Windows)...
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win64" /ve /t REG_SZ /d "" /f >nul 2>&1
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t REG_SZ /d "" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Touche F1 (aide) desactivee
 
-:: 1.13 - Desactivation audio enhancements (latence audio)
+:: 1.15 - Desactivation audio enhancements (latence audio)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des ameliorations audio...
 powershell -NoProfile -Command "$path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}'; Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.PSPath; Set-ItemProperty -Path $p -Name 'FxNonDestructiveSoftMixer' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name 'FxRender' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name 'DisableAudioEndpointDucking' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } " >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Optimisation des peripheriques de rendu audio (PowerShell)
@@ -855,7 +860,7 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Audio" /v DisableAudioEnhancem
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio" /v ImmersiveAudio /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Ameliorations audio desactivees - Latence reduite
 
-:: 1.14 - Desactivation Windows Platform Binary Table (WPBT)
+:: 1.16 - Desactivation Windows Platform Binary Table (WPBT)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation WPBT (anti bloatware OEM firmware)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% WPBT desactive
@@ -909,11 +914,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire amelior
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la compression memoire (MMAgent)...
 powershell -NoProfile -Command "try { Disable-MMAgent -mc -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire traitee
-
-:: 2.5 - SvcHost - Valeur par defaut (3670016 KB)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration SvcHost valeur par defaut...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v SvcHostSplitThresholdInKB /t REG_DWORD /d 3670016 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% SvcHost configure valeur par defaut
 
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -1042,7 +1042,11 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR OFF, Flip Mode
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation MSI (GPU) et P0 State (Performance NVIDIA)...
 powershell -NoProfile -Command "Get-PnpDevice -Class Display -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOutPreference" /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode MSI GPU et NVIDIA P0 optimises
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "FeatureControl" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "NvTeleSvc" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "DisplayWatchdog" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "NvMessageBus" /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode MSI GPU et NVIDIA P0/Telemetrie optimises
 
 :: 4.4 - Desactivation AMD telemetry
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la telemetrie AMD...
@@ -1071,11 +1075,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la preemption GPU (Hardware Sc
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 
-:: 4.8 - Optimisation de la priorite DWM (Desktop Window Manager)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la priorite DWM (Fluidite Bureau/Jeu)...
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Priorite DWM optimisee
-
-:: 4.9 - NVIDIA Profile Inspector
+:: 4.8 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
 if "!HAS_NVIDIA!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
@@ -1250,7 +1250,9 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% NetBIOS desactive
 
 gpupdate /target:computer /force >nul 2>&1
 ipconfig /flushdns >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Pile reseau optimisee avec priorite gaming
+nbtstat -R >nul 2>&1
+nbtstat -RR >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% Pile reseau optimisee (DNS/NetBIOS purges)
 
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -1412,25 +1414,20 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des economies d'energie reseau
 powershell -NoProfile -Command "Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.Name; reg add \"$p\" /v \"PnPCapabilities\" /t REG_DWORD /d 8 /f >$null; reg add \"$p\" /v \"AdvancedEEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*EEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EEELinkAdvertisement\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"SipsEnabled\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"ULPMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"GigaLite\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EnableGreenEthernet\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"PowerSavingMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"S5WakeOnLan\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnMagicPacket\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnPattern\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"WakeOnLink\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*ModernStandbyWoLMagicPacket\" /t REG_SZ /d \"0\" /f >$null }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Desactive' -ErrorAction Stop } catch {} } } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie NIC desactivees (Registre + Pilotes)
 
-
 :: 7.3 - Parametres avances du plan d'alimentation (user standard)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration avancee du plan d'alimentation...
-
 
 :: Disque dur : ne jamais eteindre
 powercfg /setacvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1
 
-
 :: Diaporama arriere-plan : en pause (economise CPU)
 powercfg /setacvalueindex SCHEME_CURRENT 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 1 >nul 2>&1
 
-
 :: Adaptateur Wi-Fi : performances maximales (pas de bridage Wi-Fi silencieux)
 powercfg /setacvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0 >nul 2>&1
-
 
 :: Veille hybride : desactivee (inutile si hibernate est off)
 powercfg /setacvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0 >nul 2>&1
@@ -1439,14 +1436,12 @@ powercfg /setdcvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 94
 powercfg /setacvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0 >nul 2>&1
 
-
 :: Hub selective suspend timeout : 0ms
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 0 >nul 2>&1
 :: USB 3 link power management : desactive
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
-
 
 :: Etat processeur max : 100%
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1
@@ -1455,12 +1450,9 @@ powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bc
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1
 
-
 :: Extinction ecran apres 10 min (protection OLED + economie)
 powercfg /setacvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 600 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 600 >nul 2>&1
-
-
 
 :: Biais qualite lecture video : performance
 powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
@@ -1468,7 +1460,6 @@ powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10
 :: Lecture video : qualite optimale
 powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0 >nul 2>&1
-
 
 :: Intel Graphics : performances maximales
 powercfg /setacvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 2 >nul 2>&1
@@ -1482,7 +1473,6 @@ powercfg /setdcvalueindex SCHEME_CURRENT f693fb01-e858-4f00-b20f-f30e12ac06d6 19
 :: GPU hybride switchable : performances maximales
 powercfg /setacvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 3 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 3 >nul 2>&1
-
 
 :: Appliquer le plan
 powercfg /S SCHEME_CURRENT >nul 2>&1
@@ -1584,7 +1574,6 @@ if exist "%STR_EXE%" (
     start "" "%STR_EXE%" --resolution 5070 --no-console
     echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution active immediatement
 )
-
 
 :: 7.12 - Desactivation du PDC et Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation du Power Throttling (bridage CPU)...
@@ -3043,8 +3032,8 @@ echo %STYLE_BOLD%%COLOR_WHITE%                 NETTOYAGE DE WINDOWS AVANCE%COLOR
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-:: Initialiser la barre de progression (16 etapes)
-set /a "CLEAN_TOTAL=16"
+:: Initialiser la barre de progression (18 etapes)
+set /a "CLEAN_TOTAL=18"
 set /a "CLEAN_STEP=0"
 
 :: ETAPE 1
@@ -3166,6 +3155,17 @@ for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" 
 )
 cleanmgr /sagerun:%SAGEID% /d C: >nul 2>&1
 powershell -NoProfile -Command "$waitCount=0; while((Get-Process cleanmgr -ErrorAction SilentlyContinue) -and ($waitCount -lt 120)){ Start-Sleep -s 1; $waitCount++ }" >nul 2>&1
+
+:: ETAPE 17
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache de Manifest (WinSxS)"
+del /s /q /f "%SystemRoot%\WinSxS\ManifestCache\*.*" >nul 2>&1
+
+:: ETAPE 18
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires profil systeme"
+del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\Local\*.tmp" >nul 2>&1
+del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\Local\Microsoft\Windows\INetCache\*.*" >nul 2>&1
 
 :: Calcul final (PowerShell pour la precision des decimales)
 for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive C).Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output \"$beforeGB $afterGB $freedGB\""') do (
