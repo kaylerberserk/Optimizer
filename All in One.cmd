@@ -1,5 +1,7 @@
 @echo off
+echo off
 cls
+:: IMPORTANT : ce fichier doit etre en UTF-8 SANS BOM (sinon @echo off est ignore)
 :: Forcer l'encodage UTF-8 pour la prise en charge des accents dans la console
 chcp 65001 >nul
 setlocal EnableDelayedExpansion
@@ -127,20 +129,42 @@ exit /b
 
 
 :DETECT_HARDWARE
-set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "IS_LAPTOP=0" & set "HAS_NVIDIA=0"
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$g=($v|foreach{$_.Name}) -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='BAT:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
+:: Parametre optionnel : 1 = ne pas ecraser IS_LAPTOP (profil utilisateur deja choisi)
+set "DETECT_KEEP_LAPTOP=%~1"
+if not defined DETECT_KEEP_LAPTOP set "DETECT_KEEP_LAPTOP=0"
+if "!DETECT_KEEP_LAPTOP!"=="0" set "IS_LAPTOP=0"
+set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "HAS_NVIDIA=0"
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $g=$gn -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
         if /i "%%a"=="OS" set "HW_OS=%%b"
         if /i "%%a"=="CPU" set "HW_CPU=%%b"
         if /i "%%a"=="GPU" set "HW_GPU=%%b"
         if /i "%%a"=="RAM" set "HW_RAM=%%b"
-        if /i "%%a"=="BAT" set "IS_LAPTOP=%%b"
+        if /i "%%a"=="LAPTOP" if "!DETECT_KEEP_LAPTOP!"=="0" set "IS_LAPTOP=%%b"
     )
     del "%TEMP%\hw_info.tmp" >nul 2>&1
 )
 echo %HW_GPU% | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
+set "DETECT_KEEP_LAPTOP="
+exit /b
+
+:APPLY_NIC_OPTIMISATIONS
+:: Profil NIC unique selon !IS_LAPTOP! (0=latence desktop, 1=equilibre portable)
+set "NIC_LAPTOP_FLAG=!IS_LAPTOP!"
+if "!NIC_LAPTOP_FLAG!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale ^(RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON^)...
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC equilibree pour Laptop ^(RSS/RSC/LSO ON, Flow Control OFF, IM ON, Rate Medium^)...
+)
+powershell -NoProfile -Command "$lap=('!NIC_LAPTOP_FLAG!' -eq '1'); function Set-NicProp { param($a,$p,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; if($lap){try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}else{try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Flow Control|Contrôle de flux'})){ Set-NicProp $adapter $prop @('Disabled','Désactivé') }; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Interrupt Moderation|Modération d.interruption'})){ Set-NicProp $adapter $prop @('Enabled','Activé') }; $rateVals=if($lap){@('Medium','Moyen','Adaptive')}else{@('Minimal','Medium','Moyen')}; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Moderation Rate|Taux de modération'})){ Set-NicProp $adapter $prop $rateVals }; $offVals=if($lap){@('Enabled','Activé','Activé (IPv4)')}else{@('Disabled','Désactivé')}; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Large Send|Grand envoi'})){ Set-NicProp $adapter $prop $offVals }; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Recv Segment|RSC'})){ Set-NicProp $adapter $prop $offVals } }" >nul 2>&1
+if "!NIC_LAPTOP_FLAG!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises ^(Desktop^)
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads adaptes ^(Laptop - CPU soulage^)
+)
+set "NIC_LAPTOP_FLAG="
 exit /b
 
 :: ===========================================================================
@@ -411,8 +435,13 @@ if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION
 if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
 if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
-call :DETECT_HARDWARE
-call :AFFICHER_RESUME_OPTIMISATION %CURRENT_OPT_MODE%
+set "RESUME_MODE=%CURRENT_OPT_MODE%"
+call :DETECT_HARDWARE 1
+if "%RESUME_MODE%"=="DESKTOP" set "IS_LAPTOP=0"
+if "%RESUME_MODE%"=="LAPTOP" set "IS_LAPTOP=1"
+set "CURRENT_OPT_MODE="
+call :AFFICHER_RESUME_OPTIMISATION %RESUME_MODE%
+set "RESUME_MODE="
 goto :MENU_PRINCIPAL
 
 :AFFICHER_RESUME_OPTIMISATION
@@ -641,7 +670,7 @@ set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
 :: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb=\"# Telemetry Block Start`r`n# --- Telemetry Block ---`r`n0.0.0.0 vortex.data.microsoft.com`r`n0.0.0.0 vortex-win.data.microsoft.com`r`n0.0.0.0 v10.vortex-win.data.microsoft.com`r`n0.0.0.0 v10.events.data.microsoft.com`r`n0.0.0.0 telecommand.telemetry.microsoft.com`r`n0.0.0.0 oca.telemetry.microsoft.com`r`n0.0.0.0 watson.telemetry.microsoft.com`r`n0.0.0.0 watsonc.microsoft.com`r`n# --- End Telemetry Block ---`r`n# Telemetry Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb=\"# Telemetry Block Start`r`n# --- Telemetry Block ---`r`n0.0.0.0 vortex.data.microsoft.com`r`n0.0.0.0 vortex-win.data.microsoft.com`r`n0.0.0.0 v10.vortex-win.data.microsoft.com`r`n0.0.0.0 v10.events.data.microsoft.com`r`n0.0.0.0 telecommand.telemetry.microsoft.com`r`n0.0.0.0 oca.telemetry.microsoft.com`r`n0.0.0.0 watson.telemetry.microsoft.com`r`n0.0.0.0 watsonc.microsoft.com`r`n# --- End Telemetry Block ---`r`n# Telemetry Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }; if($?) { exit 0 } else { exit 1 }" >nul 2>&1
 
 if %errorlevel% EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines mis a jour ^(Telemetrie bloquee, doublons nettoyes^)
@@ -1204,15 +1233,7 @@ powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentContr
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: 5.10 - Optimisation Globale NIC (RSS, RSC, LSO, Flow Control, Interrupt Moderation)
-if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale ^(RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON^)...
-    powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Minimal' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } } }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises ^(Desktop^)
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC equilibree pour Laptop ^(RSS/RSC/LSO ON, Flow Control OFF, IM ON, Rate Medium^)...
-    powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Adaptive' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé (IPv4)' -ErrorAction SilentlyContinue } } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé (IPv4)' -ErrorAction SilentlyContinue } } } }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads adaptes ^(Laptop - CPU soulage^)
-)
+call :APPLY_NIC_OPTIMISATIONS
 
 :: 5.11 - QoS Fortnite DSCP 46
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la QoS Fortnite (DSCP 46)...
@@ -1237,7 +1258,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% QoS Fortnite activee
 
 :: 5.12 - Nettoyage des protocoles reseau (Bindings)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protocoles reseau inutiles (Bindings)...
-powershell -NoProfile -Command "$bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); $nics = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }; foreach ($nic in $nics) { foreach ($id in $bindingIds) { Disable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
+powershell -NoProfile -Command "$bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); $nics = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.Virtual -eq $false }; foreach ($nic in $nics) { foreach ($id in $bindingIds) { Disable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Bindings reseau nettoyes (LLDP, LLTDIO, etc.)
 
 :: 5.13 - Desactivation NetBIOS over TCP/IP (WINS)
@@ -2518,7 +2539,7 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /t REG_D
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v "CopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=\"# Copilot Block Start`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 windows.ai.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n0.0.0.0 edge.microsoft.com`r`n# Copilot Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=\"# Copilot Block Start`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 windows.ai.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n# Copilot Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }; if($?) { exit 0 } else { exit 1 }" >nul 2>&1
 attrib +r "%HOSTS%" >nul 2>&1
 set "HOSTS="
 ipconfig /flushdns >nul 2>&1
@@ -3382,7 +3403,7 @@ echo %COLOR_WHITE%  Cette section supprime les applications preinstallees inutil
 echo %COLOR_WHITE%  tout en preservant les outils essentiels (Calculatrice, Store, Photos, Notes).%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont supprimes : News, Solitaire, Skype, People, Family, Candy Crush, Your Phone, Assistance, Maps, Office, Feedback...
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, M t o, Musique, Vid o, Calculatrice, Store, Photos, Notes, etc.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, Meteo, Musique, Video, Calculatrice, Store, Photos, Notes, etc.
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Voulez-vous supprimer les bloatwares ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 goto :MENU_GESTION_WINDOWS
