@@ -628,20 +628,23 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\WMI\Autologger\ReadyBoot" /v Star
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Taches de telemetrie desactivees
 
-:: Blocage telemetrie via hosts
+:: Blocage telemetrie via hosts 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Gestion du blocage telemetrie dans le fichier hosts...
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
-:: Utilisation de PowerShell pour ajouter ou mettre a jour UNIQUEMENT le bloc de telemetrie
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb=\"$s`r`n# --- Telemetry Block ---`r`n0.0.0.0 vortex.data.microsoft.com`r`n0.0.0.0 vortex-win.data.microsoft.com`r`n0.0.0.0 v10.vortex-win.data.microsoft.com`r`n0.0.0.0 v10.events.data.microsoft.com`r`n0.0.0.0 telecommand.telemetry.microsoft.com`r`n0.0.0.0 oca.telemetry.microsoft.com`r`n0.0.0.0 watson.telemetry.microsoft.com`r`n0.0.0.0 watsonc.microsoft.com`r`n# --- End Telemetry Block ---`r`n$e\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }" >nul 2>&1
+:: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb=\"# Telemetry Block Start`r`n# --- Telemetry Block ---`r`n0.0.0.0 vortex.data.microsoft.com`r`n0.0.0.0 vortex-win.data.microsoft.com`r`n0.0.0.0 v10.vortex-win.data.microsoft.com`r`n0.0.0.0 v10.events.data.microsoft.com`r`n0.0.0.0 telecommand.telemetry.microsoft.com`r`n0.0.0.0 oca.telemetry.microsoft.com`r`n0.0.0.0 watson.telemetry.microsoft.com`r`n0.0.0.0 watsonc.microsoft.com`r`n# --- End Telemetry Block ---`r`n# Telemetry Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }" >nul 2>&1
 
 if %errorlevel% EQU 0 (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines telemetrie mis a jour (entrees existantes preservees)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Domaines mis a jour ^(Telemetrie bloquee, doublons nettoyes^)
 ) else (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% Echec de la mise a jour du fichier hosts
 )
 attrib +r "%HOSTS%" >nul 2>&1
+
+:: Vidage du cache DNS pour appliquer immediatement les modifications du hosts
+ipconfig /flushdns >nul 2>&1
 
 :: 1.7 - Services optimises
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation services
@@ -1174,15 +1177,12 @@ powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentContr
 :: 5.9 - QoS Psched
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
 
-:: 5.10 - NIC RSS ON, RSC OFF
-powershell -NoProfile -NoLogo -Command "$adp=Get-NetAdapter|? Status -eq 'Up'; foreach($a in $adp){ try{Enable-NetAdapterRss -Name $a.Name -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $a.Name -ErrorAction Stop}catch{} }" >nul 2>&1
+:: 5.10 - Optimisation Globale NIC (RSS, RSC, LSO, Flow Control, Interrupt Moderation)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale (RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON)...
+powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Minimal' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } } }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises
 
-:: 5.11 - Optimisation Avancee NIC (LSO, RSC, Flow Control, Interrupt Moderation)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale (Flow Control, DPC, LSO/RSC)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Desactive' -ErrorAction SilentlyContinue } catch {} } }; $imProps=$props | Where-Object { $_.DisplayName -match '^Interrupt Moderation$|^Modération d''interruption$' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Active' -ErrorAction SilentlyContinue } catch {} } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Minimal' -ErrorAction SilentlyContinue } catch {} } } }; $lsoProps = $props | Where-Object { $_.DisplayName -like '*Large Send*' -or $_.DisplayName -like '*Grand envoi*' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Desactive' -ErrorAction Stop } catch {} } }; $rscProps = $props | Where-Object { $_.DisplayName -like '*Recv Segment*' -or $_.DisplayName -like '*RSC*' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Desactive' -ErrorAction Stop } catch {} } } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Advanced Properties optimises (Flow Control OFF, IM Medium/Minimal, LSO/RSC OFF)
-
-:: 5.12 - QoS Fortnite DSCP 46
+:: 5.11 - QoS Fortnite DSCP 46
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la QoS Fortnite (DSCP 46)...
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Version" /t REG_SZ /d "1.0" /f >nul 2>&1
@@ -1203,12 +1203,12 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "Remote I
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "DSCP Value" /t REG_SZ /d "46" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% QoS Fortnite activee
 
-:: 5.13 - Nettoyage des protocoles reseau (Bindings)
+:: 5.12 - Nettoyage des protocoles reseau (Bindings)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation des protocoles reseau inutiles (Bindings)...
 powershell -NoProfile -Command "$bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); $nics = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' }; foreach ($nic in $nics) { foreach ($id in $bindingIds) { Disable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Bindings reseau nettoyes (LLDP, LLTDIO, etc.)
 
-:: 5.14 - Desactivation NetBIOS over TCP/IP (WINS)
+:: 5.13 - Desactivation NetBIOS over TCP/IP (WINS)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de NetBIOS over TCP/IP...
 for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" /s ^| findstr /i /r "\\Tcpip_.*$" 2^>nul') do (
   reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
@@ -2461,11 +2461,15 @@ reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo
 reg delete "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
+:: Reactivation de Copilot dans Edge
+reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /f >nul 2>&1
+reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "CopilotPageContext" /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace '(?s)\r?\n?' + [regex]::Escape($s) + '.*?' + [regex]::Escape($e), ''; Set-Content -Path $h -Value $c -Encoding ASCII -Force } }" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace ('(?s)\r?\n?'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), ''; Set-Content -Path $h -Value $c -Encoding ASCII -Force } }" >nul 2>&1
 attrib +r "%HOSTS%" >nul 2>&1
 set "HOSTS="
+ipconfig /flushdns >nul 2>&1
 exit /b
 
 :CORE_DESACTIVER_COPILOT
@@ -2482,11 +2486,15 @@ reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
+:: Desactivation de Copilot dans Edge
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v "CopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=\"# Copilot Block Start`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 windows.ai.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n0.0.0.0 edge.microsoft.com`r`n# Copilot Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=\"# Copilot Block Start`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 windows.ai.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n0.0.0.0 edge.microsoft.com`r`n# Copilot Block End\"; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+\"`r`n`r`n\"+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }" >nul 2>&1
 attrib +r "%HOSTS%" >nul 2>&1
 set "HOSTS="
+ipconfig /flushdns >nul 2>&1
 exit /b
 
 :ACTIVER_WIDGETS_SECTION
@@ -3347,7 +3355,7 @@ echo %COLOR_WHITE%  Cette section supprime les applications preinstallees inutil
 echo %COLOR_WHITE%  tout en preservant les outils essentiels (Calculatrice, Store, Photos, Notes).%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont supprimes : News, Solitaire, Skype, People, Family, Candy Crush, Your Phone, Assistance, Maps, Office, Feedback...
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, M�t�o, Musique, Vid�o, Calculatrice, Store, Photos, Notes, etc.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, M t o, Musique, Vid o, Calculatrice, Store, Photos, Notes, etc.
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Voulez-vous supprimer les bloatwares ? [O/N]: %COLOR_RESET%"
 if %errorlevel% EQU 2 goto :MENU_GESTION_WINDOWS
