@@ -896,11 +896,6 @@ reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% FTH desactive - Performances memoire ameliorees
 
-:: 2.4 - Desactiver la compression de la memoire
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation de la compression memoire (MMAgent)...
-powershell -NoProfile -Command "try { Disable-MMAgent -mc -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression memoire traitee
-
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% Optimisations memoire appliquees avec succes.
@@ -959,11 +954,16 @@ set "TRIM_STATUS="
 
 :: 3.4 - Optimisation pilote NVMe et DirectStorage
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du boost NVMe et DirectStorage...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
+if "!IS_LAPTOP!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe (Performance Maximale) et DirectStorage actives
+) else (
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage active (APST NVMe conserve pour la temperature sur Laptop)
+)
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 735209102 /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe et DirectStorage actives
 
 :: 3.5 - Write cache buffer flushing au niveau peripherique (SCSI + NVMe)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% CacheIsPowerProtected sur disques SCSI et NVMe (equiv. Write Cache Buffer Flushing Off)...
@@ -1019,10 +1019,16 @@ reg add "HKCU\System\GameConfigStore" /v GameDVR_HonorUserFSEBehaviorMode /t REG
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" /v "AllowGameDVR" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% GameDVR desactive - Game Mode conserve pour les performances
 
-:: 4.2 - Preferences DirectX (Auto HDR, VRR desactive, Flip Model actif)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX (Auto HDR, VRR OFF, Flip Model)...
-reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=0;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR OFF, Flip Model (SwapEffectUpgrade) actif
+:: 4.2 - Preferences DirectX (Auto HDR, VRR, Flip Model actif)
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX (Auto HDR, VRR OFF, Flip Model)...
+    reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=0;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR OFF, Flip Model actif (Desktop)
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX (Auto HDR, VRR ON, Flip Model)...
+    reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR ON, Flip Model actif (Laptop)
+)
 
 :: 4.3 - Mode MSI (GPU) et P-State P0 (NVIDIA)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation MSI (GPU) et P0 State (Performance NVIDIA)...
@@ -1045,11 +1051,20 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des optimisations Low Latency NV
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg add "%%K" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%K" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%K" /v F1TransitionLatency /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "%%K" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
+  if "!IS_LAPTOP!"=="0" (
+    reg add "%%K" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "%%K" /v F1TransitionLatency /t REG_DWORD /d 1 /f >nul 2>&1
+  ) else (
+    reg delete "%%K" /v D3PCLatency /f >nul 2>&1
+    reg delete "%%K" /v F1TransitionLatency /f >nul 2>&1
+  )
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag (Desktop)
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Veille GPU preservee (Laptop)
+)
 
 :: 4.6 - HAGS Enable
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation de la planification GPU acceleree (HAGS)...
@@ -1064,50 +1079,54 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Preemption GPU activee
 :: 4.8 - NVIDIA Profile Inspector
 :: Detection GPU NVIDIA pour Profile Inspector via PowerShell
 if "!HAS_NVIDIA!"=="1" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
-    set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
+    if "!IS_LAPTOP!"=="0" (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
+        set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
 
-    :: Creer le dossier temporaire
-    if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
+        :: Creer le dossier temporaire
+        if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
 
-    :: Telecharger NVIDIA Profile Inspector
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-    if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
-        for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
-            echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Fichier NVIDIA Profile Inspector corrompu ou incomplet
-            del "!NPI_DIR!\nvidiaProfileInspector.exe"
+        :: Telecharger NVIDIA Profile Inspector
+        powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
+            for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
+                echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Fichier NVIDIA Profile Inspector corrompu ou incomplet
+                del "!NPI_DIR!\nvidiaProfileInspector.exe"
+                goto :NPI_DONE
+            )
+        ) else (
+            echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
             goto :NPI_DONE
         )
-    ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
-        goto :NPI_DONE
-    )
 
-    :: Telecharger le profil optimise
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-    if exist "!NPI_DIR!\Kaylers_profile.nip" (
-        for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
-            echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Profil NVIDIA corrompu ou incomplet
-            del "!NPI_DIR!\Kaylers_profile.nip"
+        :: Telecharger le profil optimise
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
+        powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        if exist "!NPI_DIR!\Kaylers_profile.nip" (
+            for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
+                echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Profil NVIDIA corrompu ou incomplet
+                del "!NPI_DIR!\Kaylers_profile.nip"
+                goto :NPI_DONE
+            )
+        ) else (
+            echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
             goto :NPI_DONE
         )
+
+        :: Appliquer le profil
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
+        start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
+        ping -n 2 127.0.0.1 >nul 2>&1
+        taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
+
+        :: Nettoyage
+        del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
+        del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+        rmdir "!NPI_DIR!" >nul 2>&1
     ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
-        goto :NPI_DONE
+        echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Profil NVIDIA global ignore sur Laptop pour preserver l'autonomie et le silence
     )
-
-    :: Appliquer le profil
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
-    start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
-    ping -n 2 127.0.0.1 >nul 2>&1
-    taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
-
-    :: Nettoyage
-    del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
-    del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
-    rmdir "!NPI_DIR!" >nul 2>&1
 ) else (
     echo %COLOR_YELLOW%[^!]%COLOR_RESET% GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
 )
@@ -1178,9 +1197,15 @@ powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentContr
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
 
 :: 5.10 - Optimisation Globale NIC (RSS, RSC, LSO, Flow Control, Interrupt Moderation)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale (RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON)...
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Minimal' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale (RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON)...
+    powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Minimal' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } } }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises (Desktop)
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC equilibree pour Laptop (RSS/RSC/LSO ON, Flow Control OFF, IM ON, Rate Medium)...
+    powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Adaptive' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé (IPv4)' -ErrorAction SilentlyContinue } } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé (IPv4)' -ErrorAction SilentlyContinue } } } }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads adaptes (Laptop - CPU soulage)
+)
 
 :: 5.11 - QoS Fortnite DSCP 46
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration de la QoS Fortnite (DSCP 46)...
@@ -1342,7 +1367,6 @@ powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nu
 
 :: Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du plan Ultimate Performance...
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
 set "TARGET_GUID="
 for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 if not defined TARGET_GUID (
@@ -1442,7 +1466,6 @@ powercfg /setacvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1
 powercfg /setdcvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 3 >nul 2>&1
 
 :: Appliquer le plan
-powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Parametres avances du plan d'alimentation appliques
 
 :: 7.4 - Optimisations CPU (Intel Hybrid + AMD Core Parking)
@@ -1452,7 +1475,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisations CPU specifiques (Intel Hybrid 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil processeur (performances maximales)...
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Deblocage des options de scheduling hybride (P-Cores/E-Cores)...
 :: Heterogeneous thread scheduling policy
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
@@ -1488,7 +1510,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Hibernation desactivee - Espace disque liber
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation USB - Desactivation de la mise en veille selective...
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% USB optimise - Latence minimale ^(Selective Suspend OFF^)
 
@@ -1594,7 +1615,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Economies d'energie et optimisations reseau 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Desactivation gestion d'energie PCIe...
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Gestion d'energie PCIe desactivee
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
@@ -1611,6 +1631,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Power savings desactivees sur tous les devic
 :: 7.24 - Bridage Energie (Power Throttling) deja traite
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Power Throttling (bridage CPU) deja configure
 
+:: Appliquer l'ensemble des modifications du plan d'alimentation en une seule fois
+powercfg /S SCHEME_CURRENT >nul 2>&1
 
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -1649,7 +1671,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Hibernation reactivee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation de la mise en veille selective USB...
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Mise en veille selective USB reactivee
 
@@ -1702,7 +1723,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% Reactivation du Power Throttling...
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /f >nul 2>&1
 
 :: 7.8 - Seuils d'economie d'energie
 powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 20 >nul 2>&1
