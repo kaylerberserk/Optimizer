@@ -128,7 +128,7 @@ exit /b
 
 :DETECT_HARDWARE
 set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "IS_LAPTOP=0" & set "HAS_NVIDIA=0"
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; if(Get-CimInstance Win32_Battery){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$g=($v|foreach{$_.Name}) -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='BAT:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$g=($v|foreach{$_.Name}) -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='BAT:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
         if /i "%%a"=="OS" set "HW_OS=%%b"
@@ -283,10 +283,12 @@ goto :MENU_GESTION_WINDOWS
 
 :TOUT_OPTIMISER_DESKTOP
 set "CURRENT_OPT_MODE=DESKTOP"
+set "IS_LAPTOP=0"
 goto :TOUT_OPTIMISER_COMMON
 
 :TOUT_OPTIMISER_LAPTOP
 set "CURRENT_OPT_MODE=LAPTOP"
+set "IS_LAPTOP=1"
 goto :TOUT_OPTIMISER_COMMON
 
 :TOUT_OPTIMISER_COMMON
@@ -409,6 +411,7 @@ if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION
 if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
 if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
+call :DETECT_HARDWARE
 call :AFFICHER_RESUME_OPTIMISATION %CURRENT_OPT_MODE%
 goto :MENU_PRINCIPAL
 
@@ -482,9 +485,13 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32Priorit
 echo %COLOR_GREEN%[OK]%COLOR_RESET% Planification CPU configuree
 
 :: 1.2 - Gestion de la memoire (MMAgent)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la gestion memoire (Compression OFF)...
-powershell -NoProfile -Command "Disable-MMAgent -MemoryCompression" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression de memoire desactivee (Charge CPU reduite)
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la gestion memoire ^(Compression OFF^)...
+    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Compression de memoire desactivee ^(Charge CPU reduite^)
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% Compression memoire conservee sur profil portable ^(economie RAM/CPU^)
+)
 
 :: 1.3 - Profil Gaming MMCSS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration du profil gaming (MMCSS)...
@@ -940,7 +947,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% Support des chemins longs active
 :: 3.3 - TRIM sur volumes SSD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Verification de l'etat du TRIM sur les disques SSD...
 set "TRIM_STATUS="
-for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -eq 'SSD' }; if(-not $ssds){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and ($_.FileSystem -match 'NTFS|ReFS') }; $done=$false; foreach($v in $vols){ $d=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue | Get-Disk -ErrorAction SilentlyContinue; if($d.MediaType -eq 'SSD'){ Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction SilentlyContinue | Out-Null; $done=$true } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"') do set "TRIM_STATUS=%%a"
+for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue ^| Where-Object { $_.MediaType -eq 'SSD' }; if(-not $ssds){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force ^| Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue ^| Where-Object { $_.DriveLetter -and ($_.FileSystem -match 'NTFS^|ReFS') }; $done=$false; foreach($v in $vols){ $d=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue ^| Get-Disk -ErrorAction SilentlyContinue; if($d.MediaType -eq 'SSD'){ Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction SilentlyContinue ^| Out-Null; $done=$true } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"') do set "TRIM_STATUS=%%a"
 if "%TRIM_STATUS%"=="TRIM_DONE" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% TRIM execute sur les volumes SSD ^(dernier passage memorise pour 30 jours^)
 ) else (
@@ -956,10 +963,10 @@ set "TRIM_STATUS="
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Activation du boost NVMe et DirectStorage...
 if "!IS_LAPTOP!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe (Performance Maximale) et DirectStorage actives
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Boost NVMe ^(Performance Maximale^) et DirectStorage actives
 ) else (
     reg delete "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v NativeNVMePerformance /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage active (APST NVMe conserve pour la temperature sur Laptop)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectStorage active ^(APST NVMe conserve pour la temperature sur Laptop^)
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1021,13 +1028,13 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% GameDVR desactive - Game Mode conserve pour 
 
 :: 4.2 - Preferences DirectX (Auto HDR, VRR, Flip Model actif)
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX (Auto HDR, VRR OFF, Flip Model)...
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX ^(Auto HDR, VRR OFF, Flip Model^)...
     reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=0;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR OFF, Flip Model actif (Desktop)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR OFF, Flip Model actif ^(Desktop^)
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX (Auto HDR, VRR ON, Flip Model)...
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Application des preferences DirectX ^(Auto HDR, VRR ON, Flip Model^)...
     reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR ON, Flip Model actif (Laptop)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% DirectX : Auto HDR actif, VRR ON, Flip Model actif ^(Laptop^)
 )
 
 :: 4.3 - Mode MSI (GPU) et P-State P0 (NVIDIA)
@@ -1061,9 +1068,9 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   )
 )
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag (Desktop)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Reduction de l'input lag ^(Desktop^)
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Veille GPU preservee (Laptop)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Low Latency active - Veille GPU preservee ^(Laptop^)
 )
 
 :: 4.6 - HAGS Enable
@@ -1083,10 +1090,10 @@ if "!HAS_NVIDIA!"=="1" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...
         set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
 
-        :: Creer le dossier temporaire
+        rem Creer le dossier temporaire
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
 
-        :: Telecharger NVIDIA Profile Inspector
+        rem Telecharger NVIDIA Profile Inspector
         powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
             for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
@@ -1099,7 +1106,7 @@ if "!HAS_NVIDIA!"=="1" (
             goto :NPI_DONE
         )
 
-        :: Telecharger le profil optimise
+        rem Telecharger le profil optimise
         echo %COLOR_YELLOW%[*]%COLOR_RESET% Telechargement du profil gaming optimise...
         powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\Kaylers_profile.nip" (
@@ -1113,14 +1120,14 @@ if "!HAS_NVIDIA!"=="1" (
             goto :NPI_DONE
         )
 
-        :: Appliquer le profil
+        rem Appliquer le profil
         echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du profil NVIDIA optimise...
         start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
         ping -n 2 127.0.0.1 >nul 2>&1
         taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
         echo %COLOR_GREEN%[OK]%COLOR_RESET% Profil NVIDIA Profile Inspector applique
 
-        :: Nettoyage
+        rem Nettoyage
         del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
         del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
         rmdir "!NPI_DIR!" >nul 2>&1
@@ -1198,13 +1205,13 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit 
 
 :: 5.10 - Optimisation Globale NIC (RSS, RSC, LSO, Flow Control, Interrupt Moderation)
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale (RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON)...
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC pour latence minimale ^(RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON^)...
     powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Minimal' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } } }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises (Desktop)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads optimises ^(Desktop^)
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC equilibree pour Laptop (RSS/RSC/LSO ON, Flow Control OFF, IM ON, Rate Medium)...
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration NIC equilibree pour Laptop ^(RSS/RSC/LSO ON, Flow Control OFF, IM ON, Rate Medium^)...
     powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; $fcProps=$props | Where-Object { $_.DisplayName -match 'Flow Control|Contrôle de flux' }; foreach($prop in $fcProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Disabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Désactivé' -ErrorAction SilentlyContinue } }; $imProps=$props | Where-Object { $_.DisplayName -match 'Interrupt Moderation|Modération d.interruption' }; foreach($prop in $imProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction SilentlyContinue } }; $rateProps=$props | Where-Object { $_.DisplayName -match 'Moderation Rate|Taux de modération' }; foreach($prop in $rateProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Medium' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Moyen' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Adaptive' -ErrorAction SilentlyContinue } } }; $lsoProps = $props | Where-Object { $_.DisplayName -match 'Large Send|Grand envoi' }; foreach($prop in $lsoProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé (IPv4)' -ErrorAction SilentlyContinue } } }; $rscProps = $props | Where-Object { $_.DisplayName -match 'Recv Segment|RSC' }; foreach($prop in $rscProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé' -ErrorAction Stop } catch { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $prop.DisplayName -DisplayValue 'Activé (IPv4)' -ErrorAction SilentlyContinue } } } }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads adaptes (Laptop - CPU soulage)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% NIC Proprietes et Offloads adaptes ^(Laptop - CPU soulage^)
 )
 
 :: 5.11 - QoS Fortnite DSCP 46
@@ -1271,7 +1278,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 
 :: 6.1 - Souris optimisee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% Optimisation de la reactivite souris...
-if "%IS_LAPTOP%"=="1" (
+if "!IS_LAPTOP!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% Configuration souris adaptee au trackpad ^(acceleration legere conservee^)...
     reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "4" /f >nul 2>&1
@@ -1558,7 +1565,7 @@ if exist "%STR_EXE%" (
 if exist "%STR_EXE%" (
     taskkill /F /IM SetTimerResolution.exe >nul 2>&1
     powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP%'); $Shortcut.TargetPath = '%SystemRoot%\SetTimerResolution.exe'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%SystemRoot%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci SetTimerResolution configure (5070)
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% Raccourci SetTimerResolution configure ^(5070^)
     start "" "%STR_EXE%" --resolution 5070 --no-console
     echo %COLOR_GREEN%[OK]%COLOR_RESET% SetTimerResolution active immediatement
 )
@@ -2155,16 +2162,16 @@ echo.
 choice /C 123M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, 3, M]: %COLOR_RESET%"
 if %errorlevel% EQU 4 goto :MENU_GESTION_WINDOWS
 if %errorlevel% EQU 3 (
-  echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du Mode Gaming (Performance + Compatibilite)...
-  :: Desactiver Mitigations CPU (Gain FPS)
+  echo %COLOR_YELLOW%[*]%COLOR_RESET% Application du Mode Gaming ^(Performance + Compatibilite^)...
+  rem Desactiver Mitigations CPU (Gain FPS)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
-  :: HVCI = 1, VBS = 1, CFG = 1, LSA = 0 (Mode optimal pour anti-cheat + perfs)
+  rem HVCI = 1, VBS = 1, CFG = 1, LSA = 0 (Mode optimal pour anti-cheat + perfs)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\System\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
   powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-  echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Gaming active (Optimisation CPU + Compatibilite Anti-cheat).
+  echo %COLOR_GREEN%[OK]%COLOR_RESET% Mode Gaming active ^(Optimisation CPU + Compatibilite Anti-cheat^).
   call :FINISH_ACTION "VBS/HVCI" "configure (Mode Gaming)"
   goto :TOGGLE_VBS_HVCI
 )
@@ -2579,7 +2586,7 @@ if "%SKIP_PAUSE%"=="0" (
     echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Pourquoi cette question : Recall enregistre votre activite ecran pour%COLOR_RESET%
-    echo %COLOR_WHITE%permettre des recherches IA (fort impact sur la confidentialite).%COLOR_RESET%
+    echo %COLOR_WHITE%permettre des recherches IA ^(fort impact sur la confidentialite^).%COLOR_RESET%
     echo.
     choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Recall ? [O/N]: %COLOR_RESET%"
     if %errorlevel% EQU 2 exit /b
