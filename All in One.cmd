@@ -197,8 +197,7 @@ goto %~1
 :COMMON_YES_NO
 set "%~3=0"
 choice /C ON /N /M "%~1"
-if !errorlevel! EQU 2 goto %~2
-set "%~3=1"
+if !errorlevel! EQU 1 set "%~3=1"
 exit /b 0
 
 :MENU_PRINCIPAL
@@ -234,12 +233,12 @@ echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- REGLAGES AVANCES ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie%COLOR_RESET%
-echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite ^(Desactiver/Restaurer^)%COLOR_RESET%
+echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite - Desactiver ou Restaurer%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil Latence %COLOR_RED%^(Competition / Power User - DECONSEILLE PORTABLE^)%COLOR_RESET%
-echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil Equilibre %COLOR_GREEN%^(Jeux, Web, Downloads - RECOMMANDE POUR TOUS^)%COLOR_RESET%
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil Latence %COLOR_RED%- Competition, Power User - DECONSEILLE PORTABLE%COLOR_RESET%
+echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil Equilibre %COLOR_GREEN%- Jeux, Web, Downloads - RECOMMANDE POUR TOUS%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -329,15 +328,15 @@ if "!DETECTED_LAPTOP!"=="1" (
     echo %STYLE_BOLD%%COLOR_RED%                    AVERTISSEMENT : PC PORTABLE DETECTE%COLOR_RESET%
     echo %COLOR_RED%=================================================================================%COLOR_RESET%
     echo.
-    echo %COLOR_WHITE% Vous avez selectionne le %COLOR_YELLOW%Profil Latence brute (Desktop)%COLOR_WHITE% sur un %COLOR_CYAN%PC Portable%COLOR_WHITE%.%COLOR_RESET%
+    echo %COLOR_WHITE% Vous avez selectionne le %COLOR_YELLOW%Profil Latence brute ^(Desktop^)%COLOR_WHITE% sur un %COLOR_CYAN%PC Portable%COLOR_WHITE%.%COLOR_RESET%
     echo.
     echo %COLOR_RED% [ERREUR] CE PROFIL EST ULTRA DECONSEILLE SUR UN PC PORTABLE :%COLOR_RESET%
     echo  - Risque eleve de %COLOR_YELLOW%surchauffe%COLOR_RESET% et de %COLOR_YELLOW%baisse d'autonomie dramatique%COLOR_RESET%.
-    echo  - Desactive toutes les economies d'energie (CPU, PCIe, EEE, USB selective suspend).
+    echo  - Desactive toutes les economies d'energie ^(CPU, PCIe, EEE, USB selective suspend^).
     echo  - Les ventilateurs tourneront beaucoup plus vite et la batterie s'usera rapidement.
     echo.
     echo %COLOR_GREEN% Le profil Equilibre [L] est lui aussi parfaitement optimise pour le jeu%COLOR_RESET%
-    echo %COLOR_GREEN% (il conserve plus de 95%% des optimisations). La seule difference%COLOR_RESET%
+    echo %COLOR_GREEN% ^(il conserve plus de 95%% des optimisations^). La seule difference%COLOR_RESET%
     echo %COLOR_GREEN% reelle est un infime input lag reseau/periph en echange d'un debit maximal.%COLOR_RESET%
     echo.
     echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -482,9 +481,9 @@ echo %COLOR_CYAN%===============================================================
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Toutes les optimisations ont ete appliquees.%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan "Ultimate Performance" active (economies d'energie coupees).%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan "Ultimate Performance" active ^(economies d'energie coupees^).%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Efficience et economies d'energie preservees (debit max, batterie/chauffe ok).%COLOR_RESET%
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Efficience et economies d'energie preservees ^(debit max, batterie/chauffe ok^).%COLOR_RESET%
 )
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, GPU et disques terminees.%COLOR_RESET%
 echo.
@@ -501,7 +500,7 @@ if "%DESACTIVER_IA%"=="1" (
   echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les fonctionnalites IA de Windows ont ete desactivees.%COLOR_RESET%
 )
 if "%DESACTIVER_UAC%"=="1" (
-  echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Le Controle de Compte Utilisateur ^(UAC^) a ete desactive.%COLOR_RESET%
+  echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Le Controle de Compte Utilisateur - UAC - a ete desactive.%COLOR_RESET%
 )
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
@@ -529,9 +528,9 @@ echo %COLOR_WHITE%  l'interface pour de meilleures performances generales.%COLOR
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE BRUTE%COLOR_RESET%%COLOR_WHITE% ^(reactivite maximale, sans economie d'energie^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE BRUTE%COLOR_RESET%%COLOR_WHITE% - reactivite maximale, sans economie d'energie%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% ^(jeux, debit reseau max, efficience active^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - jeux, debit reseau max, efficience active%COLOR_RESET%
 )
 echo.
 
@@ -945,9 +944,9 @@ echo %COLOR_WHITE%  pour ameliorer les performances en jeu et reduire la latence
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%
 )
 echo.
 
@@ -997,9 +996,9 @@ echo %COLOR_WHITE%  reduits et une meilleure reactivite du systeme.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%
 )
 echo.
 
@@ -1084,9 +1083,9 @@ echo %COLOR_WHITE%  et maximiser les performances en jeu.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - reactivite maximale, plan Ultimate Performance%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - HAGS, VRR et economies d'energie preservees%COLOR_RESET%
 )
 echo.
 
@@ -1244,9 +1243,9 @@ echo %COLOR_WHITE%  et ameliorer la stabilite de la connexion en jeu.%COLOR_RESE
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% ^(BBR2, NIC optimisee pour reponse instantanee^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - BBR2, NIC optimisee pour reponse instantanee%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% ^(BBR2, offloads actifs pour debit/telechargement max^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - BBR2, offloads actifs pour debit/telechargement max%COLOR_RESET%
 )
 echo.
 
@@ -1416,9 +1415,9 @@ echo %COLOR_WHITE%  la reactivite des peripheriques d'entree.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% ^(souris 1:1 sans acceleration^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% ^(trackpad et souris optimises^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - trackpad et souris optimises%COLOR_RESET%
 )
 echo.
 

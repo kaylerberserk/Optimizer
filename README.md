@@ -56,12 +56,12 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie.
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
 - **[3] Disques** : Optimisation des accès I/O (TRIM intelligent SSD tous les 30 jours, boost NVMe).
-- **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
+- **[4] GPU** : Configuration des priorités graphiques, du HAGS/VRR et réduction du délai d'affichage (latency).
 - **[5] Réseau** : Pile TCP/IP complète intégrée au script (BBR2, fix loopback, MMCSS, NIC, DNS, QoS Fortnite) — profils Latence/Équilibré via `[D]`/`[L]`.
-- **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
-- **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
+- **[6] Input** : Optimisation de la réactivité clavier/souris et désactivation de l'accélération (profil Latence = visée 1:1, profil Équilibré = trackpad préservé).
+- **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance (déconseillé sur PC Portable).
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
-- **[9] Bloatwares** : (Menu [G]) Suppression des applications préinstallées inutiles.
+- **[9] Bloatwares** : (Dans le menu [G]) Suppression des applications préinstallées inutiles.
 
 ### 📂 Gestion Windows & Maintenance (Menu [G])
 
