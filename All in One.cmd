@@ -28,6 +28,8 @@ set "COLOR_MAGENTA=%ESC%[35m" & set "COLOR_RESET=%ESC%[0m" & set "STYLE_BOLD=%ES
 :: INITIALISATION DES VARIABLES GLOBALES
 :: ===========================================================================
 set "HAS_INTERNET=0"
+:: IS_LAPTOP : 0 = profil Desktop (defaut gaming) | 1 = profil Laptop (equilibre batterie)
+:: Detecte au demarrage ; force par [D]/[L] dans Tout optimiser
 set "IS_LAPTOP=0"
 set "HAS_NVIDIA=0"
 set "DESACTIVER_SECURITE=0"
@@ -133,11 +135,9 @@ exit /b
 
 
 :DETECT_HARDWARE
-:: Parametre optionnel : 1 = ne pas ecraser IS_LAPTOP (profil utilisateur deja choisi)
-set "DETECT_KEEP_LAPTOP=%~1"
-if not defined DETECT_KEEP_LAPTOP set "DETECT_KEEP_LAPTOP=0"
-if "!DETECT_KEEP_LAPTOP!"=="0" set "IS_LAPTOP=0"
+:: Parametre optionnel : 1 = conserver IS_LAPTOP deja choisi par l'utilisateur
 set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "HAS_NVIDIA=0"
+if not "%~1"=="1" set "IS_LAPTOP=0"
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $g=$gn -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
@@ -145,30 +145,12 @@ if exist "%TEMP%\hw_info.tmp" (
         if /i "%%a"=="CPU" set "HW_CPU=%%b"
         if /i "%%a"=="GPU" set "HW_GPU=%%b"
         if /i "%%a"=="RAM" set "HW_RAM=%%b"
-        if /i "%%a"=="LAPTOP" if "!DETECT_KEEP_LAPTOP!"=="0" set "IS_LAPTOP=%%b"
+        if /i "%%a"=="LAPTOP" if not "%~1"=="1" set "IS_LAPTOP=%%b"
     )
     del "%TEMP%\hw_info.tmp" >nul 2>&1
 )
 echo %HW_GPU% | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
-set "DETECT_KEEP_LAPTOP="
-exit /b
-
-:APPLY_NIC_OPTIMISATIONS
-:: Profil NIC unique selon !IS_LAPTOP! (0=latence desktop, 1=equilibre portable)
-set "NIC_LAPTOP_FLAG=!IS_LAPTOP!"
-if "!NIC_LAPTOP_FLAG!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC pour latence minimale ^(RSS ON, LSO/RSC OFF, Flow Control OFF, IM ON^)...%COLOR_RESET%
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC equilibree pour Laptop ^(RSS/RSC/LSO ON, Flow Control OFF, IM ON, Rate Medium^)...%COLOR_RESET%
-)
-powershell -NoProfile -Command "$e=[char]0x00E9;$o=[char]0x00F4;$des=\"D${e}sactiv${e}\";$act=\"Activ${e}\";$act4=\"Activ${e} (IPv4)\";$lap=('!NIC_LAPTOP_FLAG!' -eq '1'); function Set-NicProp { param($a,$p,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; if($lap){try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}else{try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Flow Control|Controle de flux|Contr'+$o+'le de flux')})){ Set-NicProp $adapter $prop @('Disabled','Desactive',$des) }; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Interrupt Moderation|Moderation d.interruption|Mod'+$e+'ration d.interruption')})){ Set-NicProp $adapter $prop @('Enabled','Active',$act) }; $rateVals=if($lap){@('Medium','Moyen','Adaptive')}else{@('Minimal','Medium','Moyen')}; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Moderation Rate|Taux de moderation|Taux de mod'+$e+'ration')})){ Set-NicProp $adapter $prop $rateVals }; $offVals=if($lap){@('Enabled','Active','Active (IPv4)',$act,$act4)}else{@('Disabled','Desactive',$des)}; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Large Send|Grand envoi'})){ Set-NicProp $adapter $prop $offVals }; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Recv Segment|RSC'})){ Set-NicProp $adapter $prop $offVals } }" >nul 2>&1
-if "!NIC_LAPTOP_FLAG!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC Proprietes et Offloads optimises ^(Desktop^)%COLOR_RESET%
-) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC Proprietes et Offloads adaptes ^(Laptop - CPU soulage^)%COLOR_RESET%
-)
-set "NIC_LAPTOP_FLAG="
 exit /b
 
 :: ===========================================================================
@@ -334,12 +316,10 @@ if !errorlevel! EQU 1  goto :TOGGLE_DEFENDER
 goto :MENU_GESTION_WINDOWS
 
 :TOUT_OPTIMISER_DESKTOP
-set "CURRENT_OPT_MODE=DESKTOP"
 set "IS_LAPTOP=0"
 goto :TOUT_OPTIMISER_COMMON
 
 :TOUT_OPTIMISER_LAPTOP
-set "CURRENT_OPT_MODE=LAPTOP"
 set "IS_LAPTOP=1"
 goto :TOUT_OPTIMISER_COMMON
 
@@ -448,29 +428,22 @@ call :OPTIMISATIONS_DISQUES
 call :OPTIMISATIONS_GPU
 call :OPTIMISATIONS_RESEAU
 call :OPTIMISATIONS_PERIPHERIQUES
-if "%CURRENT_OPT_MODE%"=="DESKTOP" call :DESACTIVER_ECONOMIES_ENERGIE
+if "!IS_LAPTOP!"=="0" call :DESACTIVER_ECONOMIES_ENERGIE
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION
 if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
 if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
-set "RESUME_MODE=%CURRENT_OPT_MODE%"
 call :DETECT_HARDWARE 1
-if "%RESUME_MODE%"=="DESKTOP" set "IS_LAPTOP=0"
-if "%RESUME_MODE%"=="LAPTOP" set "IS_LAPTOP=1"
-set "CURRENT_OPT_MODE="
-call :AFFICHER_RESUME_OPTIMISATION %RESUME_MODE%
-set "RESUME_MODE="
+call :AFFICHER_RESUME_OPTIMISATION
 goto :MENU_PRINCIPAL
 
 :AFFICHER_RESUME_OPTIMISATION
-:: Parametres: %~1 = mode ("DESKTOP" ou "LAPTOP")
-set "RESUME_MODE=%~1"
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-if "%RESUME_MODE%"=="DESKTOP" (
+if "!IS_LAPTOP!"=="0" (
     echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION DESKTOP TERMINEE AVEC SUCCES%COLOR_RESET%
 ) else (
     echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION LAPTOP TERMINEE AVEC SUCCES%COLOR_RESET%
@@ -478,7 +451,7 @@ if "%RESUME_MODE%"=="DESKTOP" (
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Toutes les optimisations ont ete appliquees.%COLOR_RESET%
-if "%RESUME_MODE%"=="DESKTOP" (
+if "!IS_LAPTOP!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan de performances "Ultimate Performance" active.%COLOR_RESET%
 ) else (
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les economies d'energie ont ete preservees pour la batterie.%COLOR_RESET%
@@ -505,12 +478,8 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommand
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer votre PC maintenant ? [O/N]: %COLOR_RESET%"
-if !errorlevel! EQU 2 (
-    set "RESUME_MODE="
-    exit /b
-)
+if !errorlevel! EQU 2 exit /b
 if !errorlevel! EQU 1 shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
-set "RESUME_MODE="
 exit /b
 
 :OPTIMISATIONS_SYSTEME
@@ -523,6 +492,12 @@ echo %COLOR_WHITE%  Optimise le noyau Windows, desactive la telemetrie et config
 echo %COLOR_WHITE%  l'interface pour de meilleures performances generales.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%%COLOR_WHITE% ^(latence minimale^)%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%%COLOR_WHITE% ^(equilibre perf/batterie^)%COLOR_RESET%
+)
+echo.
 
 :: 1.1 - Priorites CPU et planification
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration des priorites CPU...%COLOR_RESET%
@@ -542,9 +517,8 @@ if "!IS_LAPTOP!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Compression memoire conservee sur profil portable ^(economie RAM/CPU^)%COLOR_RESET%
 )
 
-:: 1.3 - Profil Gaming MMCSS
+:: 1.3 - Profil Gaming MMCSS (taches jeux - reseau MMCSS en section 5)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil gaming (MMCSS)...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 2 /f >nul 2>&1
@@ -857,8 +831,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation pare-feu telemetrie.
 netsh advfirewall firewall add rule name="Block MS Telemetry Out" dir=out action=block remoteip=20.42.65.0/24,51.104.0.0/16,52.108.0.0/16,104.43.0.0/16,13.107.0.0/16 protocol=any >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pare-feu telemetrie actif (Update + Store preserves)%COLOR_RESET%
 
-:: Batterie - Energy Saver
-powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
+:: Batterie - Energy Saver (Desktop uniquement - seuil 100%% desactive l'economiseur sur batterie)
+if "!IS_LAPTOP!"=="0" (
+    powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Economiseur batterie conserve ^(profil portable^)%COLOR_RESET%
+)
 
 :: 1.11 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation navigateurs...%COLOR_RESET%
@@ -930,6 +908,12 @@ echo %COLOR_WHITE%  Cette section optimise la gestion de la RAM et du fichier d'
 echo %COLOR_WHITE%  pour ameliorer les performances en jeu et reduire la latence.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+)
+echo.
 
 :: 2.1 - Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memoire...%COLOR_RESET%
@@ -976,6 +960,12 @@ echo %COLOR_WHITE%  Cette section optimise les SSD/HDD pour des temps de chargem
 echo %COLOR_WHITE%  reduits et une meilleure reactivite du systeme.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+)
+echo.
 
 :: 3.1 - Configuration NTFS et TRIM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration des parametres NTFS et activation du TRIM...%COLOR_RESET%
@@ -1057,6 +1047,12 @@ echo %COLOR_WHITE%  Cette section optimise votre carte graphique pour reduire l'
 echo %COLOR_WHITE%  et maximiser les performances en jeu.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+)
+echo.
 
 :: 4.1 - GameDVR desactive - Game Mode ON
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'enregistrement automatique de gameplay...%COLOR_RESET%
@@ -1106,14 +1102,20 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Telemetrie AMD desactivee%COLOR
 
 :: 4.5 - NVIDIA Low Latency
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des optimisations Low Latency NVIDIA...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
+if "!IS_LAPTOP!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
+) else (
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /f >nul 2>&1
+)
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
-  reg add "%%K" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%K" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
   if "!IS_LAPTOP!"=="0" (
+    reg add "%%K" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "%%K" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "%%K" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "%%K" /v F1TransitionLatency /t REG_DWORD /d 1 /f >nul 2>&1
   ) else (
+    reg delete "%%K" /v LOWLATENCY /f >nul 2>&1
+    reg delete "%%K" /v Node3DLowLatency /f >nul 2>&1
     reg delete "%%K" /v D3PCLatency /f >nul 2>&1
     reg delete "%%K" /v F1TransitionLatency /f >nul 2>&1
   )
@@ -1121,7 +1123,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 if "!IS_LAPTOP!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Low Latency active - Reduction de l'input lag ^(Desktop^)%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Low Latency active - Veille GPU preservee ^(Laptop^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MaxFrameLatency et forcage low-latency desactives - Veille GPU preservee ^(Laptop^)%COLOR_RESET%
 )
 
 :: 4.6 - HAGS Enable
@@ -1205,60 +1207,119 @@ echo %COLOR_WHITE%  Cette section optimise la pile TCP/IP pour reduire le ping%C
 echo %COLOR_WHITE%  et ameliorer la stabilite de la connexion en jeu.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration de la pile TCP/IP pour faible latence...%COLOR_RESET%
-:: 5.1 - Optimisation du throttling reseau par MMCSS
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%%COLOR_WHITE% ^(BBR2, latence minimale^)%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%%COLOR_WHITE% ^(BBR2, offloads actifs, Wi-Fi preserve^)%COLOR_RESET%
+)
+echo.
 
-:: 5.2 - Pile TCP/UDP moderne CUBIC et BBR2
-netsh int tcp set heuristics disabled >nul 2>&1
+:: 5.1 - MMCSS reseau (throttling + responsivite CPU)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration MMCSS reseau...%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
+) else (
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
+)
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MMCSS reseau configure%COLOR_RESET%
+
+:: 5.2 - Pile TCP/IP Win11 (BBR2 + fix loopback + tunnels IPv6)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Pile TCP/IP Win11 ^(BBR2, fix loopback localhost^)...%COLOR_RESET%
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
-netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
-:: Correctif Loopback BBR2 (Windows 11 24H2)
+netsh int tcp set heuristics forcews=disabled >nul 2>&1
 netsh int ip set global loopbacklargemtu=disabled >nul 2>&1
+netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
+if "!IS_LAPTOP!"=="0" (
+    netsh int tcp set global rss=enabled rsc=disabled ecncapability=disabled timestamps=disabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=2 pacingprofile=off >nul 2>&1
+    netsh int tcp set supplemental template=internet congestionprovider=bbr2 minrto=300 delayedacktimeout=10 delayedackfrequency=1 >nul 2>&1
+    netsh int tcp set security mpp=disabled profiles=disabled >nul 2>&1
+) else (
+    netsh int tcp set global rss=enabled rsc=enabled ecncapability=enabled >nul 2>&1
+    netsh int tcp set supplemental template=internet congestionprovider=bbr2 minrto=300 >nul 2>&1
+)
+for %%T in (internetcustom datacenter datacentercustom compat) do (
+    netsh int tcp set supplemental template=%%T congestionprovider=bbr2 >nul 2>&1
+)
+netsh int isatap set state disabled >nul 2>&1
+netsh int teredo set state disabled >nul 2>&1
+netsh interface ipv6 6to4 set state disabled >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pile TCP BBR2 active sur les 5 templates + fix loopback%COLOR_RESET%
 
-:: 5.3 - Optimisations Network Adapter (MTU/Offload/MSI)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation des cartes reseau (Offload/MTU/MSI)...%COLOR_RESET%
-netsh int tcp set global rss=enabled rsc=disabled ecncapability=disabled >nul 2>&1
-netsh int tcp set global netdma=disabled >nul 2>&1
-:: Activation MSI Mode pour les cartes reseau
+:: 5.3 - Parametres TCP registre
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 65534 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpTimedWaitDelay /t REG_DWORD /d 32 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v Size /t REG_DWORD /d 3 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v LargeSystemCache /t REG_DWORD /d 0 /f >nul 2>&1
+) else (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 65534 /f >nul 2>&1
+)
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 128 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v NetbtPriority /t REG_DWORD /d 7 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Registre TCP configure%COLOR_RESET%
+
+:: 5.4 - MSI Mode cartes reseau
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI Mode cartes reseau...%COLOR_RESET%
 powershell -NoProfile -Command "Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
-
-:: 5.4 - BITS Optimization
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS (Telechargements)...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyForLocal" /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS et Network Adapters optimises%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MSI Mode active sur cartes reseau%COLOR_RESET%
 
 :: 5.5 - Optimisation Service BITS
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS...%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS (Telechargements)...%COLOR_RESET%
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyForLocal" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOn-Schedule" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOff-Schedule" /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise%COLOR_RESET%
 
-:: 5.6 - Priorites de resolution DNS
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Priorite de la pile de resolution DNS...%COLOR_RESET%
+:: 5.6 - Priorites DNS et connexions paralleles
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Priorite DNS et connexions paralleles...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "LocalPriority" /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "HostsPriority" /t REG_DWORD /d 5 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /t REG_DWORD /d 6 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Priorites DNS configurees%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    reg add "HKLM\SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_MAXCONNECTIONSPER1_0SERVER" /v explorer.exe /t REG_DWORD /d 4 /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_MAXCONNECTIONSPERSERVER" /v explorer.exe /t REG_DWORD /d 2 /f >nul 2>&1
+)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DNS et connexions paralleles configurees%COLOR_RESET%
 
-:: 5.7 - ISATAP/Teredo OFF
-netsh int isatap set state disabled >nul 2>&1
-netsh int teredo set state disabled >nul 2>&1
+:: 5.7 - Nagle/DelACK (Desktop uniquement)
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif...%COLOR_RESET%
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpAckFrequency" /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TCPNoDelay" /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpDelAckTicks" /t REG_DWORD /d 0 /f >nul 2>&1
+    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name DelayedAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises ^(Desktop^)%COLOR_RESET%
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves ^(Wi-Fi/batterie^)%COLOR_RESET%
+)
 
-:: 5.8 - Nagle/DelACK OFF
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpAckFrequency" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TCPNoDelay" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpDelAckTicks" /t REG_DWORD /d 0 /f >nul 2>&1
-powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name DelayedAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
+:: 5.8 - QoS Psched (Desktop uniquement)
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Psched ^(bande passante jeux^)...%COLOR_RESET%
+    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Psched configure ^(Desktop^)%COLOR_RESET%
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Psched : defaut Windows conserve ^(Laptop^)%COLOR_RESET%
+)
 
-:: 5.9 - QoS Psched
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
+:: 5.9 - Optimisation cartes reseau (RSS, RSC, LSO, Flow Control, IM)
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC desktop ^(RSS ON, LSO/RSC OFF, Flow Control OFF^)...%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC laptop ^(RSS/RSC/LSO ON, Flow Control OFF^)...%COLOR_RESET%
+)
+powershell -NoProfile -Command "$e=[char]0x00E9;$o=[char]0x00F4;$des=\"D${e}sactiv${e}\";$act=\"Activ${e}\";$act4=\"Activ${e} (IPv4)\";$lap=('!IS_LAPTOP!' -eq '1'); function Set-NicProp { param($a,$p,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; if($lap){try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}else{try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Flow Control|Controle de flux|Contr'+$o+'le de flux')})){ Set-NicProp $adapter $prop @('Disabled','Desactive',$des) }; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Interrupt Moderation|Moderation d.interruption|Mod'+$e+'ration d.interruption')})){ Set-NicProp $adapter $prop @('Enabled','Active',$act) }; $rateVals=if($lap){@('Medium','Moyen','Adaptive')}else{@('Minimal','Medium','Moyen')}; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Moderation Rate|Taux de moderation|Taux de mod'+$e+'ration')})){ Set-NicProp $adapter $prop $rateVals }; $offVals=if($lap){@('Enabled','Active','Active (IPv4)',$act,$act4)}else{@('Disabled','Desactive',$des)}; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Large Send|Grand envoi'})){ Set-NicProp $adapter $prop $offVals }; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Recv Segment|RSC'})){ Set-NicProp $adapter $prop $offVals } }" >nul 2>&1
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(Desktop^)%COLOR_RESET%
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC equilibree ^(Laptop^)%COLOR_RESET%
+)
 
-:: 5.10 - Optimisation Globale NIC (RSS, RSC, LSO, Flow Control, Interrupt Moderation)
-call :APPLY_NIC_OPTIMISATIONS
-
-:: 5.11 - QoS Fortnite DSCP 46
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration de la QoS Fortnite (DSCP 46)...%COLOR_RESET%
+:: 5.10 - QoS Fortnite DSCP 46
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Version" /t REG_SZ /d "1.0" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Application Name" /t REG_SZ /d "FortniteClient-Win64-Shipping.exe" /f >nul 2>&1
@@ -1278,12 +1339,12 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "Remote I
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "DSCP Value" /t REG_SZ /d "46" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite activee%COLOR_RESET%
 
-:: 5.12 - Nettoyage des protocoles reseau (Bindings)
+:: 5.11 - Nettoyage des protocoles reseau (Bindings)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protocoles reseau inutiles (Bindings)...%COLOR_RESET%
 powershell -NoProfile -Command "$bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); $nics = Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.Virtual -eq $false }; foreach ($nic in $nics) { foreach ($id in $bindingIds) { Disable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Bindings reseau nettoyes (LLDP, LLTDIO, etc.)%COLOR_RESET%
 
-:: 5.13 - Desactivation NetBIOS over TCP/IP (WINS)
+:: 5.12 - Desactivation NetBIOS over TCP/IP (WINS)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de NetBIOS over TCP/IP...%COLOR_RESET%
 for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" /s ^| findstr /i /r "\\Tcpip_.*$" 2^>nul') do (
   reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
@@ -1318,25 +1379,31 @@ echo %COLOR_WHITE%  Cette section desactive l'acceleration souris et optimise%CO
 echo %COLOR_WHITE%  la reactivite des peripheriques d'entree.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+)
+echo.
 
 :: 6.1 - Souris optimisee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la reactivite souris...%COLOR_RESET%
-if "!IS_LAPTOP!"=="1" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration souris adaptee au trackpad ^(acceleration legere conservee^)...%COLOR_RESET%
-    reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "4" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "12" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "SnapToDefaultButton" /t REG_SZ /d "0" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration souris legere conservee - Suivi trackpad optimise%COLOR_RESET%
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'acceleration souris et des delais...%COLOR_RESET%
+if "!IS_LAPTOP!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation acceleration souris ^(mouvement 1:1^)...%COLOR_RESET%
     reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "0" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "0" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "0" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "SnapToDefaultButton" /t REG_SZ /d "0" /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration souris desactivee - Mouvement 1:1 actif%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration souris trackpad ^(acceleration legere conservee^)...%COLOR_RESET%
+    reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "4" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "12" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "SnapToDefaultButton" /t REG_SZ /d "0" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration legere conservee - Trackpad optimise%COLOR_RESET%
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
@@ -1452,7 +1519,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GPU Power Management optimise%C
 
 :: 7.2 - NIC Energy Saving Ethernet et WiFi
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...%COLOR_RESET%
-powershell -NoProfile -Command "Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.Name; reg add \"$p\" /v \"PnPCapabilities\" /t REG_DWORD /d 8 /f >$null; reg add \"$p\" /v \"AdvancedEEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*EEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EEELinkAdvertisement\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"SipsEnabled\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"ULPMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"GigaLite\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EnableGreenEthernet\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"PowerSavingMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"S5WakeOnLan\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnMagicPacket\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnPattern\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"WakeOnLink\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*ModernStandbyWoLMagicPacket\" /t REG_SZ /d \"0\" /f >$null }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Disabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Desactive' -ErrorAction Stop } catch {} } } }" >nul 2>&1
+powershell -NoProfile -Command "$e=[char]0x00E9;$des=\"D${e}sactiv${e}\"; function Set-NicVal { param($a,$n,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $n -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.Name; reg add \"$p\" /v \"PnPCapabilities\" /t REG_DWORD /d 8 /f >$null; reg add \"$p\" /v \"AdvancedEEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*EEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EEELinkAdvertisement\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"SipsEnabled\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"ULPMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"GigaLite\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EnableGreenEthernet\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"PowerSavingMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"S5WakeOnLan\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnMagicPacket\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnPattern\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"WakeOnLink\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*ModernStandbyWoLMagicPacket\" /t REG_SZ /d \"0\" /f >$null }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { Set-NicVal $adapter $propName @('Disabled','Desactive',$des) } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC desactivees (Registre + Pilotes)%COLOR_RESET%
 
 :: 7.3 - Parametres avances du plan d'alimentation (user standard)
@@ -1797,7 +1864,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 
 :: 7.10 - Economies d'energie reseau (NIC)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des economies d'energie reseau (NIC) et bindings...%COLOR_RESET%
-powershell -NoProfile -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName $propName -DisplayValue 'Enabled' -ErrorAction Stop } catch {} } }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation' -DisplayValue 'Enabled' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Moderation interruption' -DisplayValue 'Active' -ErrorAction SilentlyContinue } catch {} }; try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Interrupt Moderation Rate' -DisplayValue 'Moderate' -ErrorAction SilentlyContinue } catch { try { Set-NetAdapterAdvancedProperty -Name $adapter -DisplayName 'Taux de moderation des interruptions' -DisplayValue 'Modere' -ErrorAction SilentlyContinue } catch {} } }; $keysToRemove = @('PnPCapabilities','AdvancedEEE','*EEE','EEELinkAdvertisement','SipsEnabled','ULPMode','GigaLite','EnableGreenEthernet','PowerSavingMode','S5WakeOnLan','*WakeOnMagicPacket','*WakeOnPattern','WakeOnLink','*ModernStandbyWoLMagicPacket','*SelectiveSuspend','*PMARPOffload','*PMNSOffload','EnablePME','ReduceSpeedOnPowerDown','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','*FlowControl','*InterruptModeration','*InterruptModerationRate','ITR','EnableLLI','EnableDownShift'); Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { foreach($k in $keysToRemove){ Remove-ItemProperty -Path $_.PSPath -Name $k -ErrorAction SilentlyContinue } }; $bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object { $nic = $_; foreach ($id in $bindingIds) { Enable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
+powershell -NoProfile -Command "$e=[char]0x00E9;$act=\"Activ${e}\";$mod=\"Mod${e}r${e}\"; function Set-NicVal { param($a,$n,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $n -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { Set-NicVal $adapter $propName @('Enabled','Active',$act) }; $props=Get-NetAdapterAdvancedProperty -Name $adapter; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Interrupt Moderation|Moderation d.interruption|Mod'+$e+'ration d.interruption')})){ Set-NicVal $adapter $prop.DisplayName @('Enabled','Active',$act) }; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Moderation Rate|Taux de moderation|Taux de mod'+$e+'ration')})){ Set-NicVal $adapter $prop.DisplayName @('Moderate','Modere',$mod) } }; $keysToRemove = @('PnPCapabilities','AdvancedEEE','*EEE','EEELinkAdvertisement','SipsEnabled','ULPMode','GigaLite','EnableGreenEthernet','PowerSavingMode','S5WakeOnLan','*WakeOnMagicPacket','*WakeOnPattern','WakeOnLink','*ModernStandbyWoLMagicPacket','*SelectiveSuspend','*PMARPOffload','*PMNSOffload','EnablePME','ReduceSpeedOnPowerDown','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','*FlowControl','*InterruptModeration','*InterruptModerationRate','ITR','EnableLLI','EnableDownShift'); Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { foreach($k in $keysToRemove){ Remove-ItemProperty -Path $_.PSPath -Name $k -ErrorAction SilentlyContinue } }; $bindingIds = @('ms_lldp', 'ms_lltdio', 'ms_implat', 'ms_rspndr'); Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object { $nic = $_; foreach ($id in $bindingIds) { Enable-NetAdapterBinding -Name $nic.Name -ComponentID $id -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC et bindings restaures%COLOR_RESET%
 
 :: 7.11 - Parametres processeur par defaut
@@ -2713,11 +2780,11 @@ if "%SKIP_PAUSE%"=="1" (
   exit /b
 )
 choice /C ON /N /M "%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-if %errorlevel% EQU 2 (
+if errorlevel 2 (
   endlocal
   exit /b
 )
-if %errorlevel% EQU 1 shutdown /r /t 5 /c "Redemarrage apres modification"
+shutdown /r /t 5 /c "Redemarrage apres modification"
 endlocal
 exit /b
 

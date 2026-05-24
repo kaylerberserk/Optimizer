@@ -57,7 +57,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
 - **[3] Disques** : Optimisation des accès I/O (TRIM intelligent SSD tous les 30 jours, boost NVMe).
 - **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
-- **[5] Réseau** : Optimisation de la pile TCP/IP pour réduire le ping et stabiliser la connexion.
+- **[5] Réseau** : Pile TCP/IP complète intégrée au script (BBR2, fix loopback, MMCSS, NIC, DNS, QoS Fortnite) — profils Desktop/Laptop via `[D]`/`[L]`.
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
