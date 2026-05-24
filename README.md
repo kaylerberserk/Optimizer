@@ -37,7 +37,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 1. **Téléchargement** : Accédez au fichier [**All in One.cmd**](https://github.com/kaylerberserk/WindowsOptimizer/blob/main/All%20in%20One.cmd) et cliquez sur le bouton **Download**.
 2. **Exécution** : Clic droit sur le fichier → **Exécuter en tant qu'administrateur**.
 3. **Sécurité** : Appuyez sur **[R]** pour créer un point de restauration avant toute modification.
-4. **Optimisation** : Choisissez votre profil (**[D]** pour Bureau, **[L]** pour Portable).
+4. **Optimisation** : Choisissez votre profil (**[D]** pour la Latence/Compétition, **[L]** pour l'Équilibre/Efficience).
 5. **Redémarrage** : Un redémarrage est nécessaire pour appliquer l'ensemble des changements.
 
 ---
@@ -48,8 +48,8 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 | Touche | Profil | Objectif |
 |:---:|:---:|---|
-| **[D]** | **Optimize All (Desktop)** | Performance brute, latence minimale et plan "Ultimate Performance". |
-| **[L]** | **Optimize All (Laptop)** | Équilibre optimisé entre puissance et autonomie (économie d'énergie préservée). |
+| **[D]** | **Optimize All (Latence)** | Latence minimale, désactive toute économie d'énergie. **Pour Compétition / Power User (Déconseillé sur portable)**. |
+| **[L]** | **Optimize All (Équilibré)** | Débit max, économies d'énergie préservées. Également optimisé pour le jeu (input lag infime). **Recommandé pour tous**. |
 
 ### ⚙️ Optimisations Granulaires
 
@@ -57,7 +57,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
 - **[3] Disques** : Optimisation des accès I/O (TRIM intelligent SSD tous les 30 jours, boost NVMe).
 - **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
-- **[5] Réseau** : Pile TCP/IP complète intégrée au script (BBR2, fix loopback, MMCSS, NIC, DNS, QoS Fortnite) — profils Desktop/Laptop via `[D]`/`[L]`.
+- **[5] Réseau** : Pile TCP/IP complète intégrée au script (BBR2, fix loopback, MMCSS, NIC, DNS, QoS Fortnite) — profils Latence/Équilibré via `[D]`/`[L]`.
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.

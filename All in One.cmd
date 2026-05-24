@@ -28,9 +28,10 @@ set "COLOR_MAGENTA=%ESC%[35m" & set "COLOR_RESET=%ESC%[0m" & set "STYLE_BOLD=%ES
 :: INITIALISATION DES VARIABLES GLOBALES
 :: ===========================================================================
 set "HAS_INTERNET=0"
-:: IS_LAPTOP : 0 = profil Desktop (defaut gaming) | 1 = profil Laptop (equilibre batterie)
+:: IS_LAPTOP : 0 = profil Latence brute (reactivite max) | 1 = profil Equilibre (debit max, batterie)
 :: Detecte au demarrage ; force par [D]/[L] dans Tout optimiser
 set "IS_LAPTOP=0"
+set "DETECTED_LAPTOP=0"
 set "HAS_NVIDIA=0"
 set "DESACTIVER_SECURITE=0"
 set "DESACTIVER_DEFENDER=0"
@@ -137,7 +138,10 @@ exit /b
 :DETECT_HARDWARE
 :: Parametre optionnel : 1 = conserver IS_LAPTOP deja choisi par l'utilisateur
 set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "HAS_NVIDIA=0"
-if not "%~1"=="1" set "IS_LAPTOP=0"
+if not "%~1"=="1" (
+    set "IS_LAPTOP=0"
+    set "DETECTED_LAPTOP=0"
+)
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $g=$gn -join ' / '; $res+='GPU:'+$g}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}else{if($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines(\"$env:TEMP\hw_info.tmp\", $res)" >nul 2>&1
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
@@ -145,7 +149,10 @@ if exist "%TEMP%\hw_info.tmp" (
         if /i "%%a"=="CPU" set "HW_CPU=%%b"
         if /i "%%a"=="GPU" set "HW_GPU=%%b"
         if /i "%%a"=="RAM" set "HW_RAM=%%b"
-        if /i "%%a"=="LAPTOP" if not "%~1"=="1" set "IS_LAPTOP=%%b"
+        if /i "%%a"=="LAPTOP" if not "%~1"=="1" (
+            set "IS_LAPTOP=%%b"
+            set "DETECTED_LAPTOP=%%b"
+        )
     )
     del "%TEMP%\hw_info.tmp" >nul 2>&1
 )
@@ -231,8 +238,8 @@ echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite ^(Desa
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Optimiser tout (PC de Bureau)%COLOR_RESET%
-echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Optimiser tout (PC Portable)%COLOR_RESET%
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil Latence %COLOR_RED%^(Competition / Power User - DECONSEILLE PORTABLE^)%COLOR_RESET%
+echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil Equilibre %COLOR_GREEN%^(Jeux, Web, Downloads - RECOMMANDE POUR TOUS^)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -316,6 +323,29 @@ if !errorlevel! EQU 1  goto :TOGGLE_DEFENDER
 goto :MENU_GESTION_WINDOWS
 
 :TOUT_OPTIMISER_DESKTOP
+if "!DETECTED_LAPTOP!"=="1" (
+    cls
+    echo %COLOR_RED%=================================================================================%COLOR_RESET%
+    echo %STYLE_BOLD%%COLOR_RED%                    AVERTISSEMENT : PC PORTABLE DETECTE%COLOR_RESET%
+    echo %COLOR_RED%=================================================================================%COLOR_RESET%
+    echo.
+    echo %COLOR_WHITE% Vous avez selectionne le %COLOR_YELLOW%Profil Latence brute (Desktop)%COLOR_WHITE% sur un %COLOR_CYAN%PC Portable%COLOR_WHITE%.%COLOR_RESET%
+    echo.
+    echo %COLOR_RED% [ERREUR] CE PROFIL EST ULTRA DECONSEILLE SUR UN PC PORTABLE :%COLOR_RESET%
+    echo  - Risque eleve de %COLOR_YELLOW%surchauffe%COLOR_RESET% et de %COLOR_YELLOW%baisse d'autonomie dramatique%COLOR_RESET%.
+    echo  - Desactive toutes les economies d'energie (CPU, PCIe, EEE, USB selective suspend).
+    echo  - Les ventilateurs tourneront beaucoup plus vite et la batterie s'usera rapidement.
+    echo.
+    echo %COLOR_GREEN% Le profil Equilibre [L] est lui aussi parfaitement optimise pour le jeu%COLOR_RESET%
+    echo %COLOR_GREEN% (il conserve plus de 95%% des optimisations). La seule difference%COLOR_RESET%
+    echo %COLOR_GREEN% reelle est un infime input lag reseau/periph en echange d'un debit maximal.%COLOR_RESET%
+    echo.
+    echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+    choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous forcer le profil Latence brute malgre tout ? [O/N]: %COLOR_RESET%"
+    if !errorlevel! EQU 2 (
+        goto :TOUT_OPTIMISER_LAPTOP
+    )
+)
 set "IS_LAPTOP=0"
 goto :TOUT_OPTIMISER_COMMON
 
@@ -444,17 +474,17 @@ cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION DESKTOP TERMINEE AVEC SUCCES%COLOR_RESET%
+    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION PROFIL LATENCE TERMINEE%COLOR_RESET%
 ) else (
-    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION LAPTOP TERMINEE AVEC SUCCES%COLOR_RESET%
+    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION PROFIL EQUILIBRE TERMINEE%COLOR_RESET%
 )
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Toutes les optimisations ont ete appliquees.%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan de performances "Ultimate Performance" active.%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan "Ultimate Performance" active (economies d'energie coupees).%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les economies d'energie ont ete preservees pour la batterie.%COLOR_RESET%
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Efficience et economies d'energie preservees (debit max, batterie/chauffe ok).%COLOR_RESET%
 )
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, GPU et disques terminees.%COLOR_RESET%
 echo.
@@ -479,8 +509,14 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer votre PC maintenant ? [O/N]: %COLOR_RESET%"
 if !errorlevel! EQU 2 exit /b
-if !errorlevel! EQU 1 shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
-exit /b
+if !errorlevel! EQU 1 (
+    shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
+    cls
+    echo.
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
+    timeout /t 5 /nobreak >nul
+    exit
+)
 
 :OPTIMISATIONS_SYSTEME
 cls
@@ -493,9 +529,9 @@ echo %COLOR_WHITE%  l'interface pour de meilleures performances generales.%COLOR
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%%COLOR_WHITE% ^(latence minimale^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE BRUTE%COLOR_RESET%%COLOR_WHITE% ^(reactivite maximale, sans economie d'energie^)%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%%COLOR_WHITE% ^(equilibre perf/batterie^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% ^(jeux, debit reseau max, efficience active^)%COLOR_RESET%
 )
 echo.
 
@@ -1208,9 +1244,9 @@ echo %COLOR_WHITE%  et ameliorer la stabilite de la connexion en jeu.%COLOR_RESE
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%%COLOR_WHITE% ^(BBR2, latence minimale^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% ^(BBR2, NIC optimisee pour reponse instantanee^)%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%%COLOR_WHITE% ^(BBR2, offloads actifs, Wi-Fi preserve^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% ^(BBR2, offloads actifs pour debit/telechargement max^)%COLOR_RESET%
 )
 echo.
 
@@ -1380,9 +1416,9 @@ echo %COLOR_WHITE%  la reactivite des peripheriques d'entree.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%DESKTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% ^(souris 1:1 sans acceleration^)%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LAPTOP%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% ^(trackpad et souris optimises^)%COLOR_RESET%
 )
 echo.
 
@@ -2785,8 +2821,11 @@ if errorlevel 2 (
   exit /b
 )
 shutdown /r /t 5 /c "Redemarrage apres modification"
-endlocal
-exit /b
+cls
+echo.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
+timeout /t 5 /nobreak >nul
+exit
 
 :DESINSTALLER_ONEDRIVE
 cls
@@ -3320,7 +3359,11 @@ set "SPACE_BEFORE_GB="
 set "SPACE_AFTER_GB="
 set "SPACE_FREED_GB="
 shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
-goto :MENU_PRINCIPAL
+cls
+echo.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
+timeout /t 10 /nobreak >nul
+exit
 
 
 :INSTALLER_VISUAL_REDIST
