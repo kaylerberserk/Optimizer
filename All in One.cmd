@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 cls
 :: IMPORTANT : textes SANS ACCENTS (ASCII) pour affichage fiable en console cmd.exe
 :: Ne pas utiliser chcp 65001 (UTF-8 casse l'affichage des .cmd sous Windows)
@@ -528,7 +528,7 @@ echo %COLOR_WHITE%  l'interface pour de meilleures performances generales.%COLOR
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE BRUTE%COLOR_RESET%%COLOR_WHITE% - reactivite maximale, sans economie d'energie%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - reactivite maximale, sans economie d'energie%COLOR_RESET%
 ) else (
     echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - jeux, debit reseau max, efficience active%COLOR_RESET%
 )
@@ -544,13 +544,9 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32Priorit
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Planification CPU configuree%COLOR_RESET%
 
 :: 1.2 - Gestion de la memoire (MMAgent)
-if "!IS_LAPTOP!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memoire ^(Compression OFF^)...%COLOR_RESET%
-    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression de memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
-) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Compression memoire conservee sur profil portable ^(economie RAM/CPU^)%COLOR_RESET%
-)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memoire ^(Compression OFF^)...%COLOR_RESET%
+powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression de memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
 
 :: 1.3 - Profil Gaming MMCSS (taches jeux - reseau MMCSS en section 5)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil gaming (MMCSS)...%COLOR_RESET%

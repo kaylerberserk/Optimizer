@@ -6,6 +6,7 @@
 *Maximisez vos performances, réduisez votre latence et reprenez le contrôle sur votre système.*
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
+[![Version](https://img.shields.io/badge/Version-2026.04-orange?style=for-the-badge)](https://github.com/kaylerberserk/WindowsOptimizer)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **Conçu pour le Gaming Compétitif, le Multitâche intensif et la Confidentialité.**  
@@ -37,7 +38,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 1. **Téléchargement** : Accédez au fichier [**All in One.cmd**](https://github.com/kaylerberserk/WindowsOptimizer/blob/main/All%20in%20One.cmd) et cliquez sur le bouton **Download**.
 2. **Exécution** : Clic droit sur le fichier → **Exécuter en tant qu'administrateur**.
 3. **Sécurité** : Appuyez sur **[R]** pour créer un point de restauration avant toute modification.
-4. **Optimisation** : Choisissez votre profil (**[D]** pour la Latence/Compétition, **[L]** pour l'Équilibre/Efficience).
+4. **Optimisation** : Choisissez votre profil (**[D]** pour Bureau, **[L]** pour Portable).
 5. **Redémarrage** : Un redémarrage est nécessaire pour appliquer l'ensemble des changements.
 
 ---
@@ -48,20 +49,20 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 | Touche | Profil | Objectif |
 |:---:|:---:|---|
-| **[D]** | **Optimize All (Latence)** | Latence minimale, désactive toute économie d'énergie. **Pour Compétition / Power User (Déconseillé sur portable)**. |
-| **[L]** | **Optimize All (Équilibré)** | Débit max, économies d'énergie préservées. Également optimisé pour le jeu (input lag infime). **Recommandé pour tous**. |
+| **[D]** | **Optimize All (Desktop)** | Performance brute, latence minimale et plan "Ultimate Performance". |
+| **[L]** | **Optimize All (Laptop)** | Équilibre optimisé entre puissance et autonomie (économie d'énergie préservée). |
 
 ### ⚙️ Optimisations Granulaires
 
 - **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie.
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
-- **[3] Disques** : Optimisation des accès I/O (TRIM intelligent SSD tous les 30 jours, boost NVMe).
-- **[4] GPU** : Configuration des priorités graphiques, du HAGS/VRR et réduction du délai d'affichage (latency).
-- **[5] Réseau** : Pile TCP/IP complète intégrée au script (BBR2, fix loopback, MMCSS, NIC, DNS, QoS Fortnite) — profils Latence/Équilibré via `[D]`/`[L]`.
-- **[6] Input** : Optimisation de la réactivité clavier/souris et désactivation de l'accélération (profil Latence = visée 1:1, profil Équilibré = trackpad préservé).
-- **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance (déconseillé sur PC Portable).
+- **[3] Disques** : Optimisation des accès I/O pour accélérer le chargement des jeux et logiciels.
+- **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
+- **[5] Réseau** : Optimisation de la pile TCP/IP pour réduire le ping et stabiliser la connexion.
+- **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
+- **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
-- **[9] Bloatwares** : (Dans le menu [G]) Suppression des applications préinstallées inutiles.
+- **[9] Bloatwares** : (Menu [G]) Suppression des applications préinstallées inutiles.
 
 ### 📂 Gestion Windows & Maintenance (Menu [G])
 
@@ -70,10 +71,10 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **VBS / HVCI** : Gestion de l'Isolation du noyau (Memory Integrity) pour les FPS ou la compatibilité Anti-Cheat.
 - **Animations** : Choix entre une interface visuelle riche ou ultra-réactive.
 - **IA & Widgets** : Suppression de Copilot, Recall et des widgets Windows 11.
-- **Applications** : Désinstallation propre de OneDrive et Microsoft Edge, avec conservation de WebView2.
+- **Applications** : Désinstallation propre de OneDrive et Microsoft Edge.
 - **Bloatwares** : Suppression en un clic des applications Windows inutiles (News, Solitaire, Skype, etc.).
 - **Runtimes** : Installation des bibliothèques essentielles (Visual C++ 2005-2022, DirectX).
-- **[N] Nettoyage Avancé** : Nettoyage en 16 étapes des fichiers temporaires, caches et logs, incluant une optimisation complète des disques (TRIM/Defrag).
+- **[N] Nettoyage Avancé** : Grand ménage en 18 étapes des fichiers temporaires, caches et logs.
 - **[W] MAS** : Lien vers l'outil d'activation communautaire pour Windows et Office.
 - **[T] WinUtil** : Accès à la boîte à outils de maintenance de Chris Titus Tech.
 
@@ -118,7 +119,7 @@ R : Absolument. Le script n'interfère jamais avec les fichiers de jeu. Pour les
 R : Absolument pas. Il cible uniquement les fichiers temporaires, caches de mises à jour et logs système qui encombrent votre disque.
 
 **Q : Puis-je réinstaller OneDrive ou Edge plus tard ?**  
-R : Oui, ils peuvent être réinstallés via le site officiel de Microsoft à tout moment. La désinstallation d'Edge dans ce script ne vise pas WebView2, qui reste préservé pour les applications Windows qui en dépendent.
+R : Oui, ils peuvent être réinstallés via le site officiel de Microsoft à tout moment.
 
 **Q : Quels "Bloatwares" sont supprimés ?**  
 R : Le script effectue un nettoyage ciblé pour supprimer les éléments publicitaires ou non-essentiels, tout en garantissant la stabilité du système.
@@ -138,7 +139,7 @@ R : Le script effectue un nettoyage ciblé pour supprimer les éléments publici
 | **Quotidien** | Météo, Sports, Finances, Alarmes, Caméra, Enregistreur vocal. |
 | **Multimédia** | Musique (Groove), Films et TV, Photos, Paint. |
 | **Productivité** | Calculatrice, Bloc-notes, Courrier & Calendrier, Sticky Notes. |
-| **Système** | Store, WebView2, Sécurité Windows, Terminal, Capture. |
+| **Système** | Store, Edge, OneDrive, Sécurité Windows, Terminal, Capture. |
 
 **Q : Combien de temps dure l'optimisation ?**  
 R : Moins de 5 minutes selon les options choisies et la vitesse de votre matériel.
