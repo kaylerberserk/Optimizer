@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 cls
 :: IMPORTANT : textes SANS ACCENTS (ASCII) pour affichage fiable en console cmd.exe
 :: Ne pas utiliser chcp 65001 (UTF-8 casse l'affichage des .cmd sous Windows)
