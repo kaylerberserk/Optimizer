@@ -265,12 +265,12 @@ if !errorlevel! EQU 10 goto :TOUT_OPTIMISER_LAPTOP
 if !errorlevel! EQU 9  goto :TOUT_OPTIMISER_DESKTOP
 if !errorlevel! EQU 8  goto :TOGGLE_PROTECTIONS_SECURITE
 if !errorlevel! EQU 7  goto :TOGGLE_ECONOMIES_ENERGIE
-if !errorlevel! EQU 6  goto :OPTIMISATIONS_PERIPHERIQUES
-if !errorlevel! EQU 5  goto :OPTIMISATIONS_RESEAU
-if !errorlevel! EQU 4  goto :OPTIMISATIONS_GPU
-if !errorlevel! EQU 3  goto :OPTIMISATIONS_DISQUES
-if !errorlevel! EQU 2  goto :OPTIMISATIONS_MEMOIRE
-if !errorlevel! EQU 1  goto :OPTIMISATIONS_SYSTEME
+if !errorlevel! EQU 6  call :OPTIMISATIONS_PERIPHERIQUES & goto :MENU_PRINCIPAL
+if !errorlevel! EQU 5  call :OPTIMISATIONS_RESEAU & goto :MENU_PRINCIPAL
+if !errorlevel! EQU 4  call :OPTIMISATIONS_GPU & goto :MENU_PRINCIPAL
+if !errorlevel! EQU 3  call :OPTIMISATIONS_DISQUES & goto :MENU_PRINCIPAL
+if !errorlevel! EQU 2  call :OPTIMISATIONS_MEMOIRE & goto :MENU_PRINCIPAL
+if !errorlevel! EQU 1  call :OPTIMISATIONS_SYSTEME & goto :MENU_PRINCIPAL
 goto :MENU_PRINCIPAL
 
 :MENU_GESTION_WINDOWS
@@ -548,7 +548,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memo
 powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression de memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
 
-:: 1.3 - Profil Gaming MMCSS (taches jeux - reseau MMCSS en section 5)
+:: 1.3 - Profil Gaming MMCSS (taches jeux)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil gaming (MMCSS)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
@@ -1064,8 +1064,8 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTED_LAPTOP!"=="1" (
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Batterie%COLOR_RESET% : NVIDIA Profile Manager reduit l'autonomie%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Veille%COLOR_RESET% : MaxFrameLatency desactive peut affecter la veille GPU%COLOR_RESET%
     echo.
-    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE (recommande laptop) - VRR ON, Low-latency OFF%COLOR_RESET%
-    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE (agressif) - VRR OFF, Low-latency ON%COLOR_RESET%
+    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande laptop^) - VRR ON, Low-latency OFF%COLOR_RESET%
+    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - VRR OFF, Low-latency ON%COLOR_RESET%
     echo.
     choice /C 12 /N /M "%COLOR_YELLOW%Choisissez le profil [1=Equilibre, 2=Latence]: %COLOR_RESET%"
     if !errorlevel! EQU 2 (
@@ -1249,8 +1249,8 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTED_LAPTOP!"=="1" (
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Batterie%COLOR_RESET% : Offloads RSC/ECN OFF augmentent la consommation%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Debit%COLOR_RESET% : Profil latence privilegie le ping au debit%COLOR_RESET%
     echo.
-    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE (recommande laptop) - RSC ON, Nagle conserve%COLOR_RESET%
-    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE (agressif) - RSC OFF, Nagle OFF%COLOR_RESET%
+    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande laptop^) - RSC ON, Nagle conserve%COLOR_RESET%
+    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - RSC OFF, Nagle OFF%COLOR_RESET%
     echo.
     choice /C 12 /N /M "%COLOR_YELLOW%Choisissez le profil [1=Equilibre, 2=Latence]: %COLOR_RESET%"
     if !errorlevel! EQU 2 (
@@ -1367,13 +1367,12 @@ if "!IS_LAPTOP!"=="0" (
 ) else (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC laptop ^(RSS/RSC/LSO ON, Flow Control OFF^)...%COLOR_RESET%
 )
-powershell -NoProfile -Command "$e=[char]0x00E9;$o=[char]0x00F4;$des=\"D${e}sactiv${e}\";$act=\"Activ${e}\";$act4=\"Activ${e} (IPv4)\";$lap=('!IS_LAPTOP!' -eq '1'); function Set-NicProp { param($a,$p,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up' -and $_.Virtual -eq $false} | ForEach-Object { $adapter=$_.Name; try{Enable-NetAdapterRss -Name $adapter -ErrorAction Stop}catch{}; if($lap){try{Enable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}else{try{Disable-NetAdapterRsc -Name $adapter -ErrorAction Stop}catch{}}; $props=Get-NetAdapterAdvancedProperty -Name $adapter; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Flow Control|Controle de flux|Contr'+$o+'le de flux')})){ Set-NicProp $adapter $prop @('Disabled','Desactive',$des) }; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Interrupt Moderation|Moderation d.interruption|Mod'+$e+'ration d.interruption')})){ Set-NicProp $adapter $prop @('Enabled','Active',$act) }; $rateVals=if($lap){@('Medium','Moyen','Adaptive')}else{@('Minimal','Medium','Moyen')}; foreach($prop in ($props|Where-Object {$_.DisplayName -match ('Moderation Rate|Taux de moderation|Taux de mod'+$e+'ration')})){ Set-NicProp $adapter $prop $rateVals }; $offVals=if($lap){@('Enabled','Active','Active (IPv4)',$act,$act4)}else{@('Disabled','Desactive',$des)}; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Large Send|Grand envoi'})){ Set-NicProp $adapter $prop $offVals }; foreach($prop in ($props|Where-Object {$_.DisplayName -match 'Recv Segment|RSC'})){ Set-NicProp $adapter $prop $offVals } }" >nul 2>&1
+powershell -NoProfile -Command "& { $e=[char]0x00E9; $des='D'+$e+'sactiv'+$e; $act='Activ'+$e; $lap=([string]$env:IS_LAPTOP -eq '1'); function Set-NicProp { param($a,$p,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-NetAdapter | Where-Object { $_.Status -eq 'Up' -and -not $_.Virtual } | ForEach-Object { $a=$_.Name; Get-NetAdapterAdvancedProperty -Name $a | ForEach-Object { $p=$_; if ($p.DisplayName -match 'Mod.*ration|Interrupt.*Mod') { $vals = if ($lap) { @('Moyenne','Medium','Enabled','On') } else { @('Minimale','Minimal','Bas','Low','Very Low') }; Set-NicProp $a $p $vals }; if ($p.DisplayName -match 'Contr.*le.*Flux|Flow.*Control') { Set-NicProp $a $p @($des,'Disabled','Off') }; if ($p.DisplayName -match 'Energy|Green|Efficace|Ethernet.*vert|.co.nerg.tique') { $vals = if ($lap) { @($act,'Enabled','On') } else { @($des,'Disabled','Off') }; Set-NicProp $a $p $vals }; if ($p.DisplayName -match 'Coalesce|Fusion.*paquet') { $vals = if ($lap) { @($act,'Enabled','On') } else { @($des,'Disabled','Off') }; Set-NicProp $a $p $vals }; if ($p.DisplayName -match 'Large.*Send|grand.*envoi') { $vals = if ($lap) { @($act,'Enabled','On') } else { @($des,'Disabled','Off') }; Set-NicProp $a $p $vals }; if ($p.DisplayName -match 'Scaling|RSS|.chelle.*r.ception' -and $p.DisplayName -notmatch 'Queue|File') { Set-NicProp $a $p @($act,'Enabled','On') }; if ($p.DisplayName -match 'Queue|File.*attente') { Set-NicProp $a $p @('4','4 files','Four') }; if ($p.DisplayName -match 'Giga.*Lite') { Set-NicProp $a $p @($des,'Disabled','Off') }; if ($p.DisplayName -match 'Arr.t.*auto|Power.*Down') { $vals = if ($lap) { @($act,'Enabled','On') } else { @($des,'Disabled','Off') }; Set-NicProp $a $p $vals }; if ($p.DisplayName -match 'ARP|NS|D.lestage.*protocole|Protocol.*Offload') { $vals = if ($lap) { @($act,'Enabled','On') } else { @($des,'Disabled','Off') }; Set-NicProp $a $p $vals }; if ($p.DisplayName -match 'R.veil|Wake.*on|Magic.*Packet|Match.*Pattern') { Set-NicProp $a $p @($des,'Disabled','Off') } } } }"
 if "!IS_LAPTOP!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(Desktop^)%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC equilibree ^(Laptop^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour efficience ^(Laptop^)%COLOR_RESET%
 )
-
 :: 5.10 - QoS Fortnite DSCP 46
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1444,8 +1443,8 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTED_LAPTOP!"=="1" (
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Trackpad%COLOR_RESET% : Acceleration OFF rend le trackpad moins naturel%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%DPI Scaling%COLOR_RESET% : Win8 Scaling OFF peut affecter l'affichage sur ecran haute densite%COLOR_RESET%
     echo.
-    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE (recommande laptop) - Acceleration legere, Scaling conserve%COLOR_RESET%
-    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE (agressif) - Acceleration OFF, Win8 Scaling ON%COLOR_RESET%
+    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande laptop^) - Acceleration legere, Scaling conserve%COLOR_RESET%
+    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - Acceleration OFF, Win8 Scaling ON%COLOR_RESET%
     echo.
     choice /C 12 /N /M "%COLOR_YELLOW%Choisissez le profil [1=Equilibre, 2=Latence]: %COLOR_RESET%"
     if !errorlevel! EQU 2 (
