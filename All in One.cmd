@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 cls
 :: IMPORTANT : textes SANS ACCENTS (ASCII) pour affichage fiable en console cmd.exe
 :: Ne pas utiliser chcp 65001 (UTF-8 casse l'affichage des .cmd sous Windows)
@@ -848,7 +848,7 @@ netsh advfirewall firewall add rule name="Block MS Telemetry Out" dir=out action
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pare-feu telemetrie actif (Update + Store preserves)%COLOR_RESET%
 
 :: Batterie - Energy Saver (seuil 100%% active l'economiseur en permanence)
-powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
+:: powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
 :: 1.10 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation navigateurs...%COLOR_RESET%
