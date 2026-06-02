@@ -156,7 +156,7 @@ if exist "%TEMP%\hw_info.tmp" (
     )
     del "%TEMP%\hw_info.tmp" >nul 2>&1
 )
-echo %HW_GPU% | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
+echo !HW_GPU! | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
 exit /b
 
@@ -311,7 +311,7 @@ choice /C 123456789M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-9
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
 if !errorlevel! EQU 10 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 9  goto :SUPPRIMER_BLOATWARES
-if !errorlevel! EQU 8  goto :INSTALLER_VISUAL_REDIST
+if !errorlevel! EQU 8  call :INSTALLER_VISUAL_REDIST & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 7  goto :DESINSTALLER_EDGE
 if !errorlevel! EQU 6  goto :DESINSTALLER_ONEDRIVE
 if !errorlevel! EQU 5  goto :MENU_IA_WIDGETS_RECALL
@@ -466,6 +466,11 @@ if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
 call :DETECT_HARDWARE 1
 call :AFFICHER_RESUME_OPTIMISATION
+set "DESACTIVER_SECURITE="
+set "DESACTIVER_DEFENDER="
+set "DESACTIVER_ANIMATIONS="
+set "DESACTIVER_IA="
+set "DESACTIVER_UAC="
 goto :MENU_PRINCIPAL
 
 :AFFICHER_RESUME_OPTIMISATION
@@ -959,7 +964,6 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :MENU_PRINCIPAL
 )
 exit /b
 
@@ -1040,7 +1044,6 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :MENU_PRINCIPAL
 )
 exit /b
 
@@ -1179,7 +1182,7 @@ if "!HAS_NVIDIA!"=="1" (
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
 
         rem Telecharger NVIDIA Profile Inspector
-        powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
             for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
                 echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Fichier NVIDIA Profile Inspector corrompu ou incomplet
@@ -1193,7 +1196,7 @@ if "!HAS_NVIDIA!"=="1" (
 
         rem Telecharger le profil optimise
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement du profil gaming optimise...%COLOR_RESET%
-        powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\Kaylers_profile.nip" (
             for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
                 echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Profil NVIDIA corrompu ou incomplet
@@ -1225,7 +1228,7 @@ if "!HAS_NVIDIA!"=="1" (
 
 :NPI_DONE
 :: Fin des optimisations specifiques NVIDIA
-
+set "NPI_DIR="
 call :FINISH_ACTION "Optimisations GPU" "terminees"
 exit /b
 
@@ -1418,7 +1421,6 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :MENU_PRINCIPAL
 )
 exit /b
 
@@ -1530,7 +1532,6 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :MENU_PRINCIPAL
 )
 exit /b
 
@@ -1555,8 +1556,8 @@ echo %COLOR_CYAN%===============================================================
 echo.
 choice /C 12M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
-if !errorlevel! EQU 2 goto :RESTAURER_ECONOMIES_ENERGIE
-if !errorlevel! EQU 1 goto :DESACTIVER_ECONOMIES_ENERGIE
+if !errorlevel! EQU 2 call :RESTAURER_ECONOMIES_ENERGIE & goto :TOGGLE_ECONOMIES_ENERGIE
+if !errorlevel! EQU 1 call :DESACTIVER_ECONOMIES_ENERGIE & goto :TOGGLE_ECONOMIES_ENERGIE
 goto :TOGGLE_ECONOMIES_ENERGIE
 
 :DESACTIVER_ECONOMIES_ENERGIE
@@ -1761,7 +1762,7 @@ set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTime
 if exist "%STR_EXE%" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %SystemRoot%%COLOR_RESET%
 ) else (
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
     if exist "%STR_EXE%" (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution installe dans %SystemRoot%%COLOR_RESET%
     ) else (
@@ -1837,9 +1838,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GPU optimise%COLOR_RESET%
 
 :: 7.23 - Desactivation economies d'energie sur TOUS les devices
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation economies d'energie sur TOUS les peripheriques (ACPI, HID, PCI, USB)...%COLOR_RESET%
-powershell -NoProfile -Command "$bases=@('HKLM:\SYSTEM\CurrentControlSet\Enum\ACPI','HKLM:\SYSTEM\CurrentControlSet\Enum\HID','HKLM:\SYSTEM\CurrentControlSet\Enum\PCI','HKLM:\SYSTEM\CurrentControlSet\Enum\USB','HKLM:\SYSTEM\CurrentControlSet\Enum\USBSTOR'); foreach($base in $bases){ if(Test-Path $base){ Get-ChildItem -Path $base -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' } | ForEach-Object { $p=$_.PSPath; Set-ItemProperty -Path $p -Name EnhancedPowerManagementEnabled -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name SelectiveSuspendEnabled -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name SelectiveSuspendOn -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name WaitWakeEnabled -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue }; Get-ChildItem -Path $base -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'WDF' } | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name IdleInWorkingState -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue } } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Power savings desactivees sur tous les devices ACPI, HID, PCI et USB%COLOR_RESET%
+:: 7.23 - Desactivation economies d'energie sur TOUS les peripheriques (Debride au point 7.8)
 
 :: 7.24 - Bridage Energie (Power Throttling) deja traite
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Power Throttling (bridage CPU) deja configure%COLOR_RESET%
@@ -1853,13 +1852,12 @@ echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %COLOR_WHITE%Economies d'energie desact
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est recommande pour appliquer les modifications.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-if "%SKIP_PAUSE%"=="0" (
-    pause
-    goto :MENU_PRINCIPAL
-)
 set "TARGET_GUID="
 set "STR_EXE="
 set "STR_STARTUP="
+if "%SKIP_PAUSE%"=="0" (
+    pause
+)
 exit /b
 
 :RESTAURER_ECONOMIES_ENERGIE
@@ -1910,6 +1908,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing reactive%COLOR
 
 :: 7.5 - SetTimerResolution du demarrage
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression de SetTimerResolution du demarrage...%COLOR_RESET%
+taskkill /f /im SetTimerResolution.exe >nul 2>&1
+if exist "%SystemRoot%\SetTimerResolution.exe" del /f /q "%SystemRoot%\SetTimerResolution.exe" >nul 2>&1
 set "STR_STARTUP=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
 if exist "%STR_STARTUP%" (
     del "%STR_STARTUP%" /f /q >nul 2>&1
@@ -2025,7 +2025,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Systeme d'alimentation restaure
 
 :: 7.20 - Peripheriques ACPI/HID/PCI/USB
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des parametres d'economie des peripheriques ACPI, HID, PCI et USB...%COLOR_RESET%
-powershell -NoProfile -Command "$bases=@('HKLM:\SYSTEM\CurrentControlSet\Enum\ACPI','HKLM:\SYSTEM\CurrentControlSet\Enum\HID','HKLM:\SYSTEM\CurrentControlSet\Enum\PCI','HKLM:\SYSTEM\CurrentControlSet\Enum\USB','HKLM:\SYSTEM\CurrentControlSet\Enum\USBSTOR'); foreach($b in $bases){ Get-ChildItem -Path $b -ErrorAction SilentlyContinue | ForEach-Object { $p = Join-Path -Path $_.PSPath -ChildPath 'Device Parameters'; if(Test-Path $p){ Remove-ItemProperty -Path $p -Name 'EnhancedPowerManagementEnabled','SelectiveSuspendEnabled','SelectiveSuspendOn','WaitWakeEnabled','DeviceSelectiveSuspended' -ErrorAction SilentlyContinue }; $w = Join-Path -Path $_.PSPath -ChildPath 'WDF'; if(Test-Path $w){ Remove-ItemProperty -Path $w -Name 'IdleInWorkingState' -ErrorAction SilentlyContinue } } }" >nul 2>&1
+powershell -NoProfile -Command "$bases=@('HKLM:\SYSTEM\CurrentControlSet\Enum\ACPI','HKLM:\SYSTEM\CurrentControlSet\Enum\HID','HKLM:\SYSTEM\CurrentControlSet\Enum\PCI','HKLM:\SYSTEM\CurrentControlSet\Enum\USB','HKLM:\SYSTEM\CurrentControlSet\Enum\USBSTOR'); foreach($b in $bases){ if(Test-Path $b){ Get-ChildItem -Path $b -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' } | ForEach-Object { $p=$_.PSPath; Remove-ItemProperty -Path $p -Name 'EnhancedPowerManagementEnabled','SelectiveSuspendEnabled','SelectiveSuspendOn','WaitWakeEnabled','DeviceSelectiveSuspended' -ErrorAction SilentlyContinue }; Get-ChildItem -Path $b -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'WDF' } | ForEach-Object { $p=$_.PSPath; Remove-ItemProperty -Path $p -Name 'IdleInWorkingState' -ErrorAction SilentlyContinue } } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres d'economie des peripheriques restaures%COLOR_RESET%
 
 :: 7.21 - Gestion d'energie PCIe
@@ -2048,9 +2048,9 @@ echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %COLOR_WHITE%Economies d'energie restau
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Un redemarrage est recommande pour appliquer les modifications.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
+set "STR_STARTUP="
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :MENU_PRINCIPAL
 )
 exit /b
 
@@ -2074,8 +2074,8 @@ echo %COLOR_CYAN%===============================================================
 echo.
 choice /C 12M /N /M "%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
-if !errorlevel! EQU 2 goto :RESTAURER_PROTECTIONS_SECURITE
-if !errorlevel! EQU 1 goto :DESACTIVER_PROTECTIONS_SECURITE
+if !errorlevel! EQU 2 call :RESTAURER_PROTECTIONS_SECURITE & goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! EQU 1 call :DESACTIVER_PROTECTIONS_SECURITE & goto :TOGGLE_PROTECTIONS_SECURITE
 goto :TOGGLE_PROTECTIONS_SECURITE
 
 :DESACTIVER_PROTECTIONS_SECURITE
@@ -2100,7 +2100,8 @@ echo %COLOR_WHITE%  - La blocklist de pilotes vulnerables aide Windows a bloquer
 echo %COLOR_WHITE%  - Ces cles de registre sont sensibles : erreur = instabilite ou surface d'attaque.%COLOR_RESET%
 echo %COLOR_WHITE%  - Indique surtout pour bench/jeux competitifs sur machine isolee et maitrisee.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_PROTECTIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%" :TOGGLE_PROTECTIONS_SECURITE
+call :ASK_IF_INTERACTIVE :DESACTIVER_PROTECTIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_PROTECTIONS_RUN
 
 :: 8.1 - Desactivation des protections Kernel SEHOP Exception Chain
@@ -2157,7 +2158,6 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :TOGGLE_PROTECTIONS_SECURITE
 )
 exit /b
 
@@ -2207,7 +2207,6 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 if "%SKIP_PAUSE%"=="0" (
     pause
-    goto :TOGGLE_PROTECTIONS_SECURITE
 )
 exit /b
 
@@ -2303,6 +2302,7 @@ echo.
 echo %COLOR_RED%[IMPORTANT]%COLOR_RESET% %COLOR_YELLOW%Sans Defender, aucune protection en temps reel n'est active.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_DEFENDER_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_DEFENDER_RUN
 cls
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %STYLE_BOLD%Desactivation de Windows Defender...%COLOR_RESET%
@@ -2455,6 +2455,7 @@ echo.
 echo %COLOR_YELLOW%[^!]%COLOR_RESET% LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_UAC_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC et les avertissements lies ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_UAC_RUN
 cls
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %STYLE_BOLD%Desactivation complete de l'UAC et des avertissements...%COLOR_RESET%
@@ -2551,6 +2552,7 @@ echo %COLOR_WHITE%- L'interface parait plus "seche" ^(transparence, barres des t
 echo %COLOR_WHITE%- Un redemarrage est necessaire pour tout voir ; reversible via le menu Activer.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_ANIMATIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment desactiver les animations ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_ANIMATIONS_RUN
 cls
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des animations Windows...%COLOR_RESET%
@@ -2669,6 +2671,7 @@ echo %COLOR_WHITE%Pourquoi cette question : Copilot s'appuie sur des services cl
 echo %COLOR_WHITE%consommer des ressources en arriere-plan pour les suggestions IA.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_COPILOT_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Copilot ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_COPILOT_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2750,6 +2753,7 @@ echo %COLOR_WHITE%Pourquoi cette question : les widgets utilisent des ressources
 echo %COLOR_WHITE%pour afficher des actualites et la meteo en continu.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_WIDGETS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation des Widgets ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_WIDGETS_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2793,6 +2797,7 @@ echo %COLOR_WHITE%Pourquoi cette question : Recall enregistre votre activite ecr
 echo %COLOR_WHITE%permettre des recherches IA ^(fort impact sur la confidentialite^).%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_RECALL_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Recall ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_RECALL_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2851,6 +2856,7 @@ echo.
 echo %COLOR_WHITE%Effet : suppression de toutes les fonctionnalites IA et widgets cloud.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_TOUT_IA_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%" EXITB
+if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_TOUT_IA_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3052,9 +3058,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression de l'icone Edge de 
 :: Suppression ciblee des raccourcis Edge uniquement
 del "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk" /f /q >nul 2>&1
 if exist "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar" (
-    for %%f in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk") do (
-        findstr /i "edge" "%%f" >nul && del "%%f" /f /q >nul 2>&1
-    )
+    powershell -NoProfile -Command "Get-ChildItem -Path '$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk' -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci Edge supprime (les autres icones sont preservees)%COLOR_RESET%
 
@@ -3170,7 +3174,7 @@ echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Lancement de l'outil d'activation...%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Veuillez suivre les instructions a l'ecran.%COLOR_RESET%
-powershell "irm https://get.activated.win | iex"
+powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://get.activated.win | iex"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Outil d'activation termine.%COLOR_RESET%
 pause
 goto :MENU_PRINCIPAL
@@ -3184,7 +3188,7 @@ echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Lancement de l'outil Chris Titus Tech...%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Veuillez suivre les instructions a l'ecran.%COLOR_RESET%
-powershell "irm https://github.com/ChrisTitusTech/winutil/releases/latest/download/winutil.ps1 | iex"
+powershell "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://github.com/ChrisTitusTech/winutil/releases/latest/download/winutil.ps1 | iex"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Outil Chris Titus Tech termine.%COLOR_RESET%
 pause
 goto :MENU_PRINCIPAL
@@ -3464,6 +3468,10 @@ if %VCINSTALLED_COUNT%==2 (
     echo.
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Toutes les versions V14 sont deja installees.%COLOR_RESET%
     if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
+    set "VC2015X86="
+    set "VC2015X64="
+    set "VCINSTALLED_COUNT="
+    set "REG_DUMP="
     if "%SKIP_PAUSE%"=="0" (
         echo.
         pause
@@ -3491,7 +3499,7 @@ if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
 set /a "VC_STEP+=1"
 call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x86"
 if %VC2015X86%==0 (
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
     if exist "%VCREDIST_DIR%\vc2015x86.exe" start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
 )
 
@@ -3499,7 +3507,7 @@ if %VC2015X86%==0 (
 set /a "VC_STEP+=1"
 call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x64"
 if %VC2015X64%==0 (
-    powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
     if exist "%VCREDIST_DIR%\vc2015x64.exe" start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
 )
 echo.
@@ -3527,6 +3535,13 @@ set "VC_STEP="
 set "VC_TOTAL="
 set "VCREDIST_DIR="
 set "VC_TO_INSTALL="
+set "VC2015X86="
+set "VC2015X64="
+set "VC2015X86_NEW="
+set "VC2015X64_NEW="
+set "VCINSTALL="
+set "VCINSTALLED_COUNT="
+set "REG_DUMP="
 
 :SKIP_DIRECTX
 cls
@@ -3540,7 +3555,6 @@ call :INSTALLER_DIRECTX
 if "%SKIP_PAUSE%"=="0" (
     echo.
     pause
-    goto :MENU_PRINCIPAL
 )
 exit /b
 
@@ -3564,7 +3578,7 @@ if exist "%DX_TEMP%" rd /s /q "%DX_TEMP%" >nul 2>&1
 mkdir "%DX_TEMP%"
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement de DirectX Redist June 2010 (95 Mo)...%COLOR_RESET%
-powershell -NoProfile -Command "try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-407C-8860-0207A3D7AF32/directx_Jun2010_redist.exe' -OutFile '%DX_TEMP%\directx_redist.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-407C-8860-0207A3D7AF32/directx_Jun2010_redist.exe' -OutFile '%DX_TEMP%\directx_redist.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
 if %errorlevel% NEQ 0 (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de DirectX.%COLOR_RESET%
     rd /s /q "%DX_TEMP%" >nul 2>&1
