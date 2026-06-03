@@ -6,7 +6,7 @@
 *Maximisez vos performances, réduisez votre latence et reprenez le contrôle sur votre système.*
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://www.microsoft.com/windows)
-[![Version](https://img.shields.io/badge/Version-2026.04-orange?style=for-the-badge)](https://github.com/kaylerberserk/WindowsOptimizer)
+[![Version](https://img.shields.io/badge/Version-2026.06-orange?style=for-the-badge)](https://github.com/kaylerberserk/WindowsOptimizer)
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **Conçu pour le Gaming Compétitif, le Multitâche intensif et la Confidentialité.**  

@@ -725,8 +725,8 @@ for %%S in (
 ) do (
   reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 )
-:: WpnUserService necessite powershell/wildcards car c'est un service par utilisateur
-powershell -NoProfile -Command "Get-Service WpnUserService* | Set-Service -StartupType Automatic" >nul 2>&1
+:: Configuration du service par utilisateur WpnUserService
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\WpnUserService" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services vitaux et synchronisation en Automatique%COLOR_RESET%
 
 :: 2 - Services occasionnels et utiles -> MANUEL (demand)
@@ -768,7 +768,7 @@ for %%S in (
   reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 )
 :: CDPUserSvc est un service par utilisateur
-powershell -NoProfile -Command "Get-Service CDPUserSvc* | Set-Service -StartupType Manual" >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\CDPUserSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services utiles et occasionnels en mode Manuel%COLOR_RESET%
 
 :: 3 - Services inutiles et telemetrie -> DESACTIVES
@@ -1302,7 +1302,7 @@ netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 
 netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Si un bug local apparait, loopbacklargemtu reste desactive%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desactive pour eviter les bugs locaux%COLOR_RESET%
 
 :: 5.3 - Parametres TCP registre
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLOR_RESET%
@@ -1507,7 +1507,7 @@ if "!IS_LAPTOP!"=="0" (
 
 :: 6.4 - MSI Mode Universel (Latence Peripheriques)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du MSI Mode pour tous les peripheriques compatibles...%COLOR_RESET%
-powershell -NoProfile -Command "Get-PnpDevice | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
+powershell -NoProfile -Command "Get-PnpDevice -Class Net,Display,SCSIAdapter,USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI activees sur tout le materiel compatible%COLOR_RESET%
 
 :: 6.5 - Accessibilite OFF
@@ -1837,7 +1837,6 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GPU optimise%COLOR_RESET%
 
-:: 7.23 - Desactivation economies d'energie sur TOUS les devices
 :: 7.23 - Desactivation economies d'energie sur TOUS les peripheriques (Debride au point 7.8)
 
 :: 7.24 - Bridage Energie (Power Throttling) deja traite
@@ -3058,7 +3057,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression de l'icone Edge de 
 :: Suppression ciblee des raccourcis Edge uniquement
 del "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk" /f /q >nul 2>&1
 if exist "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar" (
-    powershell -NoProfile -Command "Get-ChildItem -Path '$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk' -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
+    powershell -NoProfile -Command "Get-ChildItem -Path \"$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk\" -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci Edge supprime (les autres icones sont preservees)%COLOR_RESET%
 
@@ -3217,6 +3216,7 @@ echo.
 :: Creation du point de restauration (appel synchrone : plus fiable que Start-Job pour Checkpoint-Computer)
 :: Horodatage independant de la locale Windows (evite dim.-22-03_... avec %%DATE%% en francais)
 :: Ne pas entourer le format de quotes simples : le FOR / ('...') de CMD s'arrete a la premiere '
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "SystemRestorePointCreationFrequency" /t REG_DWORD /d 0 /f >nul 2>&1
 for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "RP_TIMESTAMP=%%a"
 powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; try { $desc = 'Optimizations_%RP_TIMESTAMP%'; Checkpoint-Computer -Description $desc -RestorePointType 'MODIFY_SETTINGS'; exit 0 } catch { exit 1 }" >nul 2>&1
 if %errorlevel% EQU 0 (
