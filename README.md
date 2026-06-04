@@ -49,8 +49,8 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 | Touche | Profil | Objectif |
 |:---:|:---:|---|
-| **[D]** | **Optimize All (Desktop)** | Performance brute, latence minimale et plan "Ultimate Performance". |
-| **[L]** | **Optimize All (Laptop)** | Équilibre optimisé entre puissance et autonomie (économie d'énergie préservée). |
+| **[D]** | **Profil LATENCE** (Desktop) | Performance brute, latence minimale et plan "Ultimate Performance". Déconseillé sur portable. |
+| **[L]** | **Profil EQUILIBRE** (Laptop) | Équilibre optimisé entre puissance et autonomie (économie d'énergie préservée). Recommandé pour tous. |
 
 ### ⚙️ Optimisations Granulaires
 
@@ -68,7 +68,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 - **Windows Defender** : Activation ou désactivation complète de l'antivirus intégré.
 - **UAC** : Gestion fine des notifications du Contrôle de Compte Utilisateur.
-- **VBS / HVCI** : Gestion de l'Isolation du noyau (Memory Integrity) pour les FPS ou la compatibilité Anti-Cheat.
+- **VBS / HVCI** : Gestion de l'Isolation du noyau (Memory Integrity) pour les FPS ou la compatibilité Anti-Cheat. **Mode Gaming (option 3)** recommandé : active VBS/HVCI/CFG (compatible Vanguard, FaceIT, Ricochet) tout en désactivant les mitigations CPU coûteuses (Spectre/Meltdown).
 - **Animations** : Choix entre une interface visuelle riche ou ultra-réactive.
 - **IA & Widgets** : Suppression de Copilot, Recall et des widgets Windows 11.
 - **Applications** : Désinstallation propre de OneDrive et Microsoft Edge.
@@ -108,10 +108,10 @@ R : Oui, le script vérifie l'état actuel avant d'appliquer un changement. Le r
 R : Le gain varie selon votre matériel, mais vous constaterez surtout une meilleure stabilité du framerate (moins de drops) et une réponse plus instantanée de vos périphériques.
 
 **Q : Pourquoi désactiver les mitigations Spectre/Meltdown (Option 8) ?**  
-R : Ces protections ajoutent une charge au processeur. En les désactivant, on regagne de la performance brute, mais c'est une option réservée aux utilisateurs qui acceptent le risque de sécurité associé.
+R : Ces protections ajoutent une charge au processeur. En les désactivant, on regagne de la performance brute, mais c'est une option réservée aux utilisateurs qui acceptent le risque de sécurité associé. L'option 8 couvre plus largement les protections de sécurité (mitigations CPU, VBS/HVCI, CI Policy, débridage USB).
 
 **Q : Est-ce sûr pour le jeu en ligne ?**  
-R : Absolument. Le script n'interfère jamais avec les fichiers de jeu. Pour les titres exigeants (Valorant/FaceIT), utilisez le profil de compatibilité dans le menu VBS/HVCI pour respecter les exigences de leurs anti-cheats.
+R : Absolument. Le script n'interfère jamais avec les fichiers de jeu. Pour les titres exigeants (Valorant/FaceIT/Ricochet), utilisez l'option **[3] Mode Gaming (FaceIT/Vanguard compatible)** dans le menu VBS/HVCI : VBS et HVCI restent activés (exigés par les anti-cheats) mais les mitigations CPU coûteuses sont désactivées pour libérer les performances.
 
 ### 🌐 Maintenance & Divers
 
