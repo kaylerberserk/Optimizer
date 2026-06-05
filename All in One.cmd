@@ -58,8 +58,8 @@ set "HW_RAM=Detection..."
 
 :: GUID powercfg - utilises en hardcode pour simplifier le code
 :: 54533251-82be-4824-96c1-47b60b740d00 = SUB_PROCESSOR
-:: de830923-a562-41af-a086-e3a2c6bad2da = SUB_ENERGYSAVER
 :: 381b4222-f694-41f0-9685-ff5bb260df2e = Plan d'alimentation Equilibre Windows
+:: (SUB_ENERGYSAVER de830923-a562-41af-a086-e3a2c6bad2da n'existe plus dans Windows 10/11 moderne)
 :: 0cc5b647-c1df-4637-891a-dec35c318584 = Core Parking (P-cores class 1)
 :: 0cc5b647-c1df-4637-891a-dec35c318583 = Core Parking (E-cores class 0)
 :: 93b8b6dc-0698-4d1c-9ee4-0644e900c85d = Heterogeneous thread scheduling
@@ -1778,10 +1778,8 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%USB optimise - Latence minimale
 
 :: 7.12 - Configuration generale du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du systeme d'alimentation...%COLOR_RESET%
-:: GUID SUB_ENERGYSAVER en dur (alias SUB_ENERGYSAVER non fiable selon la locale Windows)
-powercfg /setacvalueindex SCHEME_CURRENT de830923-a562-41af-a086-e3a2c6bad2da ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT de830923-a562-41af-a086-e3a2c6bad2da ee12f906-d277-404b-b6da-e5fa1a576df5 0 >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\de830923-a562-41af-a086-e3a2c6bad2da\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /t REG_DWORD /d 0 /f >nul 2>&1
+:: (Anciens powercfg sur SUB_ENERGYSAVER (de830923...) supprimes - sous-groupe inexistant en Win10/11)
+:: ASPM est configure correctement a la section 7.22 ci-dessous avec SUB_PCIEXPRESS (501a4d13...)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v SleepStudyDisabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1944,7 +1942,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du Timer Coalescin
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v GlobalTimerResolutionRequests /f >nul 2>&1
-bcdedit /deletevalue disabledynamictick >nul 2>&1
+:: (bcdedit /deletevalue disabledynamictick supprime : pas de bcdedit /set disabledynamictick dans le disable,
+::  c'etait un no-op - rien a supprimer)
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /f >nul 2>&1
@@ -1989,8 +1988,8 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPo
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /f >nul 2>&1
 
 :: 7.9 - Seuils d'economie d'energie
-:: GUID SUB_ENERGYSAVER en dur (alias SUB_ENERGYSAVER non fiable selon la locale Windows)
-powercfg /setdcvalueindex SCHEME_CURRENT de830923-a562-41af-a086-e3a2c6bad2da ESBATTTHRESHOLD 20 >nul 2>&1
+:: (Ancien powercfg sur SUB_ENERGYSAVER/ESBATTTHRESHOLD supprime - sous-groupe inexistant en Win10/11,
+::  l'alias ESBATTTHRESHOLD est de plus obsolete. Le seuil par defaut 20% est hardcode dans le plan Balanced.)
 
 :: 7.10 - NVMe APST (Autonomous Power State Transition)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration APST NVMe ^(economie d'energie par defaut^)...%COLOR_RESET%
@@ -2071,7 +2070,6 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 :: 7.19 - Systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration du systeme d'alimentation...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\de830923-a562-41af-a086-e3a2c6bad2da\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v SleepStudyDisabled /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Systeme d'alimentation restaure%COLOR_RESET%
@@ -2090,11 +2088,9 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion d'energie PCIe reactivee%COLOR_RESET%
 
 :: 7.22 - Plans d'alimentation avances
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Masquage des plans d'alimentation avances...%COLOR_RESET%
-:: GUID SUB_PROCESSOR en dur (alias SUB_PROCESSOR non fiable selon la locale Windows)
-powershell -NoProfile -Command "powercfg /attributes 54533251-82be-4824-96c1-47b60b740d00 75b0ae3f-bce0-45a7-8c89-c9611c25e100 +ATTRIB_HIDE" >nul 2>&1
-powershell -NoProfile -Command "powercfg /attributes 54533251-82be-4824-96c1-47b60b740d00 ea062031-0e34-4ff1-9b6d-eb1059334028 +ATTRIB_HIDE" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation avances masques%COLOR_RESET%
+:: (Masquage ATTRIB_HIDE sur 75b0ae3f... et ea062031... supprime : etaient des no-ops,
+::  rien dans la section disable ne les de-masque, donc rien a re-masquer au restore.)
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaures (parametres avances selon defaut Windows)%COLOR_RESET%
 
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2300,10 +2296,9 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Features" /v "TamperProtection
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des services Windows Defender...%COLOR_RESET%
 sc config WinDefend start= auto >nul 2>&1
 for %%S in (WdNisSvc Sense SecurityHealthService) do sc config %%S start= demand >nul 2>&1
-for %%S in (WdBoot WdFilter) do sc config %%S start= boot >nul 2>&1
+for %%S in (WdBoot WdFilter WdNisDrv) do sc config %%S start= boot >nul 2>&1
 for %%S in (WinDefend WdNisSvc Sense SecurityHealthService) do sc start %%S >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" /v "Start" /t REG_DWORD /d 3 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\dmwappushservice" /v "Start" /t REG_DWORD /d 3 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation de la protection en temps reel...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /f >nul 2>&1
@@ -2357,7 +2352,11 @@ echo %COLOR_WHITE%- %COLOR_RED%COUPEZ-LE%COLOR_RESET% : Si vous utilisez un anti
 echo %COLOR_WHITE%  ou si vous cherchez la performance maximale pour du jeu competitif.%COLOR_RESET%
 echo.
 echo %COLOR_RED%[IMPORTANT]%COLOR_RESET% %COLOR_YELLOW%Sans Defender, aucune protection en temps reel n'est active.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sur Windows recent, Tamper Protection peut ignorer une partie de ces reglages.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sur Windows 10 1903+ / 11, Tamper Protection bloque les modifications du registre%COLOR_RESET%
+echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Defender. Vous DEVEZ d'abord la desactiver manuellement :%COLOR_RESET%
+echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Parametres ^> Confidentialite et securite ^> Securite Windows ^> Protection contre les%COLOR_RESET%
+echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%piratages et menaces ^> Parametres de protection ^> Tamper Protection = OFF.%COLOR_RESET%
+echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Sinon, les commandes ci-dessous seront silencieusement ignorees par Defender.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_DEFENDER_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%" EXITB
 if !errorlevel! NEQ 0 exit /b
@@ -3025,17 +3024,16 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des dossiers OneDrive
 if exist "%LocalAppData%\Microsoft\OneDrive" rd "%LocalAppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%AppData%\Microsoft\OneDrive" rd "%AppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%SystemDrive%\OneDriveTemp" rd "%SystemDrive%\OneDriveTemp" /q /s >nul 2>&1
+:: Chemins fixes
 for %%C in (
     "%LocalAppData%\Microsoft\OneDrive\logs"
     "%LocalAppData%\Microsoft\OneDrive\settings"
-    "%LocalAppData%\Temp\OneDrive*"
-    "%Temp%\OneDrive*"
 ) do (
-    if exist "%%~C" (
-        rd "%%~C" /q /s >nul 2>&1
-        del "%%~C" /q /s /f >nul 2>&1
-    )
+    if exist "%%~C" rd "%%~C" /q /s >nul 2>&1
 )
+:: Wildcards : rd ne supporte pas les wildcards, il faut une enumeration for /d
+for /d %%C in ("%LocalAppData%\Temp\OneDrive*") do rd "%%C" /q /s >nul 2>&1
+for /d %%C in ("%Temp%\OneDrive*") do rd "%%C" /q /s >nul 2>&1
 if exist "%USERPROFILE%\OneDrive" (
     takeown /f "%USERPROFILE%\OneDrive" /r /d y >nul 2>&1
     rd "%USERPROFILE%\OneDrive" /s /q >nul 2>&1
@@ -3261,8 +3259,9 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification et activation de la restauration systeme si necessaire...%COLOR_RESET%
-:: DisableSR + protection volume C: via WMI root\default SystemRestore.GetDiskList (paires: code lettre ASCII, 1=actif)
-powershell -NoProfile -Command "try { $p = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' -ErrorAction SilentlyContinue; if ($null -ne $p -and $p.DisableSR -eq 1) { exit 1 }; $sr = $null; try { $sr = Get-CimInstance -ClassName SystemRestore -Namespace root/default -ErrorAction Stop } catch { $sr = Get-WmiObject -Class SystemRestore -Namespace root\default -ErrorAction SilentlyContinue }; if ($null -eq $sr) { exit 1 }; $r = $null; try { $r = Invoke-CimMethod -InputObject $sr -MethodName GetDiskList -ErrorAction Stop } catch { $r = $sr.GetDiskList() }; if ($null -eq $r) { exit 1 }; if ($null -ne $r.ReturnValue -and [int]$r.ReturnValue -ne 0) { exit 1 }; $a = @($r.DiskList); if ($a.Count -lt 2) { exit 1 }; for ($i = 0; $i -lt $a.Count; $i += 2) { $d = $a[$i]; $st = if ($i + 1 -lt $a.Count) { [int]$a[$i + 1] } else { 0 }; if ($st -ne 1) { continue }; if ($d -is [int] -and $d -eq 67) { exit 0 }; if ($d -is [string] -and $d -match '^C') { exit 0 } }; exit 1 } catch { exit 1 }" >nul 2>&1
+:: Verifie uniquement la cle registre DisableSR (SystemRestore.GetDiskList WMI n'existe pas)
+:: Si DisableSR=1, SR est desactive globalement et la creation de point echouera : on reactive
+powershell -NoProfile -Command "$p = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' -ErrorAction SilentlyContinue; if ($null -ne $p -and $p.DisableSR -eq 1) { exit 1 } else { exit 0 }" >nul 2>&1
 if %errorlevel% NEQ 0 (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la restauration systeme...%COLOR_RESET%
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -3413,7 +3412,8 @@ ipconfig /flushdns >nul 2>&1
 :: ETAPE 13
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
-for /f "tokens=*" %%G in ('wevtutil el 2^>nul') do wevtutil cl "%%G" >nul 2>&1
+:: Preserve les canaux critiques Security et System (audit/securite)
+for /f "tokens=*" %%G in ('wevtutil el 2^>nul ^| findstr /v /i /c:"Security" /c:"System"') do wevtutil cl "%%G" >nul 2>&1
 
 :: ETAPE 14
 set /a "CLEAN_STEP+=1"
@@ -3501,9 +3501,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Detection des versions installe
 set VC2015X86=0
 set VC2015X64=0
 
-:: Detection DLL
-if exist "%SystemRoot%\System32\vcruntime140.dll" set VC2015X64=1
-if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set VC2015X86=1
+:: Detection DLL : vcruntime140.dll (VC++ 2015 base) ET vcruntime140_1.dll (VS2019+)
+:: vcruntime140_1.dll est ajoutee a partir de VS 2017 update 8 / VS 2019.
+:: Si elle manque alors que 140.dll existe, le redist VC++ 2015-2017 ancien est present et doit etre reinstalle
+if exist "%SystemRoot%\System32\vcruntime140.dll" if exist "%SystemRoot%\System32\vcruntime140_1.dll" set VC2015X64=1
+if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" if exist "%SystemRoot%\SysWOW64\vcruntime140_1.dll" set VC2015X86=1
 
 :: Fallback registry pour les versions manquantes
 set "REG_DUMP=%TEMP%\vc_uninstall_dump.txt"
@@ -3532,7 +3534,7 @@ if %VCINSTALLED_COUNT%==2 (
         echo.
         pause
     )
-    goto :SKIP_DIRECTX
+    goto :INSTALLER_DIRECTX_SECTION
 )
 
 :: Suite : installation des paquets VC++ manquants (flux sequentiel, pas de goto vers ce point)
@@ -3555,16 +3557,26 @@ if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
 set /a "VC_STEP+=1"
 call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x86"
 if %VC2015X86%==0 (
-    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2015x86.exe" start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }" >nul 2>&1
+    if !errorlevel! NEQ 0 (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x86.%COLOR_RESET%
+    ) else (
+        start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
+        if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : installateur a retourne le code !errorlevel!^(!COLOR_RESET%
+    )
 )
 
 :: VC++ 2015-2022 x64
 set /a "VC_STEP+=1"
 call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x64"
 if %VC2015X64%==0 (
-    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch {}" >nul 2>&1
-    if exist "%VCREDIST_DIR%\vc2015x64.exe" start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }" >nul 2>&1
+    if !errorlevel! NEQ 0 (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x64.%COLOR_RESET%
+    ) else (
+        start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
+        if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : installateur a retourne le code !errorlevel!^(!COLOR_RESET%
+    )
 )
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification des installations...%COLOR_RESET%
@@ -3599,7 +3611,9 @@ set "VCINSTALL="
 set "VCINSTALLED_COUNT="
 set "REG_DUMP="
 
-:SKIP_DIRECTX
+:INSTALLER_DIRECTX_SECTION
+:: Ancien label :SKIP_DIRECTX renomme : c'est l'entree de la section DirectX,
+:: atteinte soit depuis le menu, soit depuis :INSTALLER_VISUAL_REDIST si VC++ deja installe
 cls
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -3648,8 +3662,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Extraction des fichiers...%COLO
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Installation silencieuse en cours...%COLOR_RESET%
 if exist "%DX_TEMP%\DXSETUP.exe" (
-    start /wait "" "%DX_TEMP%\DXSETUP.exe" /silent
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 installe avec succes.%COLOR_RESET%
+    start /wait "" "%DX_TEMP%\DXSETUP.exe" /silent >nul 2>&1
+    if !errorlevel! EQU 0 (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 installe avec succes.%COLOR_RESET%
+    ) else (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%DXSETUP a retourne le code !errorlevel! - installation peut etre incomplete.%COLOR_RESET%
+    )
 ) else (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Une erreur est survenue lors de l'extraction.%COLOR_RESET%
 )
