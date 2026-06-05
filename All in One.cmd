@@ -269,8 +269,8 @@ echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie%COLOR_R
 echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite - Desactiver ou Restaurer%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil LATENCE %COLOR_RED%- competition, power user, deconseille portable%COLOR_RESET%
 echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil EQUILIBRE %COLOR_GREEN%- jeux, web, downloads, recommande pour tous%COLOR_RESET%
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil LATENCE %COLOR_RED%- competition, power user, deconseille portable%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_YELLOW%[N]%COLOR_RESET% %COLOR_CYAN%Nettoyage Avance de Windows%COLOR_RESET%
@@ -283,7 +283,7 @@ echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COL
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 12345678DLNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, D, L, N, R, G, W, T, Q]: %COLOR_RESET%"
+choice /C 12345678LDNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, L, D, N, R, G, W, T, Q]: %COLOR_RESET%"
 
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
 if !errorlevel! EQU 16 goto :END_SCRIPT
@@ -292,8 +292,8 @@ if !errorlevel! EQU 14 goto :OUTIL_ACTIVATION
 if !errorlevel! EQU 13 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 12 goto :CREER_POINT_RESTAURATION
 if !errorlevel! EQU 11 goto :NETTOYAGE_AVANCE_WINDOWS
-if !errorlevel! EQU 10 goto :TOUT_OPTIMISER_EQUILIBRE
-if !errorlevel! EQU 9  goto :TOUT_OPTIMISER_LATENCE
+if !errorlevel! EQU 10 goto :TOUT_OPTIMISER_LATENCE
+if !errorlevel! EQU 9  goto :TOUT_OPTIMISER_EQUILIBRE
 if !errorlevel! EQU 8  goto :TOGGLE_PROTECTIONS_SECURITE
 if !errorlevel! EQU 7  goto :TOGGLE_ECONOMIES_ENERGIE
 if !errorlevel! EQU 6  call :OPTIMISATIONS_PERIPHERIQUES & goto :MENU_PRINCIPAL
@@ -952,6 +952,15 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation WPBT (anti bloatw
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%WPBT desactive%COLOR_RESET%
 
+:: 1.16 - Intel Thread Director : deverrouillage des options UI (sans danger, applicable a tous)
+:: Permet l'affichage des options Heterogeneous Scheduling et Core Parking dans powercfg.cpl.
+:: La configuration effective (Prefer Performant) est appliquee en section 7 pour le profil LATENCE.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Deverrouillage des options Intel Thread Director (Heterogeneous Scheduling, Core Parking)...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Options Thread Director / Core Parking visibles dans powercfg.cpl%COLOR_RESET%
+
 call :FINISH_ACTION "Optimisations systeme" "appliquees"
 exit /b
 
@@ -1159,15 +1168,15 @@ if "!IS_LAPTOP!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX : Auto HDR actif, VRR ON, Flip Model actif ^(Profil EQUILIBRE^)%COLOR_RESET%
 )
 
-:: 4.3 - Mode MSI (GPU) et P-State P0 (NVIDIA)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI (GPU) et P0 State (Performance NVIDIA)...%COLOR_RESET%
+:: 4.3 - Mode MSI (GPU) et telemetrie NVIDIA
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI (GPU) et desactivation telemetrie NVIDIA...%COLOR_RESET%
 powershell -NoProfile -Command "Get-PnpDevice -Class Display -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\NvControlPanel2\Client" /v "OptInOrOutPreference" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "FeatureControl" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "NvTeleSvc" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "DisplayWatchdog" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\NVIDIA Corporation\Global\NvSvc\Telemetry" /v "NvMessageBus" /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode MSI GPU et NVIDIA P0/Telemetrie optimises%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode MSI GPU active et telemetrie NVIDIA desactivee%COLOR_RESET%
 
 :: 4.4 - Desactivation AMD telemetry
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de la telemetrie AMD...%COLOR_RESET%
@@ -1737,14 +1746,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations CPU specifiques (
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil processeur (performances maximales)...%COLOR_RESET%
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Deblocage des options de scheduling hybride (P-Cores/E-Cores)...%COLOR_RESET%
-:: Heterogeneous thread scheduling policy
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
-:: Core Parking (P-cores class 1)
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
-:: Core Parking (E-cores class 0)
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director configure (P-cores prioritaires)%COLOR_RESET%
+:: Intel Thread Director : politique de scheduling reelle (valeur 2 = Prefer Performant Processors)
+:: Note : les attributs UI (Attributes=2) sont deverrouilles en section 1.16 pour tous les profils.
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 2 >nul 2>&1
+powercfg /setactive scheme_current >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director : politique "Prefer Performant" appliquee (P-cores prioritaires)^(options de parking Core/Hetero visibles dans powercfg^)%COLOR_RESET%
 
 :: AMD Ryzen - Desactivation Core Parking
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Core Parking (AMD Ryzen)...%COLOR_RESET%
