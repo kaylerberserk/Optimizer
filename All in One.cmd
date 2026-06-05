@@ -953,7 +953,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtEx
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%WPBT desactive%COLOR_RESET%
 
 call :FINISH_ACTION "Optimisations systeme" "appliquees"
-set "HOSTS="
 exit /b
 
 :OPTIMISATIONS_MEMOIRE
@@ -1046,7 +1045,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Support des chemins longs activ
 :: 3.3 - TRIM sur volumes SSD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification de l'etat du TRIM sur les disques SSD...%COLOR_RESET%
 set "TRIM_STATUS="
-for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue ^| Where-Object { $_.MediaType -eq 'SSD' }; if(-not $ssds){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force ^| Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue ^| Where-Object { $_.DriveLetter -and ($_.FileSystem -match 'NTFS^|ReFS') }; $done=$false; foreach($v in $vols){ $d=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue ^| Get-Disk -ErrorAction SilentlyContinue; if($d.MediaType -eq 'SSD'){ Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction SilentlyContinue ^| Out-Null; $done=$true } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"') do set "TRIM_STATUS=%%a"
+for /f "delims=" %%a in ('powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue ^| Where-Object { $_.MediaType -eq 'SSD' -or $_.BusType -eq 'NVMe' }; if(-not $ssds){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force ^| Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue ^| Where-Object { $_.DriveLetter -and ($_.FileSystem -in @('NTFS','ReFS')) }; $done=$false; foreach($v in $vols){ $d=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue ^| Get-Disk -ErrorAction SilentlyContinue; if($d.MediaType -eq 'SSD' -or $d.BusType -eq 'NVMe'){ Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction SilentlyContinue ^| Out-Null; $done=$true } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"') do set "TRIM_STATUS=%%a"
 if "%TRIM_STATUS%"=="TRIM_DONE" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%TRIM execute sur les volumes SSD ^(dernier passage memorise pour 30 jours^)%COLOR_RESET%
 ) else (
@@ -1636,7 +1635,7 @@ if not defined TARGET_GUID (
     for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "99999999-9999-9999-9999-999999999999"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 )
 if not defined TARGET_GUID (
-    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "Ultimate optimales"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
+    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "Ultimate"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 )
 if not defined TARGET_GUID (
     powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1
@@ -1889,11 +1888,6 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v "RMForcedMaxPerf" /t REG_DWORD /d 1 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GPU optimise%COLOR_RESET%
-
-:: 7.23 - Desactivation economies d'energie sur TOUS les peripheriques (Debride au point 7.8)
-
-:: 7.24 - Bridage Energie (Power Throttling) deja traite
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Power Throttling (bridage CPU) deja configure%COLOR_RESET%
 
 :: Appliquer l'ensemble des modifications du plan d'alimentation en une seule fois
 powercfg /S SCHEME_CURRENT >nul 2>&1
@@ -3106,7 +3100,6 @@ echo %COLOR_WHITE%- Mots de passe sauvegardes%COLOR_RESET%
 echo %COLOR_WHITE%- Extensions et themes%COLOR_RESET%
 echo %COLOR_WHITE%- Parametres et preferences%COLOR_RESET%
 echo.
-set "SUPPR_DATA=0"
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de supprimer les donnees utilisateur Edge ? [O/N]: %COLOR_RESET%"
 if !errorlevel! EQU 2 (
     set "SUPPR_DATA=0"
@@ -3231,7 +3224,6 @@ echo  %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'icone Edge a ete supprime
 set "SUPPR_DATA="
 call :FINISH_ACTION "Microsoft Edge" "desinstalle"
 goto :MENU_GESTION_WINDOWS
-
 
 :OUTIL_ACTIVATION
 cls
@@ -3480,25 +3472,20 @@ echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser.%COLOR_RESET%
 echo.
 choice /C ON /N /M "%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-if !errorlevel! EQU 2 (
-    set "SAGEID="
-    set "SPACE_BEFORE_MB="
-    set "SPACE_BEFORE_GB="
-    set "SPACE_AFTER_GB="
-    set "SPACE_FREED_GB="
-    goto :MENU_PRINCIPAL
+if !errorlevel! EQU 1 (
+    shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
+    cls
+    echo.
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
+    timeout /t 10 /nobreak >nul
+    exit
 )
 set "SAGEID="
 set "SPACE_BEFORE_MB="
 set "SPACE_BEFORE_GB="
 set "SPACE_AFTER_GB="
 set "SPACE_FREED_GB="
-shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
-cls
-echo.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
-timeout /t 10 /nobreak >nul
-exit
+goto :MENU_PRINCIPAL
 
 
 :INSTALLER_VISUAL_REDIST
@@ -3716,4 +3703,3 @@ endlocal
 :: Ferme le setlocal EnableDelayedExpansion global (ligne 5)
 endlocal
 exit /b 0
-
