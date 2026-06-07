@@ -1,0 +1,37 @@
+; =============================================================================
+; GameUserSettings.ini - TEMPLATE pour Valorant (PERFORMANCES UNIQUEMENT)
+; =============================================================================
+; Ce fichier est un MODELE. Copier dans :
+;   %LOCALAPPDATA%\VALORANT\Saved\Config\WindowsClient\GameUserSettings.ini
+; Puis redemarrer le jeu.
+;
+; Le DefaultMonitorDeviceID a ete retire car il contient l'EDID unique de
+; votre moniteur (modele + identifiant). A regenerer au premier lancement
+; du jeu.
+; =============================================================================
+
+[/Script/ShooterGame.ShooterGameUserSettings]
+DefaultMonitorIndex=0
+LastConfirmedDefaultMonitorIndex=0
+bShouldLetterbox=True
+bLastConfirmedShouldLetterbox=True
+bUseVSync=False
+bUseDynamicResolution=False
+ResolutionSizeX=1920
+ResolutionSizeY=1080
+LastUserConfirmedResolutionSizeX=1920
+LastUserConfirmedResolutionSizeY=1080
+LastConfirmedFullscreenMode=0
+PreferredFullscreenMode=1
+AudioQualityLevel=0
+LastConfirmedAudioQualityLevel=0
+FrameRateLimit=0.000000
+DesiredScreenWidth=1920
+DesiredScreenHeight=1080
+LastUserConfirmedDesiredScreenWidth=1920
+LastUserConfirmedDesiredScreenHeight=1080
+bUseHDRDisplayOutput=False
+HDRDisplayOutputNits=1000
+
+[/Script/Engine.GameUserSettings]
+bUseDesiredScreenHeight=False

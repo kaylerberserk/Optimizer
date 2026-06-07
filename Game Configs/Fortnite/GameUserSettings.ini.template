@@ -1,0 +1,42 @@
+; =============================================================================
+; GameUserSettings.ini - TEMPLATE pour Fortnite (PERFORMANCES UNIQUEMENT)
+; =============================================================================
+; Ce fichier est un MODELE. Copier dans :
+;   %LOCALAPPDATA%\FortniteGame\Saved\Config\WindowsClient\GameUserSettings.ini
+; Puis redemarrer le jeu.
+;
+; Toutes les donnees personnelles (UUID Epic, historique shop, dates,
+; statistiques, identifiants appareil) ont ete RETIREES de ce template.
+; Ne jamais commiter votre vrai GameUserSettings.ini - il contient votre
+; UUID Epic lie a votre compte de maniere permanente.
+;
+; Les cles ci-dessous sont uniquement celles qui ameliorent les performances
+; (faible latence input, vsync off, dynamic res off, qualite minimale).
+; =============================================================================
+
+[/Script/FortniteGame.FortGameUserSettings]
+FullscreenMode=0
+bUseVSync=False
+bUseDynamicResolution=False
+FrameRateLimit=0.000000
+LastConfirmedFullscreenMode=0
+PreferredFullscreenMode=0
+LowInputLatencyModeIsEnabled=True
+sg.ResolutionQuality=100
+sg.ViewDistanceQuality=0
+sg.AntiAliasingQuality=0
+sg.ShadowQuality=0
+sg.GlobalIlluminationQuality=0
+sg.ReflectionQuality=0
+sg.PostProcessQuality=0
+sg.TextureQuality=0
+sg.EffectsQuality=0
+sg.FoliageQuality=0
+sg.ShadingQuality=0
+sg.LandscapeQuality=0
+
+[D3DRHIPreference]
+PreferredRHI=dx12
+
+[PerformanceMode]
+MeshQuality=0
