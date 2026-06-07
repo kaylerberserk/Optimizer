@@ -30,9 +30,9 @@ set "COLOR_GREEN=%ESC%[32m" & set "COLOR_YELLOW=%ESC%[33m" & set "COLOR_RED=%ESC
 set "COLOR_CYAN=%ESC%[36m"  & set "COLOR_WHITE=%ESC%[37m"  & set "COLOR_BLUE=%ESC%[34m"
 set "COLOR_MAGENTA=%ESC%[35m" & set "COLOR_RESET=%ESC%[0m" & set "STYLE_BOLD=%ESC%[1m"
 
-:: ===========================================================================
+:: =================================================================================
 :: INITIALISATION DES VARIABLES GLOBALES
-:: ===========================================================================
+:: =================================================================================
 set "HAS_INTERNET=0"
 :: IS_LAPTOP est conserve pour compatibilite interne :
 ::   0 = profil LATENCE (reactivite max, tweaks agressifs)
@@ -64,9 +64,9 @@ set "HW_RAM=Detection..."
 :: 0cc5b647-c1df-4637-891a-dec35c318583 = Core Parking (E-cores class 0)
 :: 93b8b6dc-0698-4d1c-9ee4-0644e900c85d = Heterogeneous thread scheduling
 
-:: ===========================================================================
+:: =================================================================================
 :: CONVENTION DES INDICATEURS ET COULEURS
-:: ===========================================================================
+:: =================================================================================
 :: [*]         JAUNE = Action en cours d'execution
 :: [OK]        VERT  = Action terminee avec succes
 :: [TERMINE]   VERT  = Section completee
@@ -76,13 +76,13 @@ set "HW_RAM=Detection..."
 :: [-]         ROUGE = Suppression / Action negative
 :: [ERREUR]    ROUGE = Erreur critique / Echec
 :: [ATTENTION] ROUGE = Risque de securite
-:: ===========================================================================
+:: =================================================================================
 
 
 :: CHARGEMENT DU SCRIPT
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%             INITIALISATION DU SCRIPT D'OPTIMISATION              %COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                     INITIALISATION DU SCRIPT D'OPTIMISATION                     %COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -172,7 +172,7 @@ if not "%~1"=="1" (
 :: Detection materiel en une seule commande pour eviter les scripts temporaires fragiles en CMD.
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $res+='GPU:'+($gn -join ' / ')}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}elseif($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines((Join-Path $env:TEMP 'hw_info.tmp'), $res)" >nul 2>&1
 if %errorlevel% NEQ 0 (
-    echo %COLOR_YELLOW%[WARN]%COLOR_RESET% %COLOR_WHITE%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
+    echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
 )
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
@@ -191,9 +191,9 @@ echo !HW_GPU! | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
 exit /b
 
-:: ===========================================================================
+:: =================================================================================
 :: UTILS
-:: ===========================================================================
+:: =================================================================================
 
 
 :REFRESH_INTERNET_STATUS
@@ -228,11 +228,11 @@ if !errorlevel! EQU 1 (
 )
 goto %~1
 
-:: %~1 = message  %~2 = label si Non  %~3 = variable flag (ex: DESACTIVER_SECURITE)
+:: %~1 = message  %~2 = variable flag (ex: DESACTIVER_SECURITE) - positionne a 1 si Oui, 0 si Non
 :COMMON_YES_NO
-set "%~3=0"
+set "%~2=0"
 choice /C ON /N /M "%~1"
-if !errorlevel! EQU 1 set "%~3=1"
+if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
 
 :MENU_PRINCIPAL
@@ -359,7 +359,7 @@ if "!DETECTED_LAPTOP!"=="1" (
     echo.
     echo %COLOR_WHITE% Vous avez selectionne le %COLOR_YELLOW%Profil LATENCE%COLOR_WHITE% sur un %COLOR_CYAN%PC Portable%COLOR_WHITE%.%COLOR_RESET%
     echo.
-    echo %COLOR_RED% [ERREUR] CE PROFIL EST ULTRA DECONSEILLE SUR UN PC PORTABLE :%COLOR_RESET%
+    echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%CE PROFIL EST ULTRA DECONSEILLE SUR UN PC PORTABLE :%COLOR_RESET%
     echo  - Risque eleve de %COLOR_YELLOW%surchauffe%COLOR_RESET% et de %COLOR_YELLOW%baisse d'autonomie dramatique%COLOR_RESET%.
     echo  - Desactive toutes les economies d'energie ^(CPU, PCIe, EEE, USB selective suspend^).
     echo  - Les ventilateurs tourneront beaucoup plus vite et la batterie s'usera rapidement.
@@ -402,8 +402,7 @@ echo       %COLOR_YELLOW%Expose le systeme a des attaques par canal auxiliaire%C
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les protections (recommande)
 echo.
-call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%" :COMMON_SECURITE_NON DESACTIVER_SECURITE
-:COMMON_SECURITE_NON
+call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%" DESACTIVER_SECURITE
 
 cls
 echo.
@@ -419,8 +418,7 @@ echo       %COLOR_YELLOW%Expose le systeme aux virus et logiciels malveillants%C
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver Windows Defender (recommande)
 echo.
-call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%" :COMMON_DEFENDER_NON DESACTIVER_DEFENDER
-:COMMON_DEFENDER_NON
+call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%" DESACTIVER_DEFENDER
 
 cls
 echo.
@@ -436,8 +434,7 @@ echo       %COLOR_YELLOW%L'interface sera moins fluide visuellement%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les animations (recommande)
 echo.
-call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver les animations Windows ? [O/N]: %COLOR_RESET%" :COMMON_ANIMATIONS_NON DESACTIVER_ANIMATIONS
-:COMMON_ANIMATIONS_NON
+call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver les animations Windows ? [O/N]: %COLOR_RESET%" DESACTIVER_ANIMATIONS
 
 cls
 echo.
@@ -453,8 +450,7 @@ echo       %COLOR_YELLOW%Ameliore les performances et la confidentialite%COLOR_R
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver les fonctionnalites IA
 echo.
-call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces fonctionnalites IA ? [O/N]: %COLOR_RESET%" :COMMON_IA_NON DESACTIVER_IA
-:COMMON_IA_NON
+call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces fonctionnalites IA ? [O/N]: %COLOR_RESET%" DESACTIVER_IA
 
 cls
 echo.
@@ -470,8 +466,7 @@ echo       %COLOR_YELLOW%Reduit la securite en permettant aux applis de s'execut
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% - Conserver l'UAC (recommande)
 echo.
-call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC ? [O/N]: %COLOR_RESET%" :COMMON_UAC_NON DESACTIVER_UAC
-:COMMON_UAC_NON
+call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC ? [O/N]: %COLOR_RESET%" DESACTIVER_UAC
 
 
 
@@ -850,7 +845,8 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableInventor
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableUAR" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "AITEnable" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager" /v EnablePeriodicBackup /t REG_DWORD /d 1 /f >nul 2>&1
-bcdedit /set bootuxdisabled on >nul 2>&1
+:: bootuxdisabled = LATENCE profile uniquement (EQUILIBRE preserve l'animation de demarrage)
+if "!IS_LAPTOP!"=="0" bcdedit /set bootuxdisabled on >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "01" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "04" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1236,12 +1232,12 @@ if "!HAS_NVIDIA!"=="1" (
         powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
             for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
-                echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Fichier NVIDIA Profile Inspector corrompu ou incomplet
+                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Fichier NVIDIA Profile Inspector corrompu ou incomplet%COLOR_RESET%
                 del "!NPI_DIR!\nvidiaProfileInspector.exe"
                 goto :NPI_DONE
             )
         ) else (
-            echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de NVIDIA Profile Inspector
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de NVIDIA Profile Inspector%COLOR_RESET%
             goto :NPI_DONE
         )
 
@@ -1251,12 +1247,12 @@ if "!HAS_NVIDIA!"=="1" (
         powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\Kaylers_profile.nip" (
             for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
-                echo %COLOR_RED%[-]%COLOR_RESET% Erreur : Profil NVIDIA corrompu ou incomplet
+                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA corrompu ou incomplet%COLOR_RESET%
                 del "!NPI_DIR!\Kaylers_profile.nip"
                 goto :NPI_DONE
             )
         ) else (
-            echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement du profil
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement du profil%COLOR_RESET%
             goto :NPI_DONE
         )
 
@@ -1415,11 +1411,6 @@ if "!IS_LAPTOP!"=="0" (
 )
 
 :: 5.9 - Optimisation cartes reseau
-:: NOTE : on passe IS_LAPTOP par interpolation CMD (!IS_LAPTOP!) et non par
-:: $env:IS_LAPTOP. Un `set "IS_LAPTOP=1"` cree une variable SHELL CMD, pas une
-:: variable d'environnement process. Lire $env:IS_LAPTOP depuis PowerShell
-:: aurait toujours renvoye $null, donc la branche laptop etait silencieusement
-:: morte. Garder '!IS_LAPTOP!' (et non $env:) pour transmettre une variable CMD.
 if "!IS_LAPTOP!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Profil LATENCE ^(RSS ON, RSC/LSO OFF, Flow Control OFF^)...%COLOR_RESET%
 ) else (
@@ -1628,8 +1619,7 @@ echo %COLOR_WHITE%  pour maintenir les performances maximales en permanence.%COL
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 7.1 - Energie Systeme et GPU
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration des seuils d'economie d'energie...%COLOR_RESET%
+:: 7.1 - Energie Systeme et GPU (vide - Seuils d'economie traites dans 7.6/7.7)
 
 :: 7.2 - NVMe APST (Autonomous Power State Transition) - Profil LATENCE uniquement
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation APST NVMe ^(performance maximale, plus d'economie d'energie^)...%COLOR_RESET%
@@ -1679,64 +1669,48 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC desacti
 :: 7.6 - Parametres avances du plan d'alimentation (user standard)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration avancee du plan d'alimentation...%COLOR_RESET%
 
-:: Disque dur : ne jamais eteindre
 powercfg /setacvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1
 
-:: Diaporama arriere-plan : en pause (economise CPU)
 powercfg /setacvalueindex SCHEME_CURRENT 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 1 >nul 2>&1
 
-:: Adaptateur Wi-Fi : performances maximales (pas de bridage Wi-Fi silencieux)
 powercfg /setacvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 0 >nul 2>&1
 
 :: Veille hybride : desactivee (inutile si hibernate est off)
 powercfg /setacvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0 >nul 2>&1
-:: Hibernation apres : jamais
 powercfg /setacvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0 >nul 2>&1
 
-:: Hub selective suspend timeout : 0ms
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 0 >nul 2>&1
-:: USB 3 link power management : desactive
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
 
-:: Etat processeur max : 100%
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1
-:: Politique de refroidissement : actif (ventilateur reactif)
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1
 
-:: Extinction ecran apres 10 min (protection OLED + economie)
 powercfg /setacvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 600 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 600 >nul 2>&1
 
-:: Biais qualite lecture video : performance
 powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
-:: Lecture video : qualite optimale
 powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 0 >nul 2>&1
 
-:: Intel Graphics : performances maximales
 powercfg /setacvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 2 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 2 >nul 2>&1
-:: AMD power slider : meilleures performances
 powercfg /setacvalueindex SCHEME_CURRENT c763b4ec-0e50-4b6b-9bed-2b92a6ee884e 7ec1751b-60ed-4588-afb5-9819d3d77d90 3 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT c763b4ec-0e50-4b6b-9bed-2b92a6ee884e 7ec1751b-60ed-4588-afb5-9819d3d77d90 3 >nul 2>&1
-:: ATI Powerplay : performances maximales
 powercfg /setacvalueindex SCHEME_CURRENT f693fb01-e858-4f00-b20f-f30e12ac06d6 191f65b5-d45c-4a4f-8aae-1ab8bfd980e6 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT f693fb01-e858-4f00-b20f-f30e12ac06d6 191f65b5-d45c-4a4f-8aae-1ab8bfd980e6 1 >nul 2>&1
-:: GPU hybride switchable : performances maximales
 powercfg /setacvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 3 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 3 >nul 2>&1
 
-:: Appliquer le plan
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres avances du plan d'alimentation appliques%COLOR_RESET%
 
 :: 7.7 - Optimisations CPU (Intel Hybrid + AMD Core Parking)
@@ -1747,9 +1721,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil process
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 :: Intel Thread Director : politique de scheduling reelle (valeur 2 = Prefer Performant Processors)
-:: Note : les attributs UI (Attributes=2) sont deverrouilles en section 1.16 pour tous les profils.
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 2 >nul 2>&1
 powercfg /setactive scheme_current >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director : politique "Prefer Performant" appliquee (P-cores prioritaires)^(options de parking Core/Hetero visibles dans powercfg^)%COLOR_RESET%
 
@@ -1821,7 +1793,7 @@ if exist "%STR_EXE%" (
     if exist "%STR_EXE%" (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution installe dans %SystemRoot%%COLOR_RESET%
     ) else (
-        echo %COLOR_RED%[-]%COLOR_RESET% Echec du telechargement de SetTimerResolution
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de SetTimerResolution%COLOR_RESET%
     )
 )
 if exist "%STR_EXE%" (
@@ -1978,19 +1950,16 @@ if exist "%STR_STARTUP%" (
 :: 7.6 - Restaurer Intel Thread Director
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration Intel Thread Director...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\bae08b81-2d5e-4688-ad6a-13243356654b" /v Attributes /f >nul 2>&1
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 5 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 5 >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director restaure%COLOR_RESET%
 
-:: 7.7 - Restaurer AMD Core Parking
+:: 7.7 - Restaurer AMD Core Parking (default Windows = 0% = parking autorise)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration Core Parking (AMD Ryzen)...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking restaure%COLOR_RESET%
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 0 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 0 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking restaure (defaut Windows 0%%)^(autorise parking^)%COLOR_RESET%
 
 :: 7.8 - Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du Power Throttling...%COLOR_RESET%
@@ -2033,7 +2002,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des parametres pro
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /f >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 893dee8e-2bef-41e0-89c6-b55d0929964c 5 >nul 2>&1
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 90 >nul 2>&1
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres processeur restaures%COLOR_RESET%
@@ -2096,7 +2064,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation gestion d'energie 
 powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1 >nul 2>&1
 powercfg /S SCHEME_CURRENT >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion d'energie PCIe reactivee%COLOR_RESET%
 
 :: 7.22 - Plans d'alimentation avances
@@ -2175,7 +2143,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protections S
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
-::reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableCfg /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v MoveImages /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableGdsMitigation /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v PerformMmioMitigation /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2358,12 +2325,12 @@ echo.
 echo %COLOR_WHITE%Pourquoi cette question : desactiver l'antivirus integre reduit la charge CPU/disque%COLOR_RESET%
 echo %COLOR_WHITE%et supprime les micro-begaiements lies aux analyses en temps reel.%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_YELLOW%[CONSEILS]%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_YELLOW%[INFO]%COLOR_RESET%
 echo %COLOR_WHITE%- %COLOR_GREEN%GARDEZ-LE%COLOR_RESET% : Si vous n'avez pas d'autre antivirus et naviguez beaucoup.%COLOR_RESET%
 echo %COLOR_WHITE%- %COLOR_RED%COUPEZ-LE%COLOR_RESET% : Si vous utilisez un antivirus tiers ^(Bitdefender, Kaspersky...^)%COLOR_RESET%
 echo %COLOR_WHITE%  ou si vous cherchez la performance maximale pour du jeu competitif.%COLOR_RESET%
 echo.
-echo %COLOR_RED%[IMPORTANT]%COLOR_RESET% %COLOR_YELLOW%Sans Defender, aucune protection en temps reel n'est active.%COLOR_RESET%
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Sans Defender, aucune protection en temps reel n'est active.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sur Windows 10 1903+ / 11, Tamper Protection bloque les modifications du registre%COLOR_RESET%
 echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Defender. Vous DEVEZ d'abord la desactiver manuellement :%COLOR_RESET%
 echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Parametres ^> Confidentialite et securite ^> Securite Windows ^> Protection contre les%COLOR_RESET%
@@ -2428,7 +2395,7 @@ echo.
 echo %COLOR_WHITE%VBS (Virtualization Based Security) et HVCI (Memory Integrity) securisent le noyau%COLOR_RESET%
 echo %COLOR_WHITE%mais impactent lourdement les performances en jeu (jusqu'a -25%% FPS).%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_RED%[!] ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains anti-cheats (Vanguard/Valorant, FaceIT, Ricochet)%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_RED%[^!] ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains anti-cheats (Vanguard/Valorant, FaceIT, Ricochet)%COLOR_RESET%
 echo %COLOR_YELLOW%peuvent exiger que VBS/HVCI soit ACTIVE pour lancer le jeu.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer VBS / HVCI (Securite maximale)%COLOR_RESET%
@@ -2466,6 +2433,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de VBS, HVCI et Cred
 reg add "HKLM\System\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\System\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\System\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 1 /f >nul 2>&1
+:: CFG doit rester ACTIVE pour Vanguard (Valorant)
+powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard actives.%COLOR_RESET%
 call :FINISH_ACTION "VBS/HVCI" "active"
 goto :TOGGLE_VBS_HVCI
@@ -3094,7 +3063,7 @@ choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desinstaller Micr
 if !errorlevel! EQU 2 goto :MENU_GESTION_WINDOWS
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %COLOR_WHITE% SUPPRESSION DES DONNEES UTILISATEUR%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% SUPPRESSION DES DONNEES UTILISATEUR%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -3209,10 +3178,10 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" /v "PreventFirstRu
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification finale...%COLOR_RESET%
 if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
-    echo %COLOR_RED%[-]%COLOR_RESET% Edge n'a pas pu etre completement desinstalle.
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Edge n'a pas pu etre completement desinstalle.%COLOR_RESET%
 ) else (
     if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
-        echo %COLOR_RED%[-]%COLOR_RESET% Edge n'a pas pu etre completement desinstalle.
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Edge n'a pas pu etre completement desinstalle.%COLOR_RESET%
     ) else (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Microsoft Edge desinstalle avec succes !%COLOR_RESET%
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Icone supprimee de la barre des taches !%COLOR_RESET%
@@ -3266,7 +3235,7 @@ goto :MENU_PRINCIPAL
 :CREER_POINT_RESTAURATION
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %COLOR_WHITE% Creation d'un point de restauration%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% CREATION D'UN POINT DE RESTAURATION%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -3285,9 +3254,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Creation d'un point de restaura
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Cette operation peut prendre 30-60 secondes...%COLOR_RESET%
 echo.
 
-:: Creation du point de restauration (appel synchrone : plus fiable que Start-Job pour Checkpoint-Computer)
-:: Horodatage independant de la locale Windows (evite dim.-22-03_... avec %%DATE%% en francais)
-:: Ne pas entourer le format de quotes simples : le FOR / ('...') de CMD s'arrete a la premiere '
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "SystemRestorePointCreationFrequency" /t REG_DWORD /d 0 /f >nul 2>&1
 for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "RP_TIMESTAMP=%%a"
 powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; try { $desc = 'Optimizations_%RP_TIMESTAMP%'; Checkpoint-Computer -Description $desc -RestorePointType 'MODIFY_SETTINGS'; exit 0 } catch { exit 1 }" >nul 2>&1
@@ -3305,7 +3271,7 @@ goto :MENU_PRINCIPAL
 :NETTOYAGE_AVANCE_WINDOWS
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%                 NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -3322,7 +3288,7 @@ if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE%                 NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -3573,7 +3539,7 @@ if %VC2015X86%==0 (
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x86.%COLOR_RESET%
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
-        if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : installateur a retourne le code !errorlevel!^(!COLOR_RESET%
+        if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : installateur a retourne le code !errorlevel!.%COLOR_RESET%
     )
 )
 
@@ -3586,7 +3552,7 @@ if %VC2015X64%==0 (
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x64.%COLOR_RESET%
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
-        if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : installateur a retourne le code !errorlevel!^(!COLOR_RESET%
+        if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : installateur a retourne le code !errorlevel!.%COLOR_RESET%
     )
 )
 echo.
