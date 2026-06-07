@@ -1217,38 +1217,51 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v Ena
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preemption GPU activee%COLOR_RESET%
 
 :: 4.8 - NVIDIA Profile Inspector
-:: Cette section telecharge et applique un profil d'optimisation NVIDIA pour reduire l'input lag
+:: Cette section applique un profil d'optimisation NVIDIA pour reduire l'input lag.
+:: Les fichiers sont copies depuis le dossier "Tools\NVIDIA Inspector\" du repo (deja presents
+:: localement), ce qui evite un telechargement et les erreurs de chemin "lecteur introuvable".
 :: Note: applique seulement en profil LATENCE ; ignore en profil EQUILIBRE pour preserver autonomie/chauffe.
 if "!HAS_NVIDIA!"=="1" (
     if "!IS_LAPTOP!"=="0" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...%COLOR_RESET%
-        set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
+        set "NPI_SRC=%~dp0Tools\NVIDIA Inspector"
+        set "NPI_EXE_SRC=!NPI_SRC!\nvidiaProfileInspector.exe"
+        set "NPI_NIP_SRC=!NPI_SRC!\Kaylers_profile.nip"
 
-        :: Creer le dossier temporaire pour les fichiers NPI
-        if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
+        :: Dossier de travail : %SystemRoot%\Temp (toujours valide sur Windows, pas de lecteur reseau)
+        set "NPI_DIR=%SystemRoot%\Temp\NvidiaProfileInspector"
+        if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
 
-        :: Telecharger NVIDIA Profile Inspector depuis GitHub
-        :: Verification de la taille du fichier pour s'assurer qu'il n'est pas corrompu (min 10KB)
-        powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        :: 1) Essayer d'utiliser les fichiers deja presents dans le repo (offline, fiable)
+        if exist "!NPI_EXE_SRC!" if exist "!NPI_NIP_SRC!" (
+            copy /y "!NPI_EXE_SRC!" "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
+            copy /y "!NPI_NIP_SRC!" "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+        )
+
+        :: 2) Sinon, tenter un telechargement depuis GitHub en fallback
+        if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
+            powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        )
         if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
             for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
                 echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Fichier NVIDIA Profile Inspector corrompu ou incomplet%COLOR_RESET%
-                del "!NPI_DIR!\nvidiaProfileInspector.exe"
+                del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
                 goto :NPI_DONE
             )
         ) else (
-            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de NVIDIA Profile Inspector%COLOR_RESET%
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%NVIDIA Profile Inspector introuvable ^(ni local ni en ligne^)%COLOR_RESET%
             goto :NPI_DONE
         )
 
-        :: Telecharger le profil gaming optimise (Kaylers_profile.nip)
-        :: Ce profil contient des parametres optimises pour reduire l'input lag
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement du profil gaming optimise...%COLOR_RESET%
-        powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        :: Telecharger le profil gaming optimise (Kaylers_profile.nip) si pas deja copie
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preparation du profil gaming optimise...%COLOR_RESET%
+        if not exist "!NPI_DIR!\Kaylers_profile.nip" (
+            powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+        )
         if exist "!NPI_DIR!\Kaylers_profile.nip" (
             for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
                 echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA corrompu ou incomplet%COLOR_RESET%
-                del "!NPI_DIR!\Kaylers_profile.nip"
+                del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
                 goto :NPI_DONE
             )
         ) else (
@@ -1259,7 +1272,7 @@ if "!HAS_NVIDIA!"=="1" (
         :: Appliquer le profil NVIDIA en utilisant l'outil Profile Inspector
         :: L'outil est lance en arriere-plan, applique le profil, puis est ferme
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du profil NVIDIA optimise...%COLOR_RESET%
-        start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
+        start "" /D "!NPI_DIR!" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
         ping -n 2 127.0.0.1 >nul 2>&1
         taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique%COLOR_RESET%
@@ -1278,6 +1291,9 @@ if "!HAS_NVIDIA!"=="1" (
 :NPI_DONE
 :: Fin des optimisations specifiques NVIDIA
 set "NPI_DIR="
+set "NPI_SRC="
+set "NPI_EXE_SRC="
+set "NPI_NIP_SRC="
 call :FINISH_ACTION "Optimisations GPU" "terminees"
 exit /b
 
