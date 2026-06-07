@@ -49,8 +49,8 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 | Touche | Profil | Objectif |
 |:---:|:---:|---|
-| **[D]** | **Profil LATENCE** (Desktop) | Performance brute, latence minimale et plan "Ultimate Performance". Déconseillé sur portable. |
 | **[L]** | **Profil EQUILIBRE** (Laptop) | Équilibre optimisé entre puissance et autonomie (économie d'énergie préservée). Recommandé pour tous. |
+| **[D]** | **Profil LATENCE** (Desktop) | Performance brute, latence minimale et plan "Ultimate Performance". Déconseillé sur portable. |
 
 ### ⚙️ Optimisations Granulaires
 
@@ -62,7 +62,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
-- **[9] Bloatwares** : (Menu [G]) Suppression des applications préinstallées inutiles.
+- **[9] Bloatwares** : Suppression des applications préinstallées inutiles.
 
 ### 📂 Gestion Windows & Maintenance (Menu [G])
 
@@ -73,7 +73,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **IA & Widgets** : Suppression de Copilot, Recall et des widgets Windows 11.
 - **Applications** : Désinstallation propre de OneDrive et Microsoft Edge.
 - **Bloatwares** : Suppression en un clic des applications Windows inutiles (News, Solitaire, Skype, etc.).
-- **Runtimes** : Installation des bibliothèques essentielles (Visual C++ 2005-2022, DirectX).
+- **Runtimes** : Installation des bibliothèques essentielles (Visual C++ 2015-2022, DirectX).
 - **[N] Nettoyage Avancé** : Grand ménage en 18 étapes des fichiers temporaires, caches et logs.
 - **[W] MAS** : Lien vers l'outil d'activation communautaire pour Windows et Office.
 - **[T] WinUtil** : Accès à la boîte à outils de maintenance de Chris Titus Tech.
