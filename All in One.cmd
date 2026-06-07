@@ -1224,14 +1224,17 @@ if "!HAS_NVIDIA!"=="1" (
         set "NPI_EXE_SRC=!NPI_SRC!\nvidiaProfileInspector.exe"
         set "NPI_NIP_SRC=!NPI_SRC!\Kaylers_profile.nip"
 
-        :: Dossier de travail : %SystemRoot%\Temp (toujours valide sur Windows, pas de lecteur reseau)
-        set "NPI_DIR=%SystemRoot%\Temp\NvidiaProfileInspector"
-        if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
+        :: Dossier de travail : %TEMP% (par-utilisateur, toujours valide).
+        :: Fallback sur %SystemRoot%\Temp si %TEMP% est vide pour eviter "lecteur introuvable".
+        if not defined TEMP set "TEMP=%SystemRoot%\Temp"
+        if not defined TEMP set "TEMP=%CD%"
+        set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
+        if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" 1>nul 2>nul
 
         :: 1) Essayer d'utiliser les fichiers deja presents dans le repo (offline, fiable)
         if exist "!NPI_EXE_SRC!" if exist "!NPI_NIP_SRC!" (
-            copy /y "!NPI_EXE_SRC!" "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
-            copy /y "!NPI_NIP_SRC!" "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+            copy /y "!NPI_EXE_SRC!" "!NPI_DIR!\nvidiaProfileInspector.exe" 1>nul 2>nul
+            copy /y "!NPI_NIP_SRC!" "!NPI_DIR!\Kaylers_profile.nip" 1>nul 2>nul
         )
 
         :: 2) Sinon, tenter un telechargement depuis GitHub en fallback
