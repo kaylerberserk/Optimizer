@@ -1641,12 +1641,11 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%APST NVMe desactive - Performan
 :: 7.3 - Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du plan Ultimate Performance...%COLOR_RESET%
 set "TARGET_GUID="
+:: Probe par GUID (fiable quelle que soit la locale Windows)
 for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 if not defined TARGET_GUID (
+    :: Plan duplique par une execution precedente (GUID custom 99999999-...)
     for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "99999999-9999-9999-9999-999999999999"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
-)
-if not defined TARGET_GUID (
-    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i /c:"Ultimate" /c:"optimales"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 )
 if not defined TARGET_GUID (
     powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1
