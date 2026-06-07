@@ -1730,6 +1730,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations CPU specifiques (
 
 :: Intel Hybrid CPUs (Alder Lake/Raptor Lake/Meteor Lake) - Scheduling Policy
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil processeur (performances maximales)...%COLOR_RESET%
+:: E-cores (0cc5b647…-583) : 100 = aucun E-core parque
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex scheme_current 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 :: Intel Thread Director : politique de scheduling reelle (valeur 2 = Prefer Performant Processors)
@@ -1737,9 +1738,10 @@ powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93
 powercfg /setactive scheme_current >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director : politique "Prefer Performant" appliquee (P-cores prioritaires)^(options de parking Core/Hetero visibles dans powercfg^)%COLOR_RESET%
 
-:: AMD Ryzen - Desactivation Core Parking
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Core Parking (AMD Ryzen)...%COLOR_RESET%
-:: Appliquer immediatement : desactiver le core parking via powercfg sur le plan actif
+:: Desactivation Core Parking (Intel + AMD)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Core Parking (Intel Hybrid + AMD Ryzen)...%COLOR_RESET%
+:: P-cores (0cc5b647…-584) : 100 = aucun P-core parque. Meme GUID pour Intel Hybrid et AMD Ryzen
+:: (le parking core utilise le meme sous-groupe SUB_PROCESSOR 0cc5b647 sur les deux architectures)
 :: GUID SUB_PROCESSOR en dur (alias SUB_PROCESSOR non fiable selon la locale Windows)
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100 >nul 2>&1
