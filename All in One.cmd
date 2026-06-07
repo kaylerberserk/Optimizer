@@ -1224,27 +1224,26 @@ if "!HAS_NVIDIA!"=="1" (
         set "NPI_EXE_SRC=!NPI_SRC!\nvidiaProfileInspector.exe"
         set "NPI_NIP_SRC=!NPI_SRC!\Kaylers_profile.nip"
 
-        :: Dossier de travail : %TEMP% (par-utilisateur, toujours valide).
-        :: Fallback sur %SystemRoot%\Temp si %TEMP% est vide pour eviter "lecteur introuvable".
-        if not defined TEMP set "TEMP=%SystemRoot%\Temp"
-        if not defined TEMP set "TEMP=%CD%"
-        set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
-        if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" 1>nul 2>nul
+        :: Dossier de travail : %LOCALAPPDATA% (toujours un chemin local, jamais UNC).
+        :: Evite l'erreur "lecteur introuvable" causee par %TEMP% sur certains systemes.
+        if not defined LOCALAPPDATA set "LOCALAPPDATA=%USERPROFILE%\AppData\Local"
+        set "NPI_DIR=!LOCALAPPDATA!\Temp\NvidiaProfileInspector"
+        powershell -NoProfile -Command "$null = New-Item -ItemType Directory -Path '!NPI_DIR!' -Force -ErrorAction SilentlyContinue" 2>nul
 
         :: 1) Essayer d'utiliser les fichiers deja presents dans le repo (offline, fiable)
         if exist "!NPI_EXE_SRC!" if exist "!NPI_NIP_SRC!" (
-            copy /y "!NPI_EXE_SRC!" "!NPI_DIR!\nvidiaProfileInspector.exe" 1>nul 2>nul
-            copy /y "!NPI_NIP_SRC!" "!NPI_DIR!\Kaylers_profile.nip" 1>nul 2>nul
+            powershell -NoProfile -Command "Copy-Item -Path '!NPI_EXE_SRC!' -Destination '!NPI_DIR!\nvidiaProfileInspector.exe' -Force -ErrorAction SilentlyContinue" 2>nul
+            powershell -NoProfile -Command "Copy-Item -Path '!NPI_NIP_SRC!' -Destination '!NPI_DIR!\Kaylers_profile.nip' -Force -ErrorAction SilentlyContinue" 2>nul
         )
 
         :: 2) Sinon, tenter un telechargement depuis GitHub en fallback
         if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
-            powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+            powershell -NoProfile -Command "$ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing -ErrorAction SilentlyContinue } catch {}" 2>nul
         )
         if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
             for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
                 echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Fichier NVIDIA Profile Inspector corrompu ou incomplet%COLOR_RESET%
-                del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
+                powershell -NoProfile -Command "Remove-Item -Path '!NPI_DIR!\nvidiaProfileInspector.exe' -Force -ErrorAction SilentlyContinue" 2>nul
                 goto :NPI_DONE
             )
         ) else (
@@ -1254,13 +1253,11 @@ if "!HAS_NVIDIA!"=="1" (
 
         :: Telecharger le profil gaming optimise (Kaylers_profile.nip) si pas deja copie
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preparation du profil gaming optimise...%COLOR_RESET%
-        if not exist "!NPI_DIR!\Kaylers_profile.nip" (
-            powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
-        )
+        powershell -NoProfile -Command "if (-not (Test-Path '!NPI_DIR!\Kaylers_profile.nip')) { $ProgressPreference = 'SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing -ErrorAction SilentlyContinue } catch {} }" 2>nul
         if exist "!NPI_DIR!\Kaylers_profile.nip" (
             for %%A in ("!NPI_DIR!\Kaylers_profile.nip") do if %%~zA LSS 100 (
                 echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA corrompu ou incomplet%COLOR_RESET%
-                del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+                powershell -NoProfile -Command "Remove-Item -Path '!NPI_DIR!\Kaylers_profile.nip' -Force -ErrorAction SilentlyContinue" 2>nul
                 goto :NPI_DONE
             )
         ) else (
@@ -1271,15 +1268,13 @@ if "!HAS_NVIDIA!"=="1" (
         :: Appliquer le profil NVIDIA en utilisant l'outil Profile Inspector
         :: L'outil est lance en arriere-plan, applique le profil, puis est ferme
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du profil NVIDIA optimise...%COLOR_RESET%
-        start "" /D "!NPI_DIR!" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
+        start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
         ping -n 2 127.0.0.1 >nul 2>&1
         taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique%COLOR_RESET%
 
         :: Nettoyage des fichiers temporaires
-        del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
-        del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
-        rmdir "!NPI_DIR!" >nul 2>&1
+        powershell -NoProfile -Command "Remove-Item -Path '!NPI_DIR!\nvidiaProfileInspector.exe','!NPI_DIR!\Kaylers_profile.nip' -Force -ErrorAction SilentlyContinue; Remove-Item -Path '!NPI_DIR!' -Recurse -Force -ErrorAction SilentlyContinue" 2>nul
     ) else (
         echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA global ignore en profil EQUILIBRE pour preserver autonomie, chauffe et silence%COLOR_RESET%
     )
@@ -1909,9 +1904,16 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
 :: 7.0 - Reactiver le plan d'alimentation Equilibre Windows (defaut)
+:: + suppression du plan UP duplique (99999999-...) cree par DESACTIVER 7.0 en Home/Pro
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du plan Equilibre Windows...%COLOR_RESET%
 powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre Windows actif%COLOR_RESET%
+powercfg -list 2>nul | findstr /i "99999999-9999-9999-9999-999999999999" >nul
+if not errorlevel 1 (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression du plan Ultimate Performance duplique...%COLOR_RESET%
+    powercfg -deletescheme 99999999-9999-9999-9999-999999999999 >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan duplique supprime%COLOR_RESET%
+)
 
 :: 7.1 - Demarrage rapide (Fast Startup)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du demarrage rapide (Fast Startup)...%COLOR_RESET%
@@ -2121,17 +2123,17 @@ powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94
 powercfg /setacvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 600 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 300 >nul 2>&1
 
-:: Biais qualite lecture video : equilibre (50)
-powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 50 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 50 >nul 2>&1
+:: Biais qualite lecture video : equilibre (1 = performance)
+powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
 
-:: Lecture video : qualite optimale (66)
-powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 66 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 66 >nul 2>&1
+:: Lecture video : equilibre (1 = Balanced)
+powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 1 >nul 2>&1
 
-:: Intel Graphics : equilibre (0)
-powercfg /setacvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 0 >nul 2>&1
+:: Intel Graphics : equilibre (1 = Balanced)
+powercfg /setacvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 1 >nul 2>&1
 
 :: AMD power slider : equilibre (0)
 powercfg /setacvalueindex SCHEME_CURRENT c763b4ec-0e50-4b6b-9bed-2b92a6ee884e 7ec1751b-60ed-4588-afb5-9819d3d77d90 0 >nul 2>&1
@@ -2301,7 +2303,9 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%CI policy restauree%COLOR_RESET
 
 :: 8.4 - Restauration VBS/HVCI/CFG aux valeurs par defaut
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /f >nul 2>&1
+reg delete "HKLM\System\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /f >nul 2>&1
 :: CFG doit etre ACTIVE par defaut (requis pour Vanguard / anti-cheat)
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 
