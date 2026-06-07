@@ -1224,11 +1224,11 @@ if "!HAS_NVIDIA!"=="1" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...%COLOR_RESET%
         set "NPI_DIR=!TEMP!\NvidiaProfileInspector"
 
-        rem Creer le dossier temporaire pour les fichiers NPI
+        :: Creer le dossier temporaire pour les fichiers NPI
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!"
 
-        rem Telecharger NVIDIA Profile Inspector depuis GitHub
-        rem Verification de la taille du fichier pour s'assurer qu'il n'est pas corrompu (min 10KB)
+        :: Telecharger NVIDIA Profile Inspector depuis GitHub
+        :: Verification de la taille du fichier pour s'assurer qu'il n'est pas corrompu (min 10KB)
         powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe' -OutFile '!NPI_DIR!\nvidiaProfileInspector.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\nvidiaProfileInspector.exe" (
             for %%A in ("!NPI_DIR!\nvidiaProfileInspector.exe") do if %%~zA LSS 10000 (
@@ -1241,8 +1241,8 @@ if "!HAS_NVIDIA!"=="1" (
             goto :NPI_DONE
         )
 
-        rem Telecharger le profil gaming optimise (Kaylers_profile.nip)
-        rem Ce profil contient des parametres optimises pour reduire l'input lag
+        :: Telecharger le profil gaming optimise (Kaylers_profile.nip)
+        :: Ce profil contient des parametres optimises pour reduire l'input lag
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement du profil gaming optimise...%COLOR_RESET%
         powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip' -OutFile '!NPI_DIR!\Kaylers_profile.nip' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
         if exist "!NPI_DIR!\Kaylers_profile.nip" (
@@ -1256,15 +1256,15 @@ if "!HAS_NVIDIA!"=="1" (
             goto :NPI_DONE
         )
 
-        rem Appliquer le profil NVIDIA en utilisant l'outil Profile Inspector
-        rem L'outil est lance en arriere-plan, applique le profil, puis est ferme
+        :: Appliquer le profil NVIDIA en utilisant l'outil Profile Inspector
+        :: L'outil est lance en arriere-plan, applique le profil, puis est ferme
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du profil NVIDIA optimise...%COLOR_RESET%
         start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
         ping -n 2 127.0.0.1 >nul 2>&1
         taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique%COLOR_RESET%
 
-        rem Nettoyage des fichiers temporaires
+        :: Nettoyage des fichiers temporaires
         del "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
         del "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
         rmdir "!NPI_DIR!" >nul 2>&1
@@ -1757,7 +1757,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%USB optimise - Latence minimale
 
 :: 7.12 - Configuration generale du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du systeme d'alimentation...%COLOR_RESET%
-:: (Anciens powercfg sur SUB_ENERGYSAVER (de830923...) supprimes - sous-groupe inexistant en Win10/11)
 :: ASPM est configure correctement a la section 7.22 ci-dessous avec SUB_PCIEXPRESS (501a4d13...)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WcmSvc\GroupPolicy" /v fDisablePowerManagement /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v PlatformAoAcOverride /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1921,8 +1920,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du Timer Coalescin
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v MinimumDpcRate /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableTsx /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v GlobalTimerResolutionRequests /f >nul 2>&1
-:: (bcdedit /deletevalue disabledynamictick supprime : pas de bcdedit /set disabledynamictick dans le disable,
-::  c'etait un no-op - rien a supprimer)
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /f >nul 2>&1
@@ -1967,9 +1964,7 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\V
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /f >nul 2>&1
 
-:: 7.9 - Seuils d'economie d'energie
-:: (Ancien powercfg sur SUB_ENERGYSAVER/ESBATTTHRESHOLD supprime - sous-groupe inexistant en Win10/11,
-::  l'alias ESBATTTHRESHOLD est de plus obsolete. Le seuil par defaut 20% est hardcode dans le plan Balanced.)
+:: 7.9 - Seuils d'economie d'energie (vide - hardcodes 20% dans plan Balanced)
 
 :: 7.10 - NVMe APST (Autonomous Power State Transition)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration APST NVMe ^(economie d'energie par defaut^)...%COLOR_RESET%
@@ -2068,8 +2063,6 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion d'energie PCIe reactivee%COLOR_RESET%
 
 :: 7.22 - Plans d'alimentation avances
-:: (Masquage ATTRIB_HIDE sur 75b0ae3f... et ea062031... supprime : etaient des no-ops,
-::  rien dans la section disable ne les de-masque, donc rien a re-masquer au restore.)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaures (parametres avances selon defaut Windows)%COLOR_RESET%
 
 echo.
@@ -2407,10 +2400,10 @@ choice /C 123M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, 3, 
 if !errorlevel! EQU 4 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 3 (
   echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du Mode Gaming ^(Performance + Compatibilite^)...%COLOR_RESET%
-  rem Desactiver Mitigations CPU (Gain FPS)
+  :: Desactiver Mitigations CPU (Gain FPS)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
-  rem HVCI = 1, VBS = 1, CFG = 1, LSA = 0 (Mode optimal pour anti-cheat + perfs)
+  :: HVCI = 1, VBS = 1, CFG = 1, LSA = 0 (Mode optimal pour anti-cheat + perfs)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\System\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
