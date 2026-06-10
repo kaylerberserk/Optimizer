@@ -1728,9 +1728,15 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations CPU specifiques (
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil processeur (performances maximales)...%COLOR_RESET%
 :: E-cores (0cc5b647…-583) : 100 = aucun E-core parque
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 :: Intel Thread Director : politique de scheduling reelle (valeur 2 = Prefer Performant Processors)
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
+:: Short thread scheduling (Intel Hybrid) : 2 = Prefer Performant Processors
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 2 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 2 >nul 2>&1
 powercfg /setactive SCHEME_CURRENT >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director : politique "Prefer Performant" appliquee (P-cores prioritaires)^(options de parking Core/Hetero visibles dans powercfg^)%COLOR_RESET%
 
@@ -1903,17 +1909,24 @@ echo %COLOR_WHITE%  aux valeurs par defaut de Windows.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
-:: 7.0 - Reactiver le plan d'alimentation Equilibre Windows (defaut)
-:: + suppression du plan UP duplique (99999999-...) cree par DESACTIVER 7.0 en Home/Pro
+:: 7.0 - Restaurer tous les plans d'alimentation aux valeurs d'usine Microsoft
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de tous les plans d'alimentation aux valeurs d'usine...%COLOR_RESET%
+echo Add-Type -TypeDefinition @' > "%TEMP%\reset_power.ps1"
+echo using System; >> "%TEMP%\reset_power.ps1"
+echo using System.Runtime.InteropServices; >> "%TEMP%\reset_power.ps1"
+echo public class Power { >> "%TEMP%\reset_power.ps1"
+echo     [DllImport("powrprof.dll", SetLastError=true)] >> "%TEMP%\reset_power.ps1"
+echo     public static extern uint PowerRestoreDefaultPowerSchemes(); >> "%TEMP%\reset_power.ps1"
+echo } >> "%TEMP%\reset_power.ps1"
+echo '@ >> "%TEMP%\reset_power.ps1"
+echo [Power]::PowerRestoreDefaultPowerSchemes() >> "%TEMP%\reset_power.ps1"
+powershell -NoProfile -File "%TEMP%\reset_power.ps1" <nul
+del "%TEMP%\reset_power.ps1" 2>nul
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaurés (tous les schémas et valeurs par défaut)%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du plan Equilibre Windows...%COLOR_RESET%
 powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre Windows actif%COLOR_RESET%
-powercfg -list 2>nul | findstr /i "99999999-9999-9999-9999-999999999999" >nul
-if not errorlevel 1 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression du plan Ultimate Performance duplique...%COLOR_RESET%
-    powercfg -deletescheme 99999999-9999-9999-9999-999999999999 >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan duplique supprime%COLOR_RESET%
-)
+:: Le plan UP duplique (99999999-...) est automatiquement supprimé par la restauration d'usine
 
 :: 7.1 - Demarrage rapide (Fast Startup)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du demarrage rapide (Fast Startup)...%COLOR_RESET%
@@ -1927,8 +1940,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Hibernation reactivee%COLOR_RES
 
 :: 7.3 - USB Selective Suspend
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation de la mise en veille selective USB...%COLOR_RESET%
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mise en veille selective USB reactivee%COLOR_RESET%
 
@@ -1961,30 +1972,25 @@ if exist "%STR_STARTUP_LNK%" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution n'etait pas dans le demarrage%COLOR_RESET%
 )
 
-:: 7.6 - Restaurer Intel Thread Director
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration Intel Thread Director...%COLOR_RESET%
+:: 7.6 - Restaurer Intel Thread Director (visibilité panneau)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilité Intel Thread Director...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\bae08b81-2d5e-4688-ad6a-13243356654b" /v Attributes /f >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 5 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 5 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director restaure%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilité Intel Thread Director restaurée (valeurs par défaut via 7.0)%COLOR_RESET%
 
-:: 7.7 - Restaurer AMD Core Parking (default Windows = 100% = parking desactive)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration Core Parking (AMD Ryzen)...%COLOR_RESET%
+:: 7.7 - Restaurer AMD Core Parking (visibilité panneau)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilité Core Parking...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking restaure (defaut Windows 100%% = parking desactive)^%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilité Core Parking restaurée (valeur par défaut via 7.0)%COLOR_RESET%
 
 :: 7.8 - Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du Power Throttling...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\Default\VetoPolicy" /v "EA:EnergySaverEngaged" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PDC\Activators\28\VetoPolicy" /v "EA:PowerStateDischarging" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling" /v PowerThrottlingOff /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Power Throttling reactive%COLOR_RESET%
 
-:: 7.9 - Seuils d'economie d'energie (vide - hardcodes 20% dans plan Balanced)
+:: 7.9 - Seuils d'economie d'energie (hardcodes 20% dans plan Balanced, pas de restoration necessaire)
 
 :: 7.10 - NVMe APST (Autonomous Power State Transition)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration APST NVMe ^(economie d'energie par defaut^)...%COLOR_RESET%
@@ -2011,15 +2017,12 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des economies d'en
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $e=[char]0x00E9; $act='Activ'+$e; $mod='Mod'+$e+'r'+$e; function Set-Prop($a,$rx,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -match $rx}; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue; Set-Prop $n 'Energy|Green|Efficace|Ethernet.*vert|.co.nerg.tique|Giga.*Lite|Power.*Saving' @('Enabled','Active',$act,'On'); Set-Prop $n 'Interrupt.*Mod|Mod.*ration' @('Enabled','Active',$act,'On'); Set-Prop $n 'Moderation.*Rate|Taux.*mod' @('Moderate','Modere',$mod,'Medium')}; $keysToRemove=@('PnPCapabilities','AdvancedEEE','*EEE','EEELinkAdvertisement','SipsEnabled','ULPMode','GigaLite','EnableGreenEthernet','PowerSavingMode','S5WakeOnLan','*WakeOnMagicPacket','*WakeOnPattern','WakeOnLink','*ModernStandbyWoLMagicPacket','*SelectiveSuspend','*PMARPOffload','*PMNSOffload','EnablePME','ReduceSpeedOnPowerDown','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','*FlowControl','*InterruptModeration','*InterruptModerationRate','ITR','EnableLLI','EnableDownShift'); Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' -ErrorAction SilentlyContinue | Where-Object {$_.PSChildName -match '^\d{4}$'} | ForEach-Object {foreach($k in $keysToRemove){Remove-ItemProperty -Path $_.PSPath -Name $k -ErrorAction SilentlyContinue}}; $bindingIds=@('ms_lldp','ms_lltdio','ms_implat','ms_rspndr'); Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object {foreach($id in $bindingIds){Enable-NetAdapterBinding -Name $_.Name -ComponentID $id -ErrorAction SilentlyContinue}}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC et bindings restaures%COLOR_RESET%
 
-:: 7.13 - Parametres processeur par defaut
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des parametres processeur par defaut...%COLOR_RESET%
-:: Supprimer les overrides Attributes (retour au comportement par defaut du panneau)
+:: 7.13 - Visibilité des paramètres processeur dans le panneau
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilité des paramètres processeur...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /f >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 90 >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres processeur restaures%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilité restaurée (valeurs par défaut via 7.0)%COLOR_RESET%
 
 :: 7.14 - ASPM (PCI Express)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation ASPM sur le bus PCI Express...%COLOR_RESET%
@@ -2060,6 +2063,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
   reg delete "%%K" /v "*WakeOnPattern" /f >nul 2>&1
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion d'energie PCI reactivee%COLOR_RESET%
 
 :: 7.19 - Systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration du systeme d'alimentation...%COLOR_RESET%
@@ -2074,84 +2078,14 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des parametres d'e
 powershell -NoProfile -Command "$bases=@('HKLM:\SYSTEM\CurrentControlSet\Enum\ACPI','HKLM:\SYSTEM\CurrentControlSet\Enum\HID','HKLM:\SYSTEM\CurrentControlSet\Enum\PCI','HKLM:\SYSTEM\CurrentControlSet\Enum\USB','HKLM:\SYSTEM\CurrentControlSet\Enum\USBSTOR'); foreach($b in $bases){ if(Test-Path $b){ Get-ChildItem -Path $b -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' } | ForEach-Object { $p=$_.PSPath; Remove-ItemProperty -Path $p -Name 'EnhancedPowerManagementEnabled','SelectiveSuspendEnabled','SelectiveSuspendOn','WaitWakeEnabled','DeviceSelectiveSuspended' -ErrorAction SilentlyContinue }; Get-ChildItem -Path $b -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'WDF' } | ForEach-Object { $p=$_.PSPath; Remove-ItemProperty -Path $p -Name 'IdleInWorkingState' -ErrorAction SilentlyContinue } } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres d'economie des peripheriques restaures%COLOR_RESET%
 
-:: 7.21 - Gestion d'energie PCIe
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation gestion d'energie PCIe...%COLOR_RESET%
-powercfg /setacvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 501a4d13-42af-4429-9fd1-a8218c268e20 ee12f906-d277-404b-b6da-e5fa1a576df5 1 >nul 2>&1
-powercfg /S SCHEME_CURRENT >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion d'energie PCIe reactivee%COLOR_RESET%
+:: 7.21 - Gestion d'énergie PCIe (visibilité panneau)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilité PCIe...%COLOR_RESET%
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilité PCIe restaurée (valeur par défaut via 7.0)%COLOR_RESET%
 
-:: 7.23 - Plans d'alimentation avances
-:: Mirror DESACTIVER 7.6: re-appliquer chaque valeur powercfg a son defaut Windows Balanced
-:: (AC = secteur, DC = batterie). Ne touche qu'aux 12 sous-categories modifiees par 7.6.
+:: 7.22 - Energie PCIe GPU (ASPM restaure en 7.11, valeurs powercfg via 7.0)
 
-:: Disque dur : jamais eteindre (AC=0, DC=0x60=96 sec)
-powercfg /setacvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 0012ee47-9041-4b5d-9b77-535fba8b1442 6738e2c4-e8a5-4a42-b16a-e040e769756e 96 >nul 2>&1
-
-:: Diaporama arriere-plan : disponible (0 = non en pause)
-powercfg /setacvalueindex SCHEME_CURRENT 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 0d7dbae2-4294-402a-ba8e-26777e8488cd 309dce9b-bef4-4119-9921-a851fb12f0f4 0 >nul 2>&1
-
-:: Wi-Fi performances : Low Power (AC=1) / Medium Power Saving (DC=2)
-powercfg /setacvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 19cbb8fa-5279-450e-9fac-8a3d5fedd0c1 12bbebe6-58d6-4636-95bb-3217ef867c1a 2 >nul 2>&1
-
-:: Veille hybride : off (AC=0, DC=1)
-powercfg /setacvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 94ac6d29-73ce-41a6-809f-6363ba21b47e 1 >nul 2>&1
-
-:: Hibernation : jamais (0)
-powercfg /setacvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 238c9fa8-0aad-41ed-83f4-97be242c8f20 9d7815a6-7ee4-497e-8888-515a05f02364 0 >nul 2>&1
-
-:: USB Hub selective suspend : 20ms (0x14)
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 20 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 0853a681-27c8-4100-a2fd-82013e970683 20 >nul 2>&1
-
-:: USB 3 link power management : desactive (0)
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
-
-:: Etat processeur max : 100%
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bc5038f7-23e0-4960-96da-33abaf5935ec 100 >nul 2>&1
-
-:: Politique de refroidissement : actif (1)
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 94d3a615-a899-4ac5-ae2b-e4d8f634367f 1 >nul 2>&1
-
-:: Extinction ecran : 10 min AC (600), 5 min DC (300)
-powercfg /setacvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 600 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 7516b95f-f776-4464-8c53-06167f40cc99 3c0bc021-c8a8-4e07-a973-6b14cbcb2b7e 300 >nul 2>&1
-
-:: Biais qualite lecture video : equilibre (1 = Balanced)
-powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 10778347-1370-4ee0-8bbd-33bdacaade49 1 >nul 2>&1
-
-:: Lecture video : equilibre (1 = Balanced)
-powercfg /setacvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 9596fb26-9850-41fd-ac3e-f7c3c00afd4b 34c7b99f-9a6d-4b3c-8dc7-b6693b78cef4 1 >nul 2>&1
-
-:: Intel Graphics : equilibre (1 = Balanced)
-powercfg /setacvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 44f3beca-a7c0-460e-9df2-bb8b99e0cba6 3619c3f2-afb2-4afc-b0e9-e7fef372de36 1 >nul 2>&1
-
-:: AMD power slider : equilibre (0)
-powercfg /setacvalueindex SCHEME_CURRENT c763b4ec-0e50-4b6b-9bed-2b92a6ee884e 7ec1751b-60ed-4588-afb5-9819d3d77d90 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT c763b4ec-0e50-4b6b-9bed-2b92a6ee884e 7ec1751b-60ed-4588-afb5-9819d3d77d90 0 >nul 2>&1
-
-:: ATI Powerplay : equilibre (0)
-powercfg /setacvalueindex SCHEME_CURRENT f693fb01-e858-4f00-b20f-f30e12ac06d6 191f65b5-d45c-4a4f-8aae-1ab8bfd980e6 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT f693fb01-e858-4f00-b20f-f30e12ac06d6 191f65b5-d45c-4a4f-8aae-1ab8bfd980e6 0 >nul 2>&1
-
-:: GPU switchable : automatique (0)
-powercfg /setacvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1662ab2-9d34-4e53-ba8b-2639b9e20857 0 >nul 2>&1
-
-powercfg /S SCHEME_CURRENT >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaures (parametres avances selon defaut Windows)%COLOR_RESET%
+:: 7.23 - Plans d'alimentation avances (restaures via API 7.0)
 
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
