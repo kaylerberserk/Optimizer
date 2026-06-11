@@ -62,21 +62,30 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
-- **[9] Bloatwares** : Suppression des applications préinstallées inutiles.
+
+### 🧰 Outils & Utilitaires
+
+- **[N] Nettoyage Avancé** : Grand ménage en 18 étapes des fichiers temporaires, caches et logs.
+- **[R] Point de Restauration** : Crée un point de restauration système avant toute modification.
+- **[G] Gestion Windows** : Menu dédié (Defender, UAC, VBS/HVCI, Edge, OneDrive…).
+- **[W] MAS** : Lien vers l'outil d'activation communautaire pour Windows et Office.
+- **[T] WinUtil** : Accès à la boîte à outils de maintenance de Chris Titus Tech.
+- **[Q] Quitter** : Ferme le script.
 
 ### 📂 Gestion Windows & Maintenance (Menu [G])
 
-- **Windows Defender** : Activation ou désactivation complète de l'antivirus intégré.
-- **UAC** : Gestion fine des notifications du Contrôle de Compte Utilisateur.
-- **VBS / HVCI** : Gestion de l'Isolation du noyau (Memory Integrity) pour les FPS ou la compatibilité Anti-Cheat. **Mode Gaming (option 3)** recommandé : active VBS/HVCI/CFG (compatible Vanguard, FaceIT, Ricochet) tout en désactivant les mitigations CPU coûteuses (Spectre/Meltdown).
-- **Animations** : Choix entre une interface visuelle riche ou ultra-réactive.
-- **IA & Widgets** : Suppression de Copilot, Recall et des widgets Windows 11.
-- **Applications** : Désinstallation propre de OneDrive et Microsoft Edge.
-- **Bloatwares** : Suppression en un clic des applications Windows inutiles (News, Solitaire, Skype, etc.).
-- **Runtimes** : Installation des bibliothèques essentielles (Visual C++ 2015-2022, DirectX).
-- **[N] Nettoyage Avancé** : Grand ménage en 18 étapes des fichiers temporaires, caches et logs.
-- **[W] MAS** : Lien vers l'outil d'activation communautaire pour Windows et Office.
-- **[T] WinUtil** : Accès à la boîte à outils de maintenance de Chris Titus Tech.
+| Touche | Fonction | Description |
+|:---:|---|---|
+| **[1]** | **Windows Defender** | Activation ou désactivation complète de l'antivirus intégré. |
+| **[2]** | **UAC** | Gestion fine des notifications du Contrôle de Compte Utilisateur. |
+| **[3]** | **VBS / HVCI** | Gestion de l'Isolation du noyau (Memory Integrity) pour les FPS ou la compatibilité Anti-Cheat. **Mode Gaming (option 3)** : active VBS/HVCI/CFG (compatible Vanguard, FaceIT, Ricochet) tout en désactivant les mitigations CPU coûteuses (Spectre/Meltdown). |
+| **[4]** | **Animations** | Choix entre une interface visuelle riche ou ultra-réactive. |
+| **[5]** | **IA & Widgets** | Suppression de Copilot, Recall et des widgets Windows 11. |
+| **[6]** | **OneDrive** | Désinstallation complète de OneDrive. |
+| **[7]** | **Microsoft Edge** | Désinstallation complète de Microsoft Edge (WebView2 préservé). |
+| **[8]** | **Runtimes** | Installation des bibliothèques essentielles (Visual C++ 2015-2022, DirectX). |
+| **[9]** | **Bloatwares** | Suppression des apps préinstallées inutiles (News, Solitaire, Skype, etc.). |
+| **[M]** | **Retour** | Retour au menu principal. |
 
 ---
 
@@ -86,6 +95,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 - **Réversibilité** : Chaque modification est traçable. L'option **[R]** permet de créer un point de restauration instantané et les paramètres système peuvent être restaurés via les menus dédiés.
 - **Transparence** : Code source 100% ouvert, auditable et sans binaire tiers ou script obfusqué.
 - **Zéro perte de fonctions** : Les fonctionnalités vitales (Windows Update, Microsoft Store) restent opérationnelles. Les "Bloatwares" supprimés sont uniquement les apps préinstallées non-essentielles.
+- **Edge/OneDrive optionnels** : Contrairement aux bloatwares, Edge et OneDrive sont conservés par défaut mais peuvent être désinstallés via le menu **[G] → [6]** (OneDrive) ou **[G] → [7]** (Edge).
 
 ---
 
@@ -108,10 +118,10 @@ R : Oui, le script vérifie l'état actuel avant d'appliquer un changement. Le r
 R : Le gain varie selon votre matériel, mais vous constaterez surtout une meilleure stabilité du framerate (moins de drops) et une réponse plus instantanée de vos périphériques.
 
 **Q : Pourquoi désactiver les mitigations Spectre/Meltdown (Option 8) ?**  
-R : Ces protections ajoutent une charge au processeur. En les désactivant, on regagne de la performance brute, mais c'est une option réservée aux utilisateurs qui acceptent le risque de sécurité associé. L'option 8 couvre plus largement les protections de sécurité (mitigations CPU, VBS/HVCI, CI Policy, débridage USB).
+R : Ces protections ajoutent une charge au processeur. En les désactivant, on regagne de la performance brute, mais c'est une option réservée aux utilisateurs qui acceptent le risque de sécurité associé. L'option 8 désactive les mitigations CPU (Spectre/Meltdown, CI Policy) tout en conservant VBS/HVCI/CFG actifs pour la compatibilité anti-cheat.
 
 **Q : Est-ce sûr pour le jeu en ligne ?**  
-R : Absolument. Le script n'interfère jamais avec les fichiers de jeu. Pour les titres exigeants (Valorant/FaceIT/Ricochet), utilisez l'option **[3] Mode Gaming (FaceIT/Vanguard compatible)** dans le menu VBS/HVCI : VBS et HVCI restent activés (exigés par les anti-cheats) mais les mitigations CPU coûteuses sont désactivées pour libérer les performances.
+R : Absolument. Le script n'interfère jamais avec les fichiers de jeu. Pour les titres exigeants (Valorant/FaceIT/Ricochet), utilisez l'option **[3] Mode Gaming** dans le menu **[G] → VBS/HVCI** : VBS et HVCI restent activés (exigés par les anti-cheats) mais les mitigations CPU coûteuses sont désactivées pour libérer les performances.
 
 ### 🌐 Maintenance & Divers
 
@@ -139,7 +149,7 @@ R : Le script effectue un nettoyage ciblé pour supprimer les éléments publici
 | **Quotidien** | Météo, Sports, Finances, Alarmes, Caméra, Enregistreur vocal. |
 | **Multimédia** | Musique (Groove), Films et TV, Photos, Paint. |
 | **Productivité** | Calculatrice, Bloc-notes, Courrier & Calendrier, Sticky Notes. |
-| **Système** | Store, Edge, OneDrive, Sécurité Windows, Terminal, Capture. |
+| **Système** | Store, Sécurité Windows, Terminal, Capture. |
 
 **Q : Combien de temps dure l'optimisation ?**  
 R : Moins de 5 minutes selon les options choisies et la vitesse de votre matériel.
