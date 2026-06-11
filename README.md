@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ WINDOWS OPTIMIZER
+# WINDOWS OPTIMIZER
 
 ### 🚀 Le script ultime d'optimisation pour Windows 10 & 11
 *Maximisez vos performances, réduisez votre latence et reprenez le contrôle sur votre système.*
@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **Conçu pour le Gaming Compétitif, le Multitâche intensif et la Confidentialité.**  
-*100% Transparent • Open Source • Entièrement Réversible*
+*100% Transparent • Open Source*
 
 </div>
 
