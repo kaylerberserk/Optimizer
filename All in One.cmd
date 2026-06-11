@@ -1356,11 +1356,11 @@ if "!IS_LAPTOP!"=="0" (
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 128 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v NetbtPriority /t REG_DWORD /d 7 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Registre TCP configure%COLOR_RESET%
-
 :: 5.4 - MSI Mode cartes reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI Mode cartes reseau...%COLOR_RESET%
 powershell -NoProfile -Command "Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MSI Mode active sur cartes reseau%COLOR_RESET%
+
 
 :: 5.5 - Optimisation BITS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS...%COLOR_RESET%
@@ -1635,11 +1635,6 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v RmDisableRegistryCaching /t REG_DWORD /d 1 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GPU Power Management optimise%COLOR_RESET%
-
-:: 7.5 - NIC Energy Saving Ethernet et WiFi
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des economies d'energie reseau (NIC - Ethernet et WiFi)...%COLOR_RESET%
-powershell -NoProfile -Command "$e=[char]0x00E9;$des=\"D${e}sactiv${e}\"; function Set-NicVal { param($a,$n,$vals) foreach($v in $vals){ try { Set-NetAdapterAdvancedProperty -Name $a -DisplayName $n -DisplayValue $v -ErrorAction Stop; return } catch {} } }; Get-ChildItem -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}' | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.Name; reg add \"$p\" /v \"PnPCapabilities\" /t REG_DWORD /d 8 /f >$null; reg add \"$p\" /v \"AdvancedEEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*EEE\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EEELinkAdvertisement\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"SipsEnabled\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"ULPMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"GigaLite\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"EnableGreenEthernet\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"PowerSavingMode\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"S5WakeOnLan\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnMagicPacket\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*WakeOnPattern\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"WakeOnLink\" /t REG_SZ /d \"0\" /f >$null; reg add \"$p\" /v \"*ModernStandbyWoLMagicPacket\" /t REG_SZ /d \"0\" /f >$null }; Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | ForEach-Object { $adapter=$_.Name; $energyProps = @('Energy-Efficient Ethernet','Green Ethernet','Power Saving Mode','Gigabit Lite','Ethernet a economie d''energie','Ethernet vert','802.11 Power Save','Power Management','Allow the computer to turn off this device','Gestion de l''alimentation 802.11','Mode d''economie d''energie','Power Save Mode'); foreach($propName in $energyProps) { Set-NicVal $adapter $propName @('Disabled','Desactive',$des) } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC desactivees (Registre + Pilotes)%COLOR_RESET%
 
 :: 7.6 - Parametres avances du plan d'alimentation (user standard)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration avancee du plan d'alimentation...%COLOR_RESET%
@@ -2711,7 +2706,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :CORE_ACTIVER_COPILOT
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot active.%COLOR_RESET%
-call :FINISH_IA_ACTION "Copilot" "active"
+call :FINISH_ACTION "Copilot" "active"
 exit /b
 
 :DESACTIVER_COPILOT_SECTION
@@ -2738,7 +2733,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :CORE_DESACTIVER_COPILOT
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot desactive.%COLOR_RESET%
-call :FINISH_IA_ACTION "Copilot" "desactive"
+call :FINISH_ACTION "Copilot" "desactive"
 exit /b
 
 :CORE_ACTIVER_COPILOT
@@ -2803,7 +2798,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :CORE_ACTIVER_WIDGETS
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets actives.%COLOR_RESET%
-call :FINISH_IA_ACTION "Widgets" "active"
+call :FINISH_ACTION "Widgets" "active"
 exit /b
 
 :DESACTIVER_WIDGETS_SECTION
@@ -2830,7 +2825,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :CORE_DESACTIVER_WIDGETS
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets desactives.%COLOR_RESET%
-call :FINISH_IA_ACTION "Widgets" "desactive"
+call :FINISH_ACTION "Widgets" "desactive"
 exit /b
 
 :CORE_ACTIVER_WIDGETS
@@ -2857,7 +2852,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :CORE_ACTIVER_RECALL
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall active.%COLOR_RESET%
-call :FINISH_IA_ACTION "Recall" "active"
+call :FINISH_ACTION "Recall" "active"
 exit /b
 
 :DESACTIVER_RECALL_SECTION
@@ -2884,7 +2879,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :CORE_DESACTIVER_RECALL
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall desactive.%COLOR_RESET%
-call :FINISH_IA_ACTION "Recall" "desactive"
+call :FINISH_ACTION "Recall" "desactive"
 exit /b
 
 :CORE_ACTIVER_RECALL
@@ -2953,9 +2948,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets et Recall desa
 call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
 exit /b
 
-:FINISH_IA_ACTION
-call :FINISH_ACTION "%~1" "%~2"
-exit /b
 
 :FINISH_ACTION
 setlocal DisableDelayedExpansion
@@ -3049,13 +3041,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des dossiers OneDrive
 if exist "%LocalAppData%\Microsoft\OneDrive" rd "%LocalAppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%AppData%\Microsoft\OneDrive" rd "%AppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%SystemDrive%\OneDriveTemp" rd "%SystemDrive%\OneDriveTemp" /q /s >nul 2>&1
-:: Chemins fixes
-for %%C in (
-    "%LocalAppData%\Microsoft\OneDrive\logs"
-    "%LocalAppData%\Microsoft\OneDrive\settings"
-) do (
-    if exist "%%~C" rd "%%~C" /q /s >nul 2>&1
-)
 :: Wildcards : rd ne supporte pas les wildcards, il faut une enumeration for /d
 for /d %%C in ("%LocalAppData%\Temp\OneDrive*") do rd "%%C" /q /s >nul 2>&1
 for /d %%C in ("%Temp%\OneDrive*") do rd "%%C" /q /s >nul 2>&1
