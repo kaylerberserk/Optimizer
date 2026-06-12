@@ -569,7 +569,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommand
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer votre PC maintenant ? [O/N]: %COLOR_RESET%"
-if !errorlevel! EQU 2 exit /b
+if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 1 (
     shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
     cls
@@ -605,19 +605,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Planification CPU configuree%COLOR_RESET%
 
-:: 1.2 - Gestion de la memoire (MMAgent) - conditionnel selon la RAM
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Analyse de la memoire physique...%COLOR_RESET%
-for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB)"') do set "RAM_GB=%%A"
-echo %COLOR_WHITE%   RAM detectee : %RAM_GB% Go%COLOR_RESET%
-if %RAM_GB% GTR 8 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM > 8 Go : desactivation de la compression memoire...%COLOR_RESET%
-    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
-) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM <= 8 Go : compression memoire conservee ^(stabilite preservee^)%COLOR_RESET%
-)
-
-:: 1.3 - Profil Gaming MMCSS (taches jeux)
+:: 1.2 - Profil Gaming MMCSS (taches jeux)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil gaming (MMCSS)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
@@ -625,7 +613,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProf
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil gaming (MMCSS) configure%COLOR_RESET%
 
-:: 1.4 - Interface Windows
+:: 1.3 - Interface Windows
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de l'interface Windows...%COLOR_RESET%
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowTaskViewButton" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowCortanaButton" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -649,7 +637,7 @@ reg add "HKU\.DEFAULT\Control Panel\Keyboard" /v "InitialKeyboardIndicators" /t 
 reg add "HKCU\Control Panel\Keyboard" /v "InitialKeyboardIndicators" /t REG_SZ /d "2" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" /v TaskbarEndTask /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: 1.5 - Telemetrie et vie privee
+:: 1.4 - Telemetrie et vie privee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de la telemetrie et des publicites...%COLOR_RESET%
 reg add "HKCU\Software\Microsoft\InputPersonalization" /v "RestrictImplicitInkCollection" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\InputPersonalization" /v "RestrictImplicitTextCollection" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -665,7 +653,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v DisableThum
 reg add "HKCU\Control Panel\Desktop" /v JPEGImportQuality /t REG_DWORD /d 100 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interface et privacy de base optimisees%COLOR_RESET%
 
-:: 1.6 - Telemetrie systeme et vie privee approfondie
+:: 1.5 - Telemetrie systeme et vie privee approfondie
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de la telemetrie et des traceurs...%COLOR_RESET%
 :: Registre : telemetrie et publicites
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection" /v "AllowTelemetry" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -773,7 +761,7 @@ attrib +r "%HOSTS%" >nul 2>&1
 ipconfig /flushdns >nul 2>&1
 set "HOSTS="
 
-:: 1.7 - Services optimises
+:: 1.6 - Services optimises
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation services%COLOR_RESET%
 
 :: 1 - Services vitaux -> AUTOMATIQUE
@@ -860,7 +848,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services telemetrie et legacy d
 :: Services critiques laisses intacts : Bluetooth, Hello, RDP, Spooler, PlugPlay
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services optimises (Bluetooth/VPN/Hello/RDP preserves)%COLOR_RESET%
 
-:: 1.8 - Optimisations demarrage et systeme
+:: 1.7 - Optimisations demarrage et systeme
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme diverses...%COLOR_RESET%
 :: Supprimer le delai de demarrage des applications
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Serialize" /v "StartupDelayInMSec" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -880,7 +868,7 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "2048" /t REG_DWORD /d 7 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Optimisations demarrage et stockage terminees%COLOR_RESET%
 
-:: 1.9 - Utilitaires et Bloatwares (Automatique)
+:: 1.8 - Utilitaires et Bloatwares (Automatique)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Ajout de "Devenir Proprietaire" au menu contextuel...%COLOR_RESET%
 reg add "HKCR\*\shell\runas" /ve /t REG_SZ /d "Devenir Proprietaire" /f >nul 2>&1
 reg add "HKCR\*\shell\runas" /v "NoWorkingDirectory" /t REG_SZ /d "" /f >nul 2>&1
@@ -919,7 +907,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pare-feu telemetrie actif (Upda
 :: Batterie - Energy Saver (seuil 100%% active l'economiseur en permanence)
 :: powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
 
-:: 1.10 - Navigateurs
+:: 1.9 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation navigateurs...%COLOR_RESET%
 :: Microsoft Edge
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v HideFirstRunExperience /t REG_DWORD /d 1 /f >nul 2>&1
@@ -942,25 +930,25 @@ reg add "HKCU\Software\Policies\Google\Chrome" /v HardwareAccelerationModeEnable
 reg add "HKCU\Software\Policies\Google\Chrome" /v BackgroundModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Navigateurs optimises%COLOR_RESET%
 
-:: 1.11 - Desactivation du stockage reserve
+:: 1.10 - Desactivation du stockage reserve
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du stockage reserve Windows...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v ShippedWithReserves /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Stockage reserve desactive ^(~7Go recuperes apres redemarrage^)%COLOR_RESET%
 
-:: 1.12 - Affichage du code erreur BSoD
+:: 1.11 - Affichage du code erreur BSoD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de l'affichage des codes erreur BSoD...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CrashControl" /v DisplayParameters /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Codes erreur BSoD visibles (diagnostic facilite)%COLOR_RESET%
 
-:: 1.13 - Desactivation de l'aide F1
+:: 1.12 - Desactivation de l'aide F1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de la touche F1 (aide Windows)...%COLOR_RESET%
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win64" /ve /t REG_SZ /d "" /f >nul 2>&1
 reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t REG_SZ /d "" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Touche F1 (aide) desactivee%COLOR_RESET%
 
-:: 1.14 - Desactivation audio enhancements (latence audio)
+:: 1.13 - Desactivation audio enhancements (latence audio)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des ameliorations audio...%COLOR_RESET%
 powershell -NoProfile -Command "$path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}'; Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.PSPath; Set-ItemProperty -Path $p -Name 'FxNonDestructiveSoftMixer' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name 'FxRender' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue; Set-ItemProperty -Path $p -Name 'DisableAudioEndpointDucking' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } " >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Optimisation des peripheriques de rendu audio (PowerShell)%COLOR_RESET%
@@ -968,12 +956,12 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Audio" /v DisableAudioEnhancem
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio" /v ImmersiveAudio /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Ameliorations audio desactivees - Latence reduite%COLOR_RESET%
 
-:: 1.15 - Desactivation Windows Platform Binary Table (WPBT)
+:: 1.14 - Desactivation Windows Platform Binary Table (WPBT)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation WPBT (anti bloatware OEM firmware)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%WPBT desactive%COLOR_RESET%
 
-:: 1.16 - Intel Thread Director : deverrouillage des options UI (sans danger, applicable a tous)
+:: 1.15 - Intel Thread Director : deverrouillage des options UI (sans danger, applicable a tous)
 :: Permet l'affichage des options Heterogeneous Scheduling et Core Parking dans powercfg.cpl.
 :: La configuration effective (Prefer Performant) est appliquee en section 7 pour le profil LATENCE.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Deverrouillage des options Intel Thread Director (Heterogeneous Scheduling, Core Parking)...%COLOR_RESET%
@@ -1025,6 +1013,18 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du tas tolerant a
 reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%FTH desactive - Performances memoire ameliorees%COLOR_RESET%
+
+:: 2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Analyse de la memoire physique...%COLOR_RESET%
+for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB)"') do set "RAM_GB=%%A"
+echo %COLOR_WHITE%   RAM detectee : %RAM_GB% Go%COLOR_RESET%
+if %RAM_GB% GTR 8 (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM > 8 Go : desactivation de la compression memoire...%COLOR_RESET%
+    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee ^(stabilite preservee^)%COLOR_RESET%
+)
 
 call :FINISH_ACTION "Optimisations memoire" "appliquees"
 exit /b
