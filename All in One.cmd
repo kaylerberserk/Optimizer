@@ -21,7 +21,7 @@ for /f "delims=" %%a in ('powershell -NoProfile -Command "$([char]27)"') do set 
 
 :: Si powershell echoue, on utilise une alternative plus robuste
 if not defined ESC (
-    :: Methode alternative via CMD (escape sequence)
+    REM Methode alternative via CMD (escape sequence)
     for /f %%a in ('"prompt $E ^& echo on & for %%b in (1) do rem"') do set "ESC=%%a"
 )
 
@@ -1276,12 +1276,12 @@ if "!HAS_NVIDIA!"=="1" (
     if "!IS_LAPTOP!"=="0" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...%COLOR_RESET%
         
-        :: Utilisation de Windows\Temp car le %%TEMP%% utilisateur peut etre sur un RamDisk ou lecteur non mappe en Admin
+        REM Utilisation de Windows\Temp car le %%TEMP%% utilisateur peut etre sur un RamDisk ou lecteur non mappe en Admin
         set "NPI_DIR=%SystemDrive%\Windows\Temp\NPI_Temp"
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
         
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement de NVIDIA Profile Inspector et du profil...%COLOR_RESET%
-        :: Utilisation de curl (integre a Windows) au lieu de PowerShell pour eviter les erreurs de lecteur/profil
+        REM Utilisation de curl (integre a Windows) au lieu de PowerShell pour eviter les erreurs de lecteur/profil
         curl -sL "https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe" -o "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
         curl -sL "https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip" -o "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
         
@@ -1667,7 +1667,7 @@ set "TARGET_GUID="
 :: Probe par GUID (fiable quelle que soit la locale Windows)
 for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 if not defined TARGET_GUID (
-    :: Plan duplique par une execution precedente (GUID custom 99999999-...)
+    REM Plan duplique par une execution precedente (GUID custom 99999999-...)
     for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "99999999-9999-9999-9999-999999999999"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
 )
 if not defined TARGET_GUID (
@@ -2174,7 +2174,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mitigations CPU desactivees%COL
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Conservation du VBS/HVCI/CFG (requis pour Valorant, Fortnite, etc.)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
-:: CFG doit rester ACTIVE pour Vanguard (Valorant)
+REM CFG doit rester ACTIVE pour Vanguard (Valorant)
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI/CFG conserves (compatibilite anti-cheat)%COLOR_RESET%
 
@@ -2421,10 +2421,10 @@ choice /C 123M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, 3, 
 if !errorlevel! EQU 4 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 3 (
   echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du Mode Gaming ^(Performance + Compatibilite^)...%COLOR_RESET%
-  :: Desactiver Mitigations CPU (Gain FPS)
+  REM Desactiver Mitigations CPU (Gain FPS)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
-  :: HVCI = 1, VBS = 1, CFG = 1, LSA = 0 (Mode optimal pour anti-cheat + perfs)
+  REM HVCI = 1, VBS = 1, CFG = 1, LSA = 0 (Mode optimal pour anti-cheat + perfs)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2447,7 +2447,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de VBS, HVCI et Cred
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 1 /f >nul 2>&1
-:: CFG doit rester ACTIVE pour Vanguard (Valorant)
+REM CFG doit rester ACTIVE pour Vanguard (Valorant)
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard actives.%COLOR_RESET%
 call :FINISH_ACTION "VBS/HVCI" "active"
