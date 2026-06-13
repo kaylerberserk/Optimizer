@@ -1307,7 +1307,7 @@ if "!HAS_NVIDIA!"=="1" (
             echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement ou fichiers corrompus.%COLOR_RESET%
         )
         
-        :: Nettoyage
+        REM Nettoyage
         del /f /q "!NPI_DIR!\*.*" >nul 2>&1
         rmdir "!NPI_DIR!" >nul 2>&1
     ) else (
@@ -2130,7 +2130,7 @@ echo %COLOR_WHITE%  - La blocklist de pilotes vulnerables aide Windows a bloquer
 echo %COLOR_WHITE%  - Ces cles de registre sont sensibles : erreur = instabilite ou surface d'attaque.%COLOR_RESET%
 echo %COLOR_WHITE%  - Indique surtout pour bench/jeux competitifs sur machine isolee et maitrisee.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_PROTECTIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_PROTECTIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_PROTECTIONS_RUN
 cls
@@ -2341,7 +2341,7 @@ echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Parametres ^> Confidential
 echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%piratages et menaces ^> Parametres de protection ^> Tamper Protection = OFF.%COLOR_RESET%
 echo %COLOR_YELLOW%        %COLOR_RESET% %COLOR_WHITE%Sinon, les commandes ci-dessous seront silencieusement ignorees par Defender.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_DEFENDER_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_DEFENDER_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_DEFENDER_RUN
 cls
@@ -2516,7 +2516,7 @@ setlocal DisableDelayedExpansion
 echo [!] %COLOR_YELLOW%LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.%COLOR_RESET%
 endlocal
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_UAC_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC et les avertissements lies ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_UAC_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC et les avertissements lies ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_UAC_RUN
 cls
@@ -2627,7 +2627,7 @@ echo %COLOR_WHITE%- Cela modifie le registre utilisateur et bcdedit ^(animation 
 echo %COLOR_WHITE%- L'interface parait plus "seche" ^(transparence, barres des taches, menus^).%COLOR_RESET%
 echo %COLOR_WHITE%- Un redemarrage est necessaire pour tout voir ; reversible via le menu Activer.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_ANIMATIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment desactiver les animations ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_ANIMATIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment desactiver les animations ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_ANIMATIONS_RUN
 cls
@@ -2758,7 +2758,7 @@ echo.
 echo %COLOR_WHITE%Pourquoi cette question : Copilot s'appuie sur des services cloud et peut%COLOR_RESET%
 echo %COLOR_WHITE%consommer des ressources en arriere-plan pour les suggestions IA.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_COPILOT_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Copilot ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_COPILOT_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Copilot ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_COPILOT_RUN
 cls
@@ -2850,7 +2850,7 @@ echo.
 echo %COLOR_WHITE%Pourquoi cette question : les widgets utilisent des ressources et du reseau%COLOR_RESET%
 echo %COLOR_WHITE%pour afficher des actualites et la meteo en continu.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_WIDGETS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation des Widgets ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_WIDGETS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation des Widgets ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_WIDGETS_RUN
 cls
@@ -2904,7 +2904,7 @@ echo.
 echo %COLOR_WHITE%Pourquoi cette question : Recall enregistre votre activite ecran pour%COLOR_RESET%
 echo %COLOR_WHITE%permettre des recherches IA ^(fort impact sur la confidentialite^).%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_RECALL_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Recall ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_RECALL_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Recall ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_RECALL_RUN
 cls
@@ -2968,7 +2968,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %COLOR_WHITE%Effet : suppression de toutes les fonctionnalites IA et widgets cloud.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_TOUT_IA_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%" EXITB
+call :ASK_IF_INTERACTIVE :DESACTIVER_TOUT_IA_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_TOUT_IA_RUN
 cls
