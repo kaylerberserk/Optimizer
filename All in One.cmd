@@ -213,24 +213,18 @@ powershell -NoProfile -Command "try { $c=(Invoke-WebRequest -Uri \"https://www.m
 if !errorlevel! EQU 0 set "HAS_INTERNET=1"
 exit /b
 
-:: Confirmation O/N - %~1 = message, %~2 = EXITB (exit /b 1) ou label (:NOM) si Non
+:: Confirmation O/N - %~1 = message, retourne 0 pour Oui, 1 pour Non
 :ASK_CONFIRM
 choice /C ON /N /M "%~1"
-if !errorlevel! EQU 2 (
-    if /i "%~2"=="EXITB" exit /b 1
-    goto %~2
-)
+if !errorlevel! EQU 2 exit /b 1
 exit /b 0
 
-:: %~1 = label RUN (mode auto ou apres Oui)  %~2 = message  %~3 = EXITB ou :label si Non
+:: %~1 = label (ignore, conserve pour compatibilite appelants)  %~2 = message
 :ASK_IF_INTERACTIVE
 if not "%SKIP_PAUSE%"=="0" exit /b 0
-call :ASK_CONFIRM "%~2" %~3
-:: ASK_CONFIRM retourne errorlevel 0 pour Oui, 1 pour Non
-if !errorlevel! EQU 1 (
-    if /i "%~3"=="EXITB" exit /b 1
-    goto %~3
-)
+call :ASK_CONFIRM "%~2"
+:: Retourne 0 pour Oui, 1 pour Non. Les appelants gerent le routage.
+if !errorlevel! EQU 1 exit /b 1
 exit /b 0
 
 :: %~1 = message  %~2 = variable flag (ex: DESACTIVER_SECURITE) - positionne a 1 si Oui, 0 si Non
@@ -239,7 +233,7 @@ set "%~2=0"
 choice /C ONM /N /M "%~1"
 if !errorlevel! EQU 3 (
     cls
-    goto :MENU_PRINCIPAL
+    exit /b 2
 )
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
@@ -442,6 +436,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N/M]: %COLOR_RESET%" DESACTIVER_SECURITE
+if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -460,6 +455,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N/M]: %COLOR_RESET%" DESACTIVER_DEFENDER
+if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -478,6 +474,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver les animations Windows ? [O/N/M]: %COLOR_RESET%" DESACTIVER_ANIMATIONS
+if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -496,6 +493,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces fonctionnalites IA ? [O/N/M]: %COLOR_RESET%" DESACTIVER_IA
+if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -514,6 +512,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC ? [O/N/M]: %COLOR_RESET%" DESACTIVER_UAC
+if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 
 
