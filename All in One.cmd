@@ -2998,7 +2998,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommand
 echo.
 if "%SKIP_PAUSE%"=="1" goto :FINISH_ACTION_EXIT
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-if errorlevel 2 goto :FINISH_ACTION_EXIT
+if !errorlevel! EQU 2 goto :FINISH_ACTION_EXIT
 shutdown /r /t 5 /c "Redemarrage apres modification"
 cls
 echo.
