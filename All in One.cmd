@@ -224,14 +224,14 @@ exit /b 0
 
 :: %~1 = label RUN (mode auto ou apres Oui)  %~2 = message  %~3 = EXITB ou :label si Non
 :ASK_IF_INTERACTIVE
-if not "%SKIP_PAUSE%"=="0" goto %~1
+if not "%SKIP_PAUSE%"=="0" exit /b 0
 call :ASK_CONFIRM "%~2" %~3
 :: ASK_CONFIRM retourne errorlevel 0 pour Oui, 1 pour Non
 if !errorlevel! EQU 1 (
     if /i "%~3"=="EXITB" exit /b 1
     goto %~3
 )
-goto %~1
+exit /b 0
 
 :: %~1 = message  %~2 = variable flag (ex: DESACTIVER_SECURITE) - positionne a 1 si Oui, 0 si Non
 :COMMON_YES_NO
@@ -305,12 +305,36 @@ if !errorlevel! EQU 10 goto :TOUT_OPTIMISER_LATENCE
 if !errorlevel! EQU 9  goto :TOUT_OPTIMISER_EQUILIBRE
 if !errorlevel! EQU 8  goto :TOGGLE_PROTECTIONS_SECURITE
 if !errorlevel! EQU 7  goto :TOGGLE_ECONOMIES_ENERGIE
-if !errorlevel! EQU 6  call :OPTIMISATIONS_PERIPHERIQUES & goto :MENU_PRINCIPAL
-if !errorlevel! EQU 5  call :OPTIMISATIONS_RESEAU & goto :MENU_PRINCIPAL
-if !errorlevel! EQU 4  call :OPTIMISATIONS_GPU & goto :MENU_PRINCIPAL
-if !errorlevel! EQU 3  call :OPTIMISATIONS_DISQUES & goto :MENU_PRINCIPAL
-if !errorlevel! EQU 2  call :OPTIMISATIONS_MEMOIRE & goto :MENU_PRINCIPAL
-if !errorlevel! EQU 1  call :OPTIMISATIONS_SYSTEME & goto :MENU_PRINCIPAL
+if !errorlevel! EQU 6  goto :DO_PERIPHERIQUES
+if !errorlevel! EQU 5  goto :DO_RESEAU
+if !errorlevel! EQU 4  goto :DO_GPU
+if !errorlevel! EQU 3  goto :DO_DISQUES
+if !errorlevel! EQU 2  goto :DO_MEMOIRE
+if !errorlevel! EQU 1  goto :DO_SYSTEME
+goto :MENU_PRINCIPAL
+
+:DO_PERIPHERIQUES
+call :OPTIMISATIONS_PERIPHERIQUES
+goto :MENU_PRINCIPAL
+
+:DO_RESEAU
+call :OPTIMISATIONS_RESEAU
+goto :MENU_PRINCIPAL
+
+:DO_GPU
+call :OPTIMISATIONS_GPU
+goto :MENU_PRINCIPAL
+
+:DO_DISQUES
+call :OPTIMISATIONS_DISQUES
+goto :MENU_PRINCIPAL
+
+:DO_MEMOIRE
+call :OPTIMISATIONS_MEMOIRE
+goto :MENU_PRINCIPAL
+
+:DO_SYSTEME
+call :OPTIMISATIONS_SYSTEME
 goto :MENU_PRINCIPAL
 
 :MENU_GESTION_WINDOWS
@@ -349,7 +373,7 @@ choice /C 123456789M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-9
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
 if !errorlevel! EQU 10 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 9  goto :SUPPRIMER_BLOATWARES
-if !errorlevel! EQU 8  call :INSTALLER_VISUAL_REDIST & goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 8  goto :DO_INSTALLER_VISUAL_REDIST
 if !errorlevel! EQU 7  goto :DESINSTALLER_EDGE
 if !errorlevel! EQU 6  goto :DESINSTALLER_ONEDRIVE
 if !errorlevel! EQU 5  goto :MENU_IA_WIDGETS_RECALL
@@ -357,6 +381,10 @@ if !errorlevel! EQU 4  goto :TOGGLE_ANIMATIONS
 if !errorlevel! EQU 3  goto :TOGGLE_VBS_HVCI
 if !errorlevel! EQU 2  goto :TOGGLE_UAC
 if !errorlevel! EQU 1  goto :TOGGLE_DEFENDER
+goto :MENU_GESTION_WINDOWS
+
+:DO_INSTALLER_VISUAL_REDIST
+call :INSTALLER_VISUAL_REDIST
 goto :MENU_GESTION_WINDOWS
 
 :TOUT_OPTIMISER_LATENCE
@@ -1017,9 +1045,10 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%FTH desactive - Performances me
 :: 2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Analyse de la memoire physique...%COLOR_RESET%
 for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB)"') do set "RAM_GB=%%A"
-echo %COLOR_WHITE%   RAM detectee : %RAM_GB% Go%COLOR_RESET%
-if %RAM_GB% GTR 8 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM > 8 Go : desactivation de la compression memoire...%COLOR_RESET%
+if not defined RAM_GB set "RAM_GB=0"
+echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
+if !RAM_GB! GTR 8 (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM ^> 8 Go : desactivation de la compression memoire...%COLOR_RESET%
     powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
 ) else (
@@ -1602,8 +1631,16 @@ echo %COLOR_CYAN%===============================================================
 echo.
 choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
-if !errorlevel! EQU 2 call :RESTAURER_ECONOMIES_ENERGIE & goto :TOGGLE_ECONOMIES_ENERGIE
-if !errorlevel! EQU 1 call :DESACTIVER_ECONOMIES_ENERGIE & goto :TOGGLE_ECONOMIES_ENERGIE
+if !errorlevel! EQU 2 goto :DO_RESTAURER_ECONOMIES
+if !errorlevel! EQU 1 goto :DO_DESACTIVER_ECONOMIES
+goto :TOGGLE_ECONOMIES_ENERGIE
+
+:DO_RESTAURER_ECONOMIES
+call :RESTAURER_ECONOMIES_ENERGIE
+goto :TOGGLE_ECONOMIES_ENERGIE
+
+:DO_DESACTIVER_ECONOMIES
+call :DESACTIVER_ECONOMIES_ENERGIE
 goto :TOGGLE_ECONOMIES_ENERGIE
 
 :DESACTIVER_ECONOMIES_ENERGIE
@@ -2058,8 +2095,16 @@ echo %COLOR_CYAN%===============================================================
 echo.
 choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
-if !errorlevel! EQU 2 call :RESTAURER_PROTECTIONS_SECURITE & goto :TOGGLE_PROTECTIONS_SECURITE
-if !errorlevel! EQU 1 call :DESACTIVER_PROTECTIONS_SECURITE & goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! EQU 2 goto :DO_RESTAURER_PROTECTIONS
+if !errorlevel! EQU 1 goto :DO_DESACTIVER_PROTECTIONS
+goto :TOGGLE_PROTECTIONS_SECURITE
+
+:DO_RESTAURER_PROTECTIONS
+call :RESTAURER_PROTECTIONS_SECURITE
+goto :TOGGLE_PROTECTIONS_SECURITE
+
+:DO_DESACTIVER_PROTECTIONS
+call :DESACTIVER_PROTECTIONS_SECURITE
 goto :TOGGLE_PROTECTIONS_SECURITE
 
 :DESACTIVER_PROTECTIONS_SECURITE
@@ -2945,28 +2990,23 @@ exit /b
 
 
 :FINISH_ACTION
-setlocal DisableDelayedExpansion
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%%~1 %~2%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
 echo.
-if "%SKIP_PAUSE%"=="1" (
-  endlocal
-  exit /b
-)
+if "%SKIP_PAUSE%"=="1" goto :FINISH_ACTION_EXIT
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-if errorlevel 2 (
-  endlocal
-  exit /b
-)
+if errorlevel 2 goto :FINISH_ACTION_EXIT
 shutdown /r /t 5 /c "Redemarrage apres modification"
 cls
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
 timeout /t 5 /nobreak >nul
 exit
+:FINISH_ACTION_EXIT
+exit /b
 
 :DESINSTALLER_ONEDRIVE
 cls

@@ -1,0 +1,10 @@
+# Force CRLF line endings for Windows batch files
+# CMD.exe ne peut pas trouver les labels dans des fichiers avec des fins de ligne LF
+*.cmd    text eol=crlf
+*.bat    text eol=crlf
+*.ps1    text eol=crlf
+
+# Other text files
+*.md     text eol=lf
+*.txt    text eol=lf
+*.gitignore text eol=lf
