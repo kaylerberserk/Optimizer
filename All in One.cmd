@@ -1637,8 +1637,7 @@ echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_R
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 12Mm /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-if !errorlevel! EQU 4 goto :MENU_PRINCIPAL
+choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 2 goto :DO_RESTAURER_ECONOMIES
 if !errorlevel! EQU 1 goto :DO_DESACTIVER_ECONOMIES
