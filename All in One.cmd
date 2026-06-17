@@ -1410,17 +1410,20 @@ if "!PROFIL_MODE!"=="0" (
     netsh int tcp set global rss=enabled rsc=enabled ecncapability=enabled >nul 2>&1
 )
 
-:: BBR2 applique aux deux profils (LATENCE + EQUILIBRE) - meilleur debit/stabilite sur Win11 24H2/25H2
-netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux ^(LATENCE + EQUILIBRE^)%COLOR_RESET%
-:: Garde defensif : si le build OS ne supporte pas BBR2, le signaler (repli automatique sur le provider par defaut)
-netsh int tcp show supplemental template=internet 2>nul | findstr /i "bbr2" >nul 2>&1
-if !errorlevel! NEQ 0 (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%BBR2 non confirme sur ce build OS - reverifier la compatibilite (Win11 24H2/25H2)%COLOR_RESET%
+:: BBR2 applique uniquement en profil LATENCE - risque de crash sur certains builds OS
+if "!PROFIL_MODE!"=="0" (
+    netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux ^(Profil LATENCE^)%COLOR_RESET%
+    netsh int tcp show supplemental template=internet 2>nul | findstr /i "bbr2" >nul 2>&1
+    if !errorlevel! NEQ 0 (
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%BBR2 non confirme sur ce build OS - reverifier la compatibilite (Win11 24H2/25H2)%COLOR_RESET%
+    )
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%BBR2 ignore en profil EQUILIBRE ^(congestion provider par defaut conserve^)%COLOR_RESET%
 )
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desactive pour eviter les bugs locaux%COLOR_RESET%
 
