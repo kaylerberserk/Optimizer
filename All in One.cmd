@@ -185,8 +185,8 @@ if exist "%TEMP%\hw_info.tmp" (
         if /i "%%a"=="CPU" set "HW_CPU=%%b"
         if /i "%%a"=="GPU" set "HW_GPU=%%b"
         if /i "%%a"=="RAM" set "HW_RAM=%%b"
-        if /i "%%a"=="LAPTOP" if not "%~1"=="1" (
-            set "PROFIL_MODE=%%b"
+        if /i "%%a"=="LAPTOP" (
+            if not "%~1"=="1" set "PROFIL_MODE=%%b"
             set "DETECTE_PORTABLE=%%b"
         )
     )
@@ -988,14 +988,26 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation WPBT (anti bloatw
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%WPBT desactive%COLOR_RESET%
 
-:: 1.15 - Intel Thread Director : deverrouillage des options UI (sans danger, applicable a tous)
-:: Permet l'affichage des options Heterogeneous Scheduling et Core Parking dans powercfg.cpl.
-:: La configuration effective (Prefer Performant) est appliquee en section 7 pour le profil LATENCE.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Deverrouillage des options Intel Thread Director (Heterogeneous Scheduling, Core Parking)...%COLOR_RESET%
+:: 1.15 - Intel Thread Director / Core Parking (profil-aware)
+:: SCHEDPOLICY 93b8... : 0=Tous, 1=Performants, 2=Preferer performants, 3=Efficients, 4=Preferer efficients, 5=Auto.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration Intel Thread Director / Core Parking...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Options Thread Director / Core Parking visibles dans powercfg.cpl%COLOR_RESET%
+if "!PROFIL_MODE!"=="0" (
+    powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
+    if "!DETECTE_PORTABLE!"=="1" (
+        powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director LATENCE : AC prefer performance, DC Auto laptop%COLOR_RESET%
+    ) else (
+        powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director LATENCE : prefer performance AC/DC%COLOR_RESET%
+    )
+) else (
+    powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
+    powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director EQUILIBRE : Auto AC/DC%COLOR_RESET%
+)
 
 call :FINISH_ACTION "Optimisations systeme" "appliquees"
 exit /b
@@ -1275,8 +1287,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%HAGS active - Latence GPU reduite%COLOR_RESET%
 
 :: 4.7 - Preemption GPU : valeur par defaut WDDM (risque TDR-108 evite)
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preemption GPU laisee au defaut WDDM (pas de reg add forcee)^%COLOR_RESET%
+echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Preemption GPU laissee au defaut WDDM (pas de reg add forcee)^%COLOR_RESET%
 
 :: 4.8 - NVIDIA Profile Inspector
 :: Cette section applique un profil d'optimisation NVIDIA pour reduire l'input lag.
@@ -1397,24 +1408,17 @@ if "!PROFIL_MODE!"=="0" (
     netsh int tcp set global rss=enabled rsc=enabled ecncapability=enabled >nul 2>&1
 )
 
-if "!PROFIL_MODE!"=="0" (
-    netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
-    netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
-    netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
-    netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
-    netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux (profil LATENCE)%%COLOR_RESET%
-    netsh int tcp show supplemental template=internet 2>nul | findstr /i "bbr2" >nul 2>&1
-    if !errorlevel! NEQ 0 (
-        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%BBR2 non confirme sur ce build OS - reverifier la compatibilite (Win11 24H2/25H2)%%COLOR_RESET%
-    )
-) else (
-    netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
-    netsh int tcp set supplemental template=internetcustom congestionprovider=cubic >nul 2>&1
-    netsh int tcp set supplemental template=datacenter congestionprovider=cubic >nul 2>&1
-    netsh int tcp set supplemental template=datacentercustom congestionprovider=cubic >nul 2>&1
-    netsh int tcp set supplemental template=compat congestionprovider=cubic >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE : cubic par defaut (compatibilite Win11 24H2)%%COLOR_RESET%
+:: BBR2 applique aux deux profils (LATENCE + EQUILIBRE) - meilleur debit/stabilite sur Win11 24H2/25H2
+netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux ^(LATENCE + EQUILIBRE^)%COLOR_RESET%
+:: Garde defensif : si le build OS ne supporte pas BBR2, le signaler (repli automatique sur le provider par defaut)
+netsh int tcp show supplemental template=internet 2>nul | findstr /i "bbr2" >nul 2>&1
+if !errorlevel! NEQ 0 (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%BBR2 non confirme sur ce build OS - reverifier la compatibilite (Win11 24H2/25H2)%COLOR_RESET%
 )
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desactive pour eviter les bugs locaux%COLOR_RESET%
 
@@ -1575,21 +1579,19 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
 if "!PROFIL_MODE!"=="0" (
     echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - trackpad et souris optimises%COLOR_RESET%
+    if "!DETECTE_PORTABLE!"=="1" (
+        echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - trackpad optimise, acceleration legere%COLOR_RESET%
+    ) else (
+        echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
+    )
 )
 echo.
 
 :: 6.1 - Souris optimisee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la reactivite souris...%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation acceleration souris ^(mouvement 1:1^)...%COLOR_RESET%
-    reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "0" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "0" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "0" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
-    reg add "HKCU\Control Panel\Mouse" /v "SnapToDefaultButton" /t REG_SZ /d "0" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration souris desactivee - Mouvement 1:1 actif%COLOR_RESET%
-) else (
+set "KEEP_MOUSE_ACCEL=0"
+if "!PROFIL_MODE!"=="1" if "!DETECTE_PORTABLE!"=="1" set "KEEP_MOUSE_ACCEL=1"
+if "!KEEP_MOUSE_ACCEL!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration souris trackpad ^(acceleration legere conservee^)...%COLOR_RESET%
     reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "4" /f >nul 2>&1
@@ -1597,7 +1599,16 @@ if "!PROFIL_MODE!"=="0" (
     reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
     reg add "HKCU\Control Panel\Mouse" /v "SnapToDefaultButton" /t REG_SZ /d "0" /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration legere conservee - Trackpad optimise%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation acceleration souris ^(mouvement 1:1^)...%COLOR_RESET%
+    reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "0" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "0" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "0" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
+    reg add "HKCU\Control Panel\Mouse" /v "SnapToDefaultButton" /t REG_SZ /d "0" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration souris desactivee - Mouvement 1:1 actif%COLOR_RESET%
 )
+set "KEEP_MOUSE_ACCEL="
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsolutePointerAsAbsolute" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1788,20 +1799,17 @@ powercfg /setdcvalueindex SCHEME_CURRENT e276e160-7cb0-43c6-b20b-73f5dce39954 a1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres avances du plan d'alimentation appliques%COLOR_RESET%
 
-:: 7.6 - Optimisations CPU (Intel Hybrid + AMD Core Parking)echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations CPU specifiques (Intel Hybrid / AMD Ryzen)...%COLOR_RESET%
+:: 7.6 - Optimisations CPU (Intel Hybrid + AMD Core Parking)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations CPU specifiques (Intel Hybrid / AMD Ryzen)...%COLOR_RESET%
 
-:: Intel Hybrid CPUs (Alder Lake/Raptor Lake/Meteor Lake) - Scheduling Policy
+:: Intel Hybrid CPUs (Alder Lake/Raptor Lake/Meteor Lake)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil processeur (performances maximales)...%COLOR_RESET%
 :: E-cores (0cc5b647...-583) : 100 = aucun E-core parque
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
-:: Intel Thread Director : politique de scheduling reelle (valeur 1 = Prefer Performance - MS Learn 2026)
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 1 >nul 2>&1
-REM bae08b81-2d5e-4688-ad6a-13243356654b (Short thread scheduling) : GUID NON documente MS Learn 2026 - supprime pour eviter comportement indefini (etait annote Prefer Performant sans fondement MS)
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director : politique "Prefer Performant" appliquee (P-cores prioritaires)^(options de parking Core/Hetero visibles dans powercfg^)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking E-cores configure%COLOR_RESET%
 
 :: Desactivation Core Parking (Intel + AMD)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Core Parking (Intel Hybrid + AMD Ryzen)...%COLOR_RESET%
@@ -2156,6 +2164,7 @@ call :DESACTIVER_PROTECTIONS_SECURITE
 goto :TOGGLE_PROTECTIONS_SECURITE
 
 :DESACTIVER_PROTECTIONS_SECURITE
+if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_PROTECTIONS_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : DESACTIVATION DES PROTECTIONS DE SECURITE%COLOR_RESET%
