@@ -37,11 +37,13 @@ set "COLOR_MAGENTA=%ESC%[35m" & set "COLOR_RESET=%ESC%[0m" & set "STYLE_BOLD=%ES
 :: INITIALISATION DES VARIABLES GLOBALES
 :: =================================================================================
 set "HAS_INTERNET=0"
-:: PROFIL_MODE est conserve pour compatibilite interne :
-::   0 = profil LATENCE (reactivite max, tweaks agressifs)
-::   1 = profil EQUILIBRE (recommande pour tous, surtout laptop, debit/stabilite/autonomie)
+:: PROFIL_USAGE : 0 = Gaming (latence reduite, tweaks reseau/souris agressifs)
+::               1 = Normal (bureautique, multimedia, ajustements equilibres)
+:: PROFIL_POWER : 0 = MaxPerf   (plan Ultimate Performance, economies d'energie coupees)
+::               1 = Eco       (plan Equilibre, autonomie/stabilite preservees)
 :: DETECTE_PORTABLE garde le type materiel reel detecte au demarrage.
-set "PROFIL_MODE=0"
+set "PROFIL_USAGE=0"
+set "PROFIL_POWER=0"
 set "DETECTE_PORTABLE=0"
 set "HAS_NVIDIA=0"
 set "DESACTIVER_SECURITE=0"
@@ -166,10 +168,10 @@ exit /b
 
 
 :DETECT_HARDWARE
-:: Parametre optionnel : 1 = conserver PROFIL_MODE deja choisi par l'utilisateur
+:: Parametre optionnel : 1 = conserver les profils deja choisis par l'utilisateur
 set "HW_OS=Windows" & set "HW_CPU=Inconnu" & set "HW_GPU=Inconnu" & set "HW_RAM=?" & set "HAS_NVIDIA=0"
 if not "%~1"=="1" (
-    set "PROFIL_MODE=0"
+    set "PROFIL_USAGE=0"
     set "DETECTE_PORTABLE=0"
 )
 :: Detection materiel en une seule commande pour eviter les scripts temporaires fragiles en CMD.
@@ -186,7 +188,7 @@ if exist "%TEMP%\hw_info.tmp" (
         if /i "%%a"=="GPU" set "HW_GPU=%%b"
         if /i "%%a"=="RAM" set "HW_RAM=%%b"
         if /i "%%a"=="LAPTOP" (
-            if not "%~1"=="1" set "PROFIL_MODE=%%b"
+            if not "%~1"=="1" if "%%b"=="1" set "PROFIL_POWER=1"
             set "DETECTE_PORTABLE=%%b"
         )
     )
@@ -272,8 +274,7 @@ echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie%COLOR_R
 echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite - Desactiver ou Restaurer%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
-echo %COLOR_YELLOW%[L]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil EQUILIBRE %COLOR_GREEN%- jeux, web, downloads, recommande pour tous%COLOR_RESET%
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_WHITE%Tout optimiser - Profil LATENCE %COLOR_RED%- competition, power user, deconseille portable%COLOR_RESET%
+echo %COLOR_YELLOW%[O]%COLOR_RESET% %COLOR_WHITE%Tout optimiser %COLOR_GREEN%- repondez a 2 questions, le script gere le reste%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_YELLOW%[N]%COLOR_RESET% %COLOR_CYAN%Nettoyage Avance de Windows%COLOR_RESET%
@@ -286,17 +287,16 @@ echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COL
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-choice /C 12345678LDNRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, L, D, N, R, G, W, T, Q]: %COLOR_RESET%"
+choice /C 12345678ONRGWTQ /N /M "%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, O, N, R, G, W, T, Q]: %COLOR_RESET%"
 
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
-if !errorlevel! EQU 16 goto :END_SCRIPT
-if !errorlevel! EQU 15 goto :OUTIL_CHRIS_TITUS
-if !errorlevel! EQU 14 goto :OUTIL_ACTIVATION
-if !errorlevel! EQU 13 goto :MENU_GESTION_WINDOWS
-if !errorlevel! EQU 12 goto :CREER_POINT_RESTAURATION
-if !errorlevel! EQU 11 goto :NETTOYAGE_AVANCE_WINDOWS
-if !errorlevel! EQU 10 goto :TOUT_OPTIMISER_LATENCE
-if !errorlevel! EQU 9  goto :TOUT_OPTIMISER_EQUILIBRE
+if !errorlevel! EQU 15 goto :END_SCRIPT
+if !errorlevel! EQU 14 goto :OUTIL_CHRIS_TITUS
+if !errorlevel! EQU 13 goto :OUTIL_ACTIVATION
+if !errorlevel! EQU 12 goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 11 goto :CREER_POINT_RESTAURATION
+if !errorlevel! EQU 10 goto :NETTOYAGE_AVANCE_WINDOWS
+if !errorlevel! EQU 9  goto :TOUT_OPTIMISER
 if !errorlevel! EQU 8  goto :TOGGLE_PROTECTIONS_SECURITE
 if !errorlevel! EQU 7  goto :TOGGLE_ECONOMIES_ENERGIE
 if !errorlevel! EQU 6  goto :DO_PERIPHERIQUES
@@ -381,35 +381,45 @@ goto :MENU_GESTION_WINDOWS
 call :INSTALLER_VISUAL_REDIST
 goto :MENU_GESTION_WINDOWS
 
-:TOUT_OPTIMISER_LATENCE
+:TOUT_OPTIMISER
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                     TOUT OPTIMISER - CONFIGURATION                     %COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+
+:: Q1 - Usage principal
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Quel est l'usage principal de ce PC ?%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_GREEN%[1] GAMING%COLOR_RESET% - Priorite aux jeux ^(latence reduite, tweaks reseau/souris agressifs^)
+echo %COLOR_CYAN%[2] NORMAL%COLOR_RESET% - Bureautique, multimedia, creation ^(ajustements equilibres^)
+echo.
+choice /C 12 /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez votre usage [1=Gaming / 2=Normal]: %COLOR_RESET%"
+if !errorlevel! EQU 1 set "PROFIL_USAGE=0"
+if !errorlevel! EQU 2 set "PROFIL_USAGE=1"
+
+:: Q2 - Batterie (seulement si laptop)
 if "!DETECTE_PORTABLE!"=="1" (
     cls
-    echo %COLOR_RED%=================================================================================%COLOR_RESET%
-    echo %STYLE_BOLD%%COLOR_RED%                    AVERTISSEMENT : PC PORTABLE DETECTE%COLOR_RESET%
-    echo %COLOR_RED%=================================================================================%COLOR_RESET%
-    echo.
-    echo %COLOR_WHITE% Vous avez selectionne le %COLOR_YELLOW%Profil LATENCE%COLOR_WHITE% sur un %COLOR_CYAN%PC Portable%COLOR_WHITE%.%COLOR_RESET%
-    echo.
-    echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%CE PROFIL EST ULTRA DECONSEILLE SUR UN PC PORTABLE :%COLOR_RESET%
-    echo  - Risque eleve de %COLOR_YELLOW%surchauffe%COLOR_RESET% et de %COLOR_YELLOW%baisse d'autonomie dramatique%COLOR_RESET%.
-    echo  - Desactive toutes les economies d'energie ^(CPU, PCIe, EEE, USB selective suspend^).
-    echo  - Les ventilateurs tourneront beaucoup plus vite et la batterie s'usera rapidement.
-    echo.
-    echo %COLOR_GREEN% Le profil Equilibre [L] est lui aussi parfaitement optimise pour le jeu%COLOR_RESET%
-    echo %COLOR_GREEN% ^(il conserve plus de 95%% des optimisations^). La seule difference%COLOR_RESET%
-    echo %COLOR_GREEN% reelle est un infime input lag reseau/periph en echange d'un debit maximal.%COLOR_RESET%
+    echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+    echo %STYLE_BOLD%%COLOR_WHITE%                     TOUT OPTIMISER - CONFIGURATION                     %COLOR_RESET%
+    echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
     echo.
     echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-    choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous forcer le profil LATENCE malgre tout ? [O/N]: %COLOR_RESET%"
-    if !errorlevel! EQU 2 (
-        goto :TOUT_OPTIMISER_EQUILIBRE
-    )
+    echo %COLOR_WHITE%PC Portable detecte. Voulez-vous preserver l'autonomie ?%COLOR_RESET%
+    echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+    echo.
+    echo %COLOR_GREEN%[1] OUI ^(Mode ECO^)%COLOR_RESET% - Preserve l'autonomie et reduit la chauffe ^(Recommande^)
+    echo %COLOR_RED%[2] NON ^(MAX PERF^)%COLOR_RESET% - Performances maximales ^(batterie videe rapidement^)
+    echo.
+    choice /C 12 /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez l'economie d'energie [1=Eco / 2=MaxPerf]: %COLOR_RESET%"
+    if !errorlevel! EQU 1 set "PROFIL_POWER=1"
+    if !errorlevel! EQU 2 set "PROFIL_POWER=0"
+) else (
+    set "PROFIL_POWER=0"
 )
-set "PROFIL_MODE=0"
-goto :TOUT_OPTIMISER_COMMON
-
-:TOUT_OPTIMISER_EQUILIBRE
-set "PROFIL_MODE=1"
 goto :TOUT_OPTIMISER_COMMON
 
 :TOUT_OPTIMISER_COMMON
@@ -527,7 +537,7 @@ call :OPTIMISATIONS_DISQUES
 call :OPTIMISATIONS_GPU
 call :OPTIMISATIONS_RESEAU
 call :OPTIMISATIONS_PERIPHERIQUES
-if "!PROFIL_MODE!"=="0" call :DESACTIVER_ECONOMIES_ENERGIE
+if "!PROFIL_POWER!"=="0" call :DESACTIVER_ECONOMIES_ENERGIE
 if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
 if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION
 if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION
@@ -547,17 +557,22 @@ goto :MENU_PRINCIPAL
 cls
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION PROFIL LATENCE TERMINEE%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION TERMINEE - Profil GAMING / %COLOR_RESET%
 ) else (
-    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION PROFIL EQUILIBRE TERMINEE%COLOR_RESET%
+    echo %STYLE_BOLD%%COLOR_WHITE% OPTIMISATION TERMINEE - Profil NORMAL %COLOR_RESET%
+)
+if "!PROFIL_POWER!"=="0" (
+    echo %STYLE_BOLD%%COLOR_WHITE% Mode PERFORMANCE MAX%COLOR_RESET%
+) else (
+    echo %STYLE_BOLD%%COLOR_WHITE% Mode ECO%COLOR_RESET%
 )
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
 echo %STYLE_BOLD%%COLOR_BLUE%-- RESULTATS APPLIQUES ----------------------------------------------------------%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, disques, GPU, reseau, peripheriques.%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_POWER!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan "Ultimate Performance" actif ^(economies d'energie coupees^).%COLOR_RESET%
 ) else (
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Efficience preservee ^(debit max, batterie/chauffe ok^).%COLOR_RESET%
@@ -608,6 +623,10 @@ if !errorlevel! EQU 1 (
 
 :OPTIMISATIONS_SYSTEME
 cls
+if not defined PROFIL_USAGE set "PROFIL_USAGE=0"
+if not defined PROFIL_POWER (
+    if "%DETECTE_PORTABLE%"=="1" (set "PROFIL_POWER=1") else (set "PROFIL_POWER=0")
+)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 1 : OPTIMISATIONS SYSTEME%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -616,10 +635,10 @@ echo %COLOR_WHITE%  Optimise le noyau Windows, desactive la telemetrie et config
 echo %COLOR_WHITE%  l'interface pour de meilleures performances generales.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - reactivite maximale, sans economie d'energie%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%GAMING%COLOR_RESET%%COLOR_WHITE% - reactivite maximale%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - jeux, debit reseau max, efficience active%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% - jeux, debit reseau max, efficience active%COLOR_RESET%
 )
 echo.
 
@@ -885,8 +904,8 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableInventor
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableUAR" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "AITEnable" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager" /v EnablePeriodicBackup /t REG_DWORD /d 1 /f >nul 2>&1
-:: bootuxdisabled = LATENCE profile uniquement (EQUILIBRE preserve l'animation de demarrage)
-if "!PROFIL_MODE!"=="0" bcdedit /set bootuxdisabled on >nul 2>&1
+:: bootuxdisabled = Gaming uniquement (Normal preserve l'animation de demarrage)
+if "!PROFIL_USAGE!"=="0" bcdedit /set bootuxdisabled on >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "01" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "04" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -988,25 +1007,23 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation WPBT (anti bloatw
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v DisableWpbtExecution /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%WPBT desactive%COLOR_RESET%
 
-:: 1.15 - Intel Thread Director / Core Parking (profil-aware)
-:: SCHEDPOLICY 93b8... : 0=Tous, 1=Performants, 2=Preferer performants, 3=Efficients, 4=Preferer efficients, 5=Auto.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration Intel Thread Director / Core Parking...%COLOR_RESET%
+:: 1.15 - Intel Thread Director : valeur 5 (Auto) recommandee pour tous
+:: Ne fait rien sur CPU non-hybride (AMD, Intel avant 12th gen).
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration Intel Thread Director (Auto)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /t REG_DWORD /d 2 /f >nul 2>&1
-if "!PROFIL_MODE!"=="0" (
-    powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
-    if "!DETECTE_PORTABLE!"=="1" (
-        powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director LATENCE : AC prefer performance, DC Auto laptop%COLOR_RESET%
-    ) else (
-        powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director LATENCE : prefer performance AC/DC%COLOR_RESET%
-    )
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director : Auto AC/DC%COLOR_RESET%
+
+:: 1.16 - DisablePagefileEncryption (Gaming uniquement : reduit latence I/O, incompatible BitLocker)
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du chiffrement du fichier d'echange (Gaming)...%COLOR_RESET%
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption=1 (Gaming, BitLocker incompatible)%COLOR_RESET%
 ) else (
-    powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
-    powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director EQUILIBRE : Auto AC/DC%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption conserve au defaut (Normal : BitLocker compatible)%COLOR_RESET%
 )
 
 call :FINISH_ACTION "Optimisations systeme" "appliquees"
@@ -1014,6 +1031,10 @@ exit /b
 
 :OPTIMISATIONS_MEMOIRE
 cls
+if not defined PROFIL_USAGE set "PROFIL_USAGE=0"
+if not defined PROFIL_POWER (
+    if "%DETECTE_PORTABLE%"=="1" (set "PROFIL_POWER=1") else (set "PROFIL_POWER=0")
+)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 2 : OPTIMISATIONS MEMOIRE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1022,23 +1043,11 @@ echo %COLOR_WHITE%  Cette section optimise la gestion de la RAM et du fichier d'
 echo %COLOR_WHITE%  pour ameliorer les performances en jeu et reduire la latence.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%
-) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%
-)
 echo.
 
 :: 2.1 - Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memoire...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "ClearPageFileAtShutdown" /t REG_DWORD /d 0 /f >nul 2>&1
-if "!PROFIL_MODE!"=="0" (
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption=1 ^(profil LATENCE, opt-in^)^%COLOR_RESET%
-) else (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption conserve par defaut ^(BitLocker + secrets pagines intacts^)^%COLOR_RESET%
-)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagingExecutive" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "SystemPages" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v LargeSystemCache /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1065,13 +1074,9 @@ for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance W
 if not defined RAM_GB set "RAM_GB=0"
 echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
 if !RAM_GB! GTR 8 (
-    if "!PROFIL_MODE!"=="0" (
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE + RAM ^> 8 Go : desactivation de la compression memoire ^(charge CPU reduite^)...%COLOR_RESET%
-        powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee ^(profil LATENCE^)%COLOR_RESET%
-    ) else (
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE + RAM ^> 8 Go : compression memoire laissee au defaut Windows ^(pas de write HKLM^)%COLOR_RESET%
-    )
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM ^> 8 Go : desactivation de la compression memoire ^(charge CPU reduite^)...%COLOR_RESET%
+    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee%COLOR_RESET%
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee ^(stabilite preservee^)%COLOR_RESET%
 )
@@ -1081,6 +1086,10 @@ exit /b
 
 :OPTIMISATIONS_DISQUES
 cls
+if not defined PROFIL_USAGE set "PROFIL_USAGE=0"
+if not defined PROFIL_POWER (
+    if "%DETECTE_PORTABLE%"=="1" (set "PROFIL_POWER=1") else (set "PROFIL_POWER=0")
+)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 3 : OPTIMISATIONS DISQUES ET STOCKAGE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1089,10 +1098,10 @@ echo %COLOR_WHITE%  Cette section optimise les SSD/HDD pour des temps de chargem
 echo %COLOR_WHITE%  reduits et une meilleure reactivite du systeme.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%GAMING%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%
 )
 echo.
 
@@ -1167,6 +1176,10 @@ exit /b
 
 :OPTIMISATIONS_GPU
 cls
+if not defined PROFIL_USAGE set "PROFIL_USAGE=0"
+if not defined PROFIL_POWER (
+    if "%DETECTE_PORTABLE%"=="1" (set "PROFIL_POWER=1") else (set "PROFIL_POWER=0")
+)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 4 : OPTIMISATIONS GPU%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1176,36 +1189,10 @@ echo %COLOR_WHITE%  et maximiser les performances en jeu.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
-:: Avertissement mode manuel sur PC portable : choix entre profil Equilibre et Latence.
-if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
-    setlocal DisableDelayedExpansion
-    echo [!] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
-    endlocal
-    echo.
-    echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_WHITE%. Les optimisations GPU peuvent impacter :%COLOR_RESET%
-    echo %COLOR_WHITE%  - %COLOR_YELLOW%Chauffe%COLOR_RESET% : Low-latency et VRR OFF augmentent la temperature GPU%COLOR_RESET%
-    echo %COLOR_WHITE%  - %COLOR_YELLOW%Batterie%COLOR_RESET% : NVIDIA Profile Manager reduit l'autonomie%COLOR_RESET%
-    echo %COLOR_WHITE%  - %COLOR_YELLOW%Veille%COLOR_RESET% : MaxFrameLatency desactive peut affecter la veille GPU%COLOR_RESET%
-    echo.
-    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande pour tous, surtout laptop^) - VRR ON, Low-latency OFF%COLOR_RESET%
-    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - VRR OFF, Low-latency ON%COLOR_RESET%
-    echo.
-    choice /C 12 /N /M "%COLOR_YELLOW%Choisissez le profil [1=Equilibre, 2=Latence]: %COLOR_RESET%"
-    if !errorlevel! EQU 2 (
-        set "PROFIL_MODE=0"
-        echo %COLOR_WHITE%Profil LATENCE force - Optimisations agressives actives%COLOR_RESET%
-    ) else (
-        set "PROFIL_MODE=1"
-        echo %COLOR_WHITE%Profil EQUILIBRE conserve - Optimisations moderees actives%COLOR_RESET%
-    )
-    echo.
-    echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-)
-
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - reactivite maximale, plan Ultimate Performance%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%GAMING%COLOR_RESET%%COLOR_WHITE% - latence GPU prioritaire, MaxFrameLatency/LOWLATENCY actifs%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - HAGS, VRR et economies d'energie preservees%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% - VRR ON, veille GPU preservee%COLOR_RESET%
 )
 echo.
 
@@ -1228,16 +1215,10 @@ reg add "HKCU\System\GameConfigStore" /v GameDVR_HonorUserFSEBehaviorMode /t REG
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" /v "AllowGameDVR" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GameDVR desactive - Game Mode conserve pour les performances%COLOR_RESET%
 
-:: 4.2 - Preferences DirectX (Auto HDR, VRR, Flip Model actif)
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des preferences DirectX ^(Auto HDR, VRR OFF, Flip Model^)...%COLOR_RESET%
-    reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=0;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX : Auto HDR actif, VRR OFF, Flip Model actif ^(Profil LATENCE^)%COLOR_RESET%
-) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des preferences DirectX ^(Auto HDR, VRR ON, Flip Model^)...%COLOR_RESET%
-    reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX : Auto HDR actif, VRR ON, Flip Model actif ^(Profil EQUILIBRE^)%COLOR_RESET%
-)
+:: 4.2 - Preferences DirectX (Auto HDR, VRR ON, Flip Model actif)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des preferences DirectX ^(Auto HDR, VRR ON, Flip Model^)...%COLOR_RESET%
+reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX : Auto HDR actif, VRR ON, Flip Model actif%COLOR_RESET%
 
 :: 4.3 - Mode MSI (GPU) et telemetrie NVIDIA
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI (GPU) et desactivation telemetrie NVIDIA...%COLOR_RESET%
@@ -1257,28 +1238,21 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Telemetrie AMD desactivee%COLOR
 
 :: 4.5 - NVIDIA Low Latency
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des optimisations Low Latency NVIDIA...%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
-) else (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /f >nul 2>&1
 )
 for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
-  if "!PROFIL_MODE!"=="0" (
+  if "!PROFIL_USAGE!"=="0" (
     reg add "%%K" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "%%K" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "%%K" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "%%K" /v F1TransitionLatency /t REG_DWORD /d 1 /f >nul 2>&1
-  ) else (
-    reg delete "%%K" /v LOWLATENCY /f >nul 2>&1
-    reg delete "%%K" /v Node3DLowLatency /f >nul 2>&1
-    reg delete "%%K" /v D3PCLatency /f >nul 2>&1
-    reg delete "%%K" /v F1TransitionLatency /f >nul 2>&1
   )
 )
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Low Latency active - Reduction de l'input lag ^(Profil LATENCE^)%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Low Latency active - Reduction de l'input lag ^(Gaming^)%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MaxFrameLatency et forcage low-latency desactives - Veille GPU preservee ^(Profil EQUILIBRE^)%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Low Latency ignore - Veille GPU preservee ^(Normal^)%COLOR_RESET%
 )
 
 :: 4.6 - HAGS Enable
@@ -1294,7 +1268,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preemption GPU activee%COLOR_RE
 :: 4.8 - NVIDIA Profile Inspector
 :: Cette section applique un profil d'optimisation NVIDIA pour reduire l'input lag.
 if "!HAS_NVIDIA!"=="1" (
-    if "!PROFIL_MODE!"=="0" (
+    if "!PROFIL_USAGE!"=="0" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...%COLOR_RESET%
         
         REM Utilisation de Windows\Temp car le %%TEMP%% utilisateur peut etre sur un RamDisk ou lecteur non mappe en Admin
@@ -1346,6 +1320,10 @@ exit /b
 
 :OPTIMISATIONS_RESEAU
 cls
+if not defined PROFIL_USAGE set "PROFIL_USAGE=0"
+if not defined PROFIL_POWER (
+    if "%DETECTE_PORTABLE%"=="1" (set "PROFIL_POWER=1") else (set "PROFIL_POWER=0")
+)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 5 : OPTIMISATIONS RESEAU ET INTERNET%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1368,28 +1346,18 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
     echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande pour tous, surtout laptop^) - TCP prudent, debit/stabilite/autonomie%COLOR_RESET%
     echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - TCP/NIC plus agressifs%COLOR_RESET%
     echo.
-    choice /C 12 /N /M "%COLOR_YELLOW%Choisissez le profil [1=Equilibre, 2=Latence]: %COLOR_RESET%"
-    if !errorlevel! EQU 2 (
-        set "PROFIL_MODE=0"
-        echo %COLOR_WHITE%Profil LATENCE force - Optimisations agressives actives%COLOR_RESET%
-    ) else (
-        set "PROFIL_MODE=1"
-        echo %COLOR_WHITE%Profil EQUILIBRE conserve - Optimisations moderees actives%COLOR_RESET%
-    )
-    echo.
-    echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-)
 
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - BBR2, NIC optimisee pour reponse instantanee%COLOR_RESET%
+
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%GAMING%COLOR_RESET%%COLOR_WHITE% - BBR2, NIC optimisee pour reponse instantanee%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - BBR2, stabilite et autonomie preservees%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% - BBR2, stabilite et autonomie preservees%COLOR_RESET%
 )
 echo.
 
 :: 5.1 - MMCSS reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration MMCSS reseau...%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 4294967295 /f >nul 2>&1
 ) else (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
@@ -1404,7 +1372,7 @@ netsh int tcp set heuristics forcews=disabled >nul 2>&1
 netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_USAGE!"=="0" (
     netsh int tcp set global rss=enabled rsc=disabled ecncapability=disabled timestamps=disabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=2 pacingprofile=off >nul 2>&1
 ) else (
     netsh int tcp set global rss=enabled rsc=enabled ecncapability=enabled >nul 2>&1
@@ -1426,7 +1394,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desac
 :: 5.3 - Parametres TCP registre
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 65534 /f >nul 2>&1
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpTimedWaitDelay /t REG_DWORD /d 32 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v Size /t REG_DWORD /d 3 /f >nul 2>&1
 )
@@ -1451,15 +1419,15 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Priorite DNS et connexions para
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "LocalPriority" /t REG_DWORD /d 4 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "HostsPriority" /t REG_DWORD /d 5 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /t REG_DWORD /d 6 /f >nul 2>&1
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_MAXCONNECTIONSPER1_0SERVER" /v explorer.exe /t REG_DWORD /d 4 /f >nul 2>&1
     reg add "HKLM\SOFTWARE\Microsoft\Internet Explorer\MAIN\FeatureControl\FEATURE_MAXCONNECTIONSPERSERVER" /v explorer.exe /t REG_DWORD /d 2 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DNS et connexions paralleles configurees%COLOR_RESET%
 
-:: 5.7 - Nagle/DelACK
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif...%COLOR_RESET%
+:: 5.7 - Nagle/DelACK (Gaming uniquement)
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif (Gaming)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpAckFrequency" /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TCPNoDelay" /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v "TcpDelAckTicks" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1469,26 +1437,26 @@ if "!PROFIL_MODE!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves%COLOR_RESET%
 )
 
-:: 5.8 - QoS Psched
-if "!PROFIL_MODE!"=="0" (
+:: 5.8 - QoS Psched (Gaming uniquement)
+if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Psched ^(bande passante jeux^)...%COLOR_RESET%
     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /t REG_DWORD /d 0 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Psched configure ^(Profil LATENCE^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Psched configure ^(Gaming^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Psched : defaut Windows conserve ^(Profil EQUILIBRE^)%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Psched : defaut Windows conserve ^(Normal^)%COLOR_RESET%
 )
 
 :: 5.9 - Optimisation cartes reseau
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Profil LATENCE ^(RSS ON, RSC/LSO OFF, Flow Control OFF^)...%COLOR_RESET%
+if "!PROFIL_POWER!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC MaxPerf ^(RSS ON, RSC/LSO OFF, Flow Control OFF^)...%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Profil EQUILIBRE ^(RSS/RSC/LSO ON, Flow Control OFF^)...%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSS/RSC/LSO ON, Flow Control OFF, Energie ON^)...%COLOR_RESET%
 )
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('!PROFIL_MODE!' -eq '1'); $e=[char]0x00E9; $des='D'+$e+'sactiv'+$e; $act='Activ'+$e; function Set-Prop($a,$rx,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -match $rx}; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n 'Contr.*le.*Flux|Flow.*Control' @($des,'Disabled','Off'); Set-Prop $n 'Energy|Green|Efficace|Ethernet.*vert|.co.nerg.tique|Giga.*Lite|Power.*Saving' $(if($lap){@($act,'Enabled','On')}else{@($des,'Disabled','Off')}); Set-Prop $n 'Coalesce|Fusion.*paquet|Arr.t.*auto|Power.*Down|ARP.*Offload|NS.*Offload|Protocol.*Offload' $(if($lap){@($act,'Enabled','On')}else{@($des,'Disabled','Off')}); Set-Prop $n 'R.veil|Wake.*on|Magic.*Packet|Match.*Pattern' @($des,'Disabled','Off')}" >nul 2>&1
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(Profil LATENCE^)%COLOR_RESET%
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('!PROFIL_POWER!' -eq '1'); $e=[char]0x00E9; $des='D'+$e+'sactiv'+$e; $act='Activ'+$e; function Set-Prop($a,$rx,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName -match $rx}; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -DisplayName $p.DisplayName -DisplayValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n 'Contr.*le.*Flux|Flow.*Control' @($des,'Disabled','Off'); Set-Prop $n 'Energy|Green|Efficace|Ethernet.*vert|.co.nerg.tique|Giga.*Lite|Power.*Saving' $(if($lap){@($act,'Enabled','On')}else{@($des,'Disabled','Off')}); Set-Prop $n 'Coalesce|Fusion.*paquet|Arr.t.*auto|Power.*Down|ARP.*Offload|NS.*Offload|Protocol.*Offload' $(if($lap){@($act,'Enabled','On')}else{@($des,'Disabled','Off')}); Set-Prop $n 'R.veil|Wake.*on|Magic.*Packet|Match.*Pattern' @($des,'Disabled','Off')}" >nul 2>&1
+if "!PROFIL_POWER!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(MaxPerf^)%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Profil EQUILIBRE^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
 )
 
 :: 5.10 - QoS Fortnite DSCP 46
@@ -1524,13 +1492,13 @@ for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\Net
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NetBIOS desactive%COLOR_RESET%
 
-:: 5.13 - RssBaseCpu (interrupts NIC decales du core 0)
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu=1 ^(interrupts NIC sur CPU 1+^)...%COLOR_RESET%
+:: 5.13 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu=1 ^(Gaming : interrupts NIC sur CPU 1+^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Ndis\Parameters" /v RssBaseCpu /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu configure %COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu configure ^(Gaming^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu : reserve aux systemes latence%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu : defaut Windows conserve ^(Normal^)%COLOR_RESET%
 )
 
 gpupdate /target:computer /force >nul 2>&1
@@ -1543,6 +1511,10 @@ exit /b
 
 :OPTIMISATIONS_PERIPHERIQUES
 cls
+if not defined PROFIL_USAGE set "PROFIL_USAGE=0"
+if not defined PROFIL_POWER (
+    if "%DETECTE_PORTABLE%"=="1" (set "PROFIL_POWER=1") else (set "PROFIL_POWER=0")
+)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 6 : OPTIMISATIONS CLAVIER ET SOURIS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1562,22 +1534,9 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Trackpad%COLOR_RESET% : Acceleration OFF rend le trackpad moins naturel%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%DPI Scaling%COLOR_RESET% : Win8 Scaling OFF peut affecter l'affichage sur ecran haute densite%COLOR_RESET%
     echo.
-    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande pour tous, surtout laptop^) - Acceleration legere, Scaling conserve%COLOR_RESET%
-    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - Acceleration OFF, Win8 Scaling ON%COLOR_RESET%
-    echo.
-    choice /C 12 /N /M "%COLOR_YELLOW%Choisissez le profil [1=Equilibre, 2=Latence]: %COLOR_RESET%"
-    if !errorlevel! EQU 2 (
-        set "PROFIL_MODE=0"
-        echo %COLOR_WHITE%Profil LATENCE force - Optimisations agressives actives%COLOR_RESET%
-    ) else (
-        set "PROFIL_MODE=1"
-        echo %COLOR_WHITE%Profil EQUILIBRE conserve - Optimisations moderees actives%COLOR_RESET%
-    )
-    echo.
-    echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 )
 
-if "!PROFIL_MODE!"=="0" (
+if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
 ) else (
     if "!DETECTE_PORTABLE!"=="1" (
@@ -1591,7 +1550,7 @@ echo.
 :: 6.1 - Souris optimisee
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la reactivite souris...%COLOR_RESET%
 set "KEEP_MOUSE_ACCEL=0"
-if "!PROFIL_MODE!"=="1" if "!DETECTE_PORTABLE!"=="1" set "KEEP_MOUSE_ACCEL=1"
+if "!PROFIL_USAGE!"=="1" if "!DETECTE_PORTABLE!"=="1" set "KEEP_MOUSE_ACCEL=1"
 if "!KEEP_MOUSE_ACCEL!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration souris trackpad ^(acceleration legere conservee^)...%COLOR_RESET%
     reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "1" /f >nul 2>&1
