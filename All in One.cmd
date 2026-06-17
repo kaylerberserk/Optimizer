@@ -2227,13 +2227,6 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation CI Policy (Driver 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Blocklist de pilotes vulnerables desactivee%COLOR_RESET%
 
-:: USB Polling / WHQL Settings
-if "!PROFIL_MODE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Debridage du polling rate USB ^(WHQL Settings^)...%COLOR_RESET%
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Debridage USB active ^(Profil LATENCE uniquement^)%COLOR_RESET%
-)
-
 call :FINISH_ACTION "Protections securite" "desactivees"
 exit /b
 
@@ -2268,8 +2261,7 @@ echo.
 :: 8.3 - Blocklist de pilotes vulnerables
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation de la blocklist de pilotes vulnerables...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 1 /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%CI policy restauree%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Blocklist pilotes vulnerables reactivee%COLOR_RESET%
 
 :: 8.4 - Restauration VBS/HVCI/CFG aux valeurs par defaut
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
