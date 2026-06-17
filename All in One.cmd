@@ -1053,11 +1053,15 @@ for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance W
 if not defined RAM_GB set "RAM_GB=0"
 echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
 if !RAM_GB! GTR 8 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM ^> 8 Go : desactivation de la compression memoire...%COLOR_RESET%
-    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee ^(Charge CPU reduite^)%COLOR_RESET%
+    if "!PROFIL_MODE!"=="0" (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE + RAM ^> 8 Go : desactivation de la compression memoire (charge CPU reduite)...%COLOR_RESET%
+        powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee (profil LATENCE)%COLOR_RESET%
+    ) else (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE + RAM ^> 8 Go : compression memoire laissee au defaut Windows (pas de write HKLM)%COLOR_RESET%
+    )
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee ^(stabilite preservee^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee (stabilite preservee)%COLOR_RESET%
 )
 
 call :FINISH_ACTION "Optimisations memoire" "appliquees"
