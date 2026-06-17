@@ -1066,14 +1066,14 @@ if not defined RAM_GB set "RAM_GB=0"
 echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
 if !RAM_GB! GTR 8 (
     if "!PROFIL_MODE!"=="0" (
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE + RAM ^> 8 Go : desactivation de la compression memoire (charge CPU reduite)...%COLOR_RESET%
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE + RAM ^> 8 Go : desactivation de la compression memoire ^(charge CPU reduite^)...%COLOR_RESET%
         powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee (profil LATENCE)%COLOR_RESET%
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee ^(profil LATENCE^)%COLOR_RESET%
     ) else (
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE + RAM ^> 8 Go : compression memoire laissee au defaut Windows (pas de write HKLM)%COLOR_RESET%
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE + RAM ^> 8 Go : compression memoire laissee au defaut Windows ^(pas de write HKLM^)%COLOR_RESET%
     )
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee (stabilite preservee)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee ^(stabilite preservee^)%COLOR_RESET%
 )
 
 call :FINISH_ACTION "Optimisations memoire" "appliquees"
@@ -1286,8 +1286,10 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la planification 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%HAGS active - Latence GPU reduite%COLOR_RESET%
 
-:: 4.7 - Preemption GPU : valeur par defaut WDDM (risque TDR-108 evite)
-echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Preemption GPU laissee au defaut WDDM (pas de reg add forcee)^%COLOR_RESET%
+:: 4.7 - Preemption GPU
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la preemption GPU...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preemption GPU activee%COLOR_RESET%
 
 :: 4.8 - NVIDIA Profile Inspector
 :: Cette section applique un profil d'optimisation NVIDIA pour reduire l'input lag.
@@ -1338,6 +1340,35 @@ if "!HAS_NVIDIA!"=="1" (
     echo [!] GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
     endlocal
 )
+
+:: 4.9 - Optimisations DWM (Desktop Window Manager)
+:: Reduction du buffering DWM et de la queue de frames pour diminuer l'input lag
+:: en mode fenetre/borderless (mode par defaut de Windows 11).
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations DWM (buffering, frame queue, composition)...%COLOR_RESET%
+if "!PROFIL_MODE!"=="0" (
+    reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v ForceDisableFrameBuffering /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v MaxQueuedFrames /t REG_DWORD /d 0 /f >nul 2>&1
+) else (
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v ForceDisableFrameBuffering /f >nul 2>&1
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v MaxQueuedFrames /f >nul 2>&1
+)
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v DWM_BUFFER_COUNT /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v UseCopyOnPresent /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v ForceDisableModeChangeAnimation /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DWM optimise : buffer=1, queue=0, copy-on-present, animation off%COLOR_RESET%
+
+:: 4.10 - Planification Scheduler Kernel
+:: Optimisation du scheduler de threads kernel pour favoriser la reactivite.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation planification kernel (scheduler threads)...%COLOR_RESET%
+if "!PROFIL_MODE!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadSchedulingModel /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DisableAutoBoost /t REG_DWORD /d 1 /f >nul 2>&1
+) else (
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadSchedulingModel /f >nul 2>&1
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DisableAutoBoost /f >nul 2>&1
+)
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v CriticalPriorityBoost /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Scheduler kernel optimise : thread model, critical boost, auto-boost off%COLOR_RESET%
 
 call :FINISH_ACTION "Optimisations GPU" "terminees"
 exit /b
