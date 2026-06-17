@@ -1307,7 +1307,7 @@ if "!HAS_NVIDIA!"=="1" (
         del /f /q "!NPI_DIR!\*.*" >nul 2>&1
         rmdir "!NPI_DIR!" >nul 2>&1
     ) else (
-        echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA global ignore en profil EQUILIBRE pour preserver autonomie, chauffe et silence%COLOR_RESET%
+        echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA global ignore en profil NORMAL pour preserver autonomie, chauffe et silence%COLOR_RESET%
     )
 ) else (
     setlocal DisableDelayedExpansion
@@ -1329,7 +1329,7 @@ echo %STYLE_BOLD%%COLOR_WHITE% SECTION 5 : OPTIMISATIONS RESEAU ET INTERNET%COLO
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%  Cette section optimise la pile TCP/IP et la carte reseau.%COLOR_RESET%
-echo %COLOR_WHITE%  Profil LATENCE = ping/reactivite max ; profil EQUILIBRE = recommande pour tous.%COLOR_RESET%
+echo %COLOR_WHITE%  Profil GAMING = ping/reactivite max ; profil NORMAL = recommande pour tous.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
@@ -1341,11 +1341,9 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations reseau peuvent impacter :%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Wi-Fi%COLOR_RESET% : Nagle/DelACK OFF peut destabiliser le Wi-Fi%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Batterie%COLOR_RESET% : certains offloads agressifs augmentent la consommation%COLOR_RESET%
-    echo %COLOR_WHITE%  - %COLOR_YELLOW%Debit%COLOR_RESET% : profil latence privilegie le ping au debit%COLOR_RESET%
+    echo %COLOR_WHITE%  - %COLOR_YELLOW%Debit%COLOR_RESET% : profil GAMING privilegie le ping au debit%COLOR_RESET%
     echo.
-    echo %COLOR_GREEN%[1]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE ^(recommande pour tous, surtout laptop^) - TCP prudent, debit/stabilite/autonomie%COLOR_RESET%
-    echo %COLOR_RED%[2]%COLOR_RESET% %COLOR_WHITE%Profil LATENCE ^(agressif^) - TCP/NIC plus agressifs%COLOR_RESET%
-    echo.
+
 
 
 if "!PROFIL_USAGE!"=="0" (
@@ -1378,13 +1376,13 @@ if "!PROFIL_USAGE!"=="0" (
     netsh int tcp set global rss=enabled rsc=enabled ecncapability=enabled >nul 2>&1
 )
 
-:: BBR2 applique aux deux profils (LATENCE + EQUILIBRE) - meilleur debit/stabilite sur Win11 24H2/25H2
+:: BBR2 applique aux deux profils (GAMING + NORMAL) - meilleur debit/stabilite sur Win11 24H2/25H2
 netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux (LATENCE + EQUILIBRE)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux (GAMING + NORMAL)%COLOR_RESET%
 netsh int tcp show supplemental template=internet 2>nul | findstr /i "bbr2" >nul 2>&1
 if !errorlevel! NEQ 0 (
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%BBR2 non confirme sur ce build OS - reverifier la compatibilite (Win11 24H2/25H2)%COLOR_RESET%
@@ -1537,12 +1535,12 @@ if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
 )
 
 if "!PROFIL_USAGE!"=="0" (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%LATENCE%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%GAMING%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
 ) else (
     if "!DETECTE_PORTABLE!"=="1" (
-        echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - trackpad optimise, acceleration legere%COLOR_RESET%
+        echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% - trackpad optimise, acceleration legere%COLOR_RESET%
     ) else (
-        echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%EQUILIBRE%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
+        echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% - souris 1:1 sans acceleration%COLOR_RESET%
     )
 )
 echo.
@@ -1580,14 +1578,14 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la reactivite c
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Clavier et files d'attente optimises - Delai minimal%COLOR_RESET%
 
-:: 6.3 - Win8 Scaling (Profil LATENCE uniquement)
-if "!PROFIL_MODE!"=="0" (
+:: 6.3 - Win8 Scaling (Profil GAMING uniquement)
+if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du Scaling Windows ^(Win8 DPI Scaling^)...%COLOR_RESET%
     reg add "HKCU\Control Panel\Desktop" /v Win8DpiScaling /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 96 /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling active ^(Mode 1:1 force^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling ignore en profil EQUILIBRE ^(conserve le scaling par defaut^)%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling ignore en profil NORMAL ^(conserve le scaling par defaut^)%COLOR_RESET%
 )
 
 :: 6.4 - MSI Mode Universel (Latence Peripheriques)
@@ -1640,8 +1638,8 @@ echo %STYLE_BOLD%%COLOR_WHITE% GESTION DES ECONOMIES D'ENERGIE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%  Cette section permet de gerer les economies d'energie du systeme.%COLOR_RESET%
-echo %COLOR_WHITE%  Le profil LATENCE desactive ces fonctions pour maximiser les performances.%COLOR_RESET%
-echo %COLOR_WHITE%  Le profil EQUILIBRE les conserve/restaure pour tous, surtout laptop.%COLOR_RESET%
+echo %COLOR_WHITE%  Le profil GAMING/MAX PERF desactive ces fonctions pour maximiser les performances.%COLOR_RESET%
+echo %COLOR_WHITE%  Le profil NORMAL/ECO les conserve/restaure pour tous, surtout laptop.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_RED%Desactiver les economies d'energie (Performances maximales)%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Restaurer les economies d'energie (Parametres par defaut)%COLOR_RESET%
