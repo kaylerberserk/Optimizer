@@ -928,7 +928,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Privacy avancee appliquee%COLOR
 
 :: Pare-feu telemetrie
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation pare-feu telemetrie...%COLOR_RESET%
-netsh advfirewall firewall add rule name="Block MS Telemetry Out" dir=out action=block remoteip=20.42.65.0/24,51.104.0.0/16,52.108.0.0/16,104.43.0.0/16,13.107.0.0/16 protocol=any >nul 2>&1
+netsh advfirewall firewall add rule name="Block MS Telemetry Out" dir=out action=block remoteip=20.42.65.0/24,51.104.0.0/16,52.108.0.0/16,104.43.0.0/16 protocol=any >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pare-feu telemetrie actif (Update + Store preserves)%COLOR_RESET%
 
 :: Batterie - Energy Saver (seuil 100%% active l'economiseur en permanence)
@@ -1020,7 +1020,13 @@ echo.
 :: 2.1 - Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memoire...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "ClearPageFileAtShutdown" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
+if "!PROFIL_MODE!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption=1 ^(profil LATENCE, opt-in^)^%COLOR_RESET%
+) else (
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption conserve par defaut ^(BitLocker + secrets pagines intacts^)^%COLOR_RESET%
+)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagingExecutive" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "SystemPages" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v LargeSystemCache /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1264,10 +1270,9 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la planification 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%HAGS active - Latence GPU reduite%COLOR_RESET%
 
-:: 4.7 - Activation et raffinement de la preemption GPU
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la preemption GPU (Hardware Scheduling)...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preemption GPU activee%COLOR_RESET%
+:: 4.7 - Preemption GPU : valeur par defaut WDDM (risque TDR-108 evite)
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preemption GPU laisee au defaut WDDM (pas de reg add forcee)^%COLOR_RESET%
 
 :: 4.8 - NVIDIA Profile Inspector
 :: Cette section applique un profil d'optimisation NVIDIA pour reduire l'input lag.
@@ -1388,12 +1393,25 @@ if "!PROFIL_MODE!"=="0" (
     netsh int tcp set global rss=enabled rsc=enabled ecncapability=enabled >nul 2>&1
 )
 
-netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux%COLOR_RESET%
+if "!PROFIL_MODE!"=="0" (
+    netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
+    netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 active sur les templates principaux (profil LATENCE)%%COLOR_RESET%
+    netsh int tcp show supplemental template=internet 2>nul | findstr /i "bbr2" >nul 2>&1
+    if !errorlevel! NEQ 0 (
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%BBR2 non confirme sur ce build OS - reverifier la compatibilite (Win11 24H2/25H2)%%COLOR_RESET%
+    )
+) else (
+    netsh int tcp set supplemental template=internet congestionprovider=cubic >nul 2>&1
+    netsh int tcp set supplemental template=internetcustom congestionprovider=cubic >nul 2>&1
+    netsh int tcp set supplemental template=datacenter congestionprovider=cubic >nul 2>&1
+    netsh int tcp set supplemental template=datacentercustom congestionprovider=cubic >nul 2>&1
+    netsh int tcp set supplemental template=compat congestionprovider=cubic >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil EQUILIBRE : cubic par defaut (compatibilite Win11 24H2)%%COLOR_RESET%
+)
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desactive pour eviter les bugs locaux%COLOR_RESET%
 
 :: 5.3 - Parametres TCP registre
@@ -1599,8 +1617,28 @@ if "!PROFIL_MODE!"=="0" (
 
 :: 6.4 - MSI Mode Universel (Latence Peripheriques)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du MSI Mode pour tous les peripheriques compatibles...%COLOR_RESET%
-powershell -NoProfile -Command "Get-PnpDevice -Class Net,Display,SCSIAdapter,USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
+powershell -NoProfile -Command "Get-PnpDevice -Class Net,Display,USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI activees sur tout le materiel compatible%COLOR_RESET%
+
+
+
+:: X - Fronts 25H2 (Recall / CloudExperienceHost / PhoneLink - YourPhone - Win11 24H2/25H2)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 (Recall / CEH / PhoneLink)...%COLOR_RESET%
+
+:: X.1 - Recall (Copilot+ ARM64 ou NPU x64) - desactive la capture IA
+powershell -NoProfile -Command "$a=(Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue).Architecture;$n=(Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object {$_.PNPClass -eq 'System' -and $_.DeviceID -match 'NPU'} | Select-Object -First 1);if($a -eq 12 -or $n){if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null};Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force;if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null};Set-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force;echo 'Recall: DisableAIDataAnalysis=1 (Copilot+ detecte)'}else{echo 'Recall: ignore (pas de NPU/ARM64 detecte)'}" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - politique appliquee si Copilot+ detected^%COLOR_RESET%
+
+:: X.2 - CloudExperienceHost mute via Scheduled Task + politique CloudContent (sans Remove-AppxPackage)
+schtasks /Change /Disable /TN "\Microsoft\Windows\CloudExperienceHost\CreateObjectTask" >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableTailoredExperiencesWithDiagnosticData /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%CloudExperienceHost mute (CreateObjectTask + CloudContent)^%COLOR_RESET%
+
+:: X.3 - Phone Link / YourPhone block background activation (sans uninstall, garde Outlook mobile / Files)
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
+powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%PhoneLink / YourPhone background activation bloquee^%COLOR_RESET%
 
 :: 6.5 - Accessibilite OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des raccourcis d'accessibilite...%COLOR_RESET%
