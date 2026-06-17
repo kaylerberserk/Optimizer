@@ -1341,35 +1341,6 @@ if "!HAS_NVIDIA!"=="1" (
     endlocal
 )
 
-:: 4.9 - Optimisations DWM (Desktop Window Manager)
-:: Reduction du buffering DWM et de la queue de frames pour diminuer l'input lag
-:: en mode fenetre/borderless (mode par defaut de Windows 11).
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisations DWM (buffering, frame queue, composition)...%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v ForceDisableFrameBuffering /t REG_DWORD /d 1 /f >nul 2>&1
-    reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v MaxQueuedFrames /t REG_DWORD /d 0 /f >nul 2>&1
-) else (
-    reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v ForceDisableFrameBuffering /f >nul 2>&1
-    reg delete "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v MaxQueuedFrames /f >nul 2>&1
-)
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v DWM_BUFFER_COUNT /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v UseCopyOnPresent /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\Dwm" /v ForceDisableModeChangeAnimation /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DWM optimise : buffer=1, queue=0, copy-on-present, animation off%COLOR_RESET%
-
-:: 4.10 - Planification Scheduler Kernel
-:: Optimisation du scheduler de threads kernel pour favoriser la reactivite.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation planification kernel (scheduler threads)...%COLOR_RESET%
-if "!PROFIL_MODE!"=="0" (
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadSchedulingModel /t REG_DWORD /d 1 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DisableAutoBoost /t REG_DWORD /d 1 /f >nul 2>&1
-) else (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v ThreadSchedulingModel /f >nul 2>&1
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\kernel" /v DisableAutoBoost /f >nul 2>&1
-)
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v CriticalPriorityBoost /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Scheduler kernel optimise : thread model, critical boost, auto-boost off%COLOR_RESET%
-
 call :FINISH_ACTION "Optimisations GPU" "terminees"
 exit /b
 
