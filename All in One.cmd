@@ -1681,7 +1681,6 @@ if not defined TARGET_GUID (
     set "TARGET_GUID=99999999-9999-9999-9999-999999999999"
 )
 powercfg /setactive !TARGET_GUID! >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan Ultimate Performance actif (scheduler optimise - augmente la consommation)%COLOR_RESET%
 
 :: 7.4 - GPU Power Management (ULPS & PowerMizer)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'ULPS (AMD) et configuration PowerMizer (NVIDIA)...%COLOR_RESET%
@@ -1756,13 +1755,10 @@ powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0c
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 100 >nul 2>&1
 powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
 powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 4d2b0152-7d5c-498b-88e2-34345392a2c5 5000 >nul 2>&1
-:: Intel Thread Director : politique de scheduling reelle (valeur 2 = Prefer Performant Processors)
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 2 >nul 2>&1
-:: Short thread scheduling (Intel Hybrid) : 2 = Prefer Performant Processors
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 2 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 bae08b81-2d5e-4688-ad6a-13243356654b 2 >nul 2>&1
-powercfg /setactive SCHEME_CURRENT >nul 2>&1
+:: Intel Thread Director : politique de scheduling reelle (valeur 1 = Prefer Performance - MS Learn 2026)
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 1 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 1 >nul 2>&1
+REM bae08b81-2d5e-4688-ad6a-13243356654b (Short thread scheduling) : GUID NON documente MS Learn 2026 - supprime pour eviter comportement indefini (etait annote Prefer Performant sans fondement MS)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director : politique "Prefer Performant" appliquee (P-cores prioritaires)^(options de parking Core/Hetero visibles dans powercfg^)%COLOR_RESET%
 
 :: Desactivation Core Parking (Intel + AMD)
@@ -1973,7 +1969,11 @@ if exist "%STR_STARTUP_LNK%" (
 :: 7.6 - Restaurer Intel Thread Director (visibilite panneau)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilite Intel Thread Director...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\bae08b81-2d5e-4688-ad6a-13243356654b" /v Attributes /f >nul 2>&1
+REM Restauration de la valeur Thread Director a la valeur default 0 (All Processors) :
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 0 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 0 >nul 2>&1
+powercfg /setactive SCHEME_CURRENT >nul 2>&1
+REM bae08b81-2d5e-4688-ad6a-13243356654b : GUID non documente MS Learn 2026 (Voir 7.x commentaire) - pas de reg delete necessaire
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilite Intel Thread Director restauree (valeurs par defaut via 7.0)%COLOR_RESET%
 
 :: 7.7 - Restaurer AMD Core Parking (visibilite panneau)
