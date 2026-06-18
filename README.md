@@ -38,19 +38,46 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 1. **Téléchargement** : Accédez au fichier [**All in One.cmd**](https://github.com/kaylerberserk/WindowsOptimizer/blob/main/All%20in%20One.cmd) et cliquez sur le bouton **Download**.
 2. **Exécution** : Clic droit sur le fichier → **Exécuter en tant qu'administrateur**.
 3. **Sécurité** : Appuyez sur **[R]** pour créer un point de restauration avant toute modification.
-4. **Optimisation** : Choisissez votre profil (**[D]** pour Bureau, **[L]** pour Portable).
+4. **Optimisation** : Appuyez sur **[O]** pour tout optimiser d'un coup. Le script vous pose **2 questions simples** (votre usage, puis votre priorité énergie/performance) et applique automatiquement le bon profil.
 5. **Redémarrage** : Un redémarrage est nécessaire pour appliquer l'ensemble des changements.
 
 ---
 
 ## 🛠️ Guide des Fonctionnalités
 
-### 🌟 Profils Automatiques (All-in-One)
+### 🌟 Système de Profils à 2 Axes (All-in-One [O])
 
-| Touche | Profil | Objectif |
+L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose 2 questions et en déduit automatiquement la configuration optimale.
+
+Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage, et **Réseau** demande les deux.
+
+#### Axe 1 — Usage (`PROFIL_USAGE`)
+> *Pilote la **latence applicative** : périphériques d'entrée, pile TCP, latence GPU.*
+
+| Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[L]** | **Profil EQUILIBRE** (Laptop) | Équilibre optimisé entre puissance et autonomie (économie d'énergie préservée). Recommandé pour tous. |
-| **[D]** | **Profil LATENCE** (Desktop) | Performance brute, latence minimale et plan "Ultimate Performance". Déconseillé sur portable. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF, ECN OFF, accélération souris OFF, Win8 Scaling, DisablePagefileEncryption. |
+| **[2]** | **NORMAL** | VRR ON, veille GPU préservée, defaults TCP conservés, accélération trackpad légère sur portable. |
+
+#### Axe 2 — Énergie (`PROFIL_POWER`)
+> *Pilote **l'énergie, les offloads CPU/NIC et le plan d'alimentation**.*
+
+| Choix | Profil | Réglages clés |
+|:---:|:---:|---|
+| **[1]** | **ECO** | Plan Équilibré, RSC/LSO ON, offloads NIC ON, compression mémoire conservée, économies d'énergie préservées. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF, offloads OFF, compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
+
+> **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
+> **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations de latence restent actives et réduisent l'autonomie.
+
+> **Thread Director** reste dans les optimisations **Système** : **GAMING** préfère les cœurs performants sur secteur, tandis que **NORMAL** reste en Auto. Sur portable, le mode batterie reste en Auto pour éviter de sacrifier inutilement l'autonomie.
+
+#### Règle d'attribution (design interne)
+Chaque réglage est piloté par **un seul axe**, jamais les deux, pour éviter les conflits :
+- **Latence applicative** (input, I/O, stack TCP Nagle, low-latency GPU) → `PROFIL_USAGE`
+- **Énergie / offloads CPU & NIC / plan d'alimentation** → `PROFIL_POWER`
+
+Cela évite notamment le double-pilotage de RSC (Receive Segment Coalescing) : la pile TCP **et** le matériel NIC suivent tous deux `PROFIL_POWER`, garantissant la cohérence.
 
 ### ⚙️ Optimisations Granulaires
 
