@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **Conçu pour le Gaming Compétitif, le Multitâche intensif et la Confidentialité.**  
-*100% Transparent • Open Source*
+*100% Transparent • Open Source • Valeurs réseau vérifiées Microsoft Docs*
 
 </div>
 
@@ -56,16 +56,16 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF, ECN OFF, accélération souris OFF, Win8 Scaling, DisablePagefileEncryption. |
-| **[2]** | **NORMAL** | VRR ON, veille GPU préservée, defaults TCP conservés, accélération trackpad légère sur portable. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, initialrto=1000, TcpTimedWaitDelay=30, SystemResponsiveness=10, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. |
+| **[2]** | **NORMAL** | VRR ON, veille GPU préservée, defaults TCP conservés, SystemResponsiveness laissé au défaut Windows, accélération trackpad légère sur portable. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
 > *Pilote **l'énergie, les offloads CPU/NIC et le plan d'alimentation**.*
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **ECO** | Plan Équilibré, RSC/LSO ON, offloads NIC ON, compression mémoire conservée, économies d'énergie préservées. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF, offloads OFF, compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
+| **[1]** | **ECO** | Plan Équilibré, RSC/LSO ON, offloads NIC ON, Interrupt Moderation Adaptive, EEE ON, économies d'énergie NIC préservées (sauf WoL off), compression mémoire conservée. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF, Flow Control OFF, Interrupt Moderation Minimal (ITR 200), EEE/GigaLite/ReduceSpeedOff, Power Management NIC OFF, compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations de latence restent actives et réduisent l'autonomie.
