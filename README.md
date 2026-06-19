@@ -56,7 +56,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, initialrto=1000, TcpTimedWaitDelay=30, SystemResponsiveness=10, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, BBR2 + TCP Pacing + ECN, DefaultTTL=64, initialrto=1000, TcpTimedWaitDelay=30, SystemResponsiveness=10, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. |
 | **[2]** | **NORMAL** | VRR ON, veille GPU préservée, defaults TCP conservés, SystemResponsiveness laissé au défaut Windows, accélération trackpad légère sur portable. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
@@ -64,8 +64,8 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **ECO** | Plan Équilibré, RSC/LSO ON, offloads NIC ON, Interrupt Moderation Adaptive, EEE ON, économies d'énergie NIC préservées (sauf WoL off), compression mémoire conservée. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF, Flow Control OFF, Interrupt Moderation Minimal (ITR 200), EEE/GigaLite/ReduceSpeedOff, Power Management NIC OFF, compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
+| **[1]** | **ECO** | Plan Équilibré, BBR2 + TCP Pacing + ECN, RSC/LSO ON, offloads NIC ON, Interrupt Moderation Adaptive, EEE ON, Wi-Fi roam agressif modéré (Roam=2), économies d'énergie NIC préservées (sauf WoL off), compression mémoire conservée. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, BBR2 + TCP Pacing + ECN, RSC/LSO OFF, Flow Control OFF, Interrupt Moderation Minimal (ITR 200), EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers max, gestion énergie USB désactivée (selective suspend + USB 3 LPM), compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations de latence restent actives et réduisent l'autonomie.
@@ -85,7 +85,7 @@ Cela évite notamment le double-pilotage de RSC (Receive Segment Coalescing) : l
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
 - **[3] Disques** : Optimisation des accès I/O pour accélérer le chargement des jeux et logiciels.
 - **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
-- **[5] Réseau** : Optimisation de la pile TCP/IP pour réduire le ping et stabiliser la connexion.
+- **[5] Réseau** : Optimisation de la pile TCP/IP (BBR2 + TCP Pacing + ECN, DefaultTTL=64, MSI cartes réseau) et tuning fin de la carte réseau (Wi-Fi : Roam/MIMO/uAPSD, buffers max, gestion énergie USB désactivée).
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
