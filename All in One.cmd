@@ -870,14 +870,14 @@ set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
 :: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb=""# Telemetry Block Start`r`n# --- Telemetry Block ---`r`n0.0.0.0 vortex.data.microsoft.com`r`n0.0.0.0 vortex-win.data.microsoft.com`r`n0.0.0.0 v10.vortex-win.data.microsoft.com`r`n0.0.0.0 v10.events.data.microsoft.com`r`n0.0.0.0 telecommand.telemetry.microsoft.com`r`n0.0.0.0 oca.telemetry.microsoft.com`r`n0.0.0.0 watson.telemetry.microsoft.com`r`n0.0.0.0 watsonc.microsoft.com`r`n# --- End Telemetry Block ---`r`n# Telemetry Block End""; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+""`r`n`r`n""+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }; if($?) { exit 0 } else { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "$h='%HOSTS%'; $ErrorActionPreference='Stop'; $crlf=[char]13+[char]10; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb='# Telemetry Block Start'+$crlf+'# --- Telemetry Block ---'+$crlf+'0.0.0.0 vortex.data.microsoft.com'+$crlf+'0.0.0.0 vortex-win.data.microsoft.com'+$crlf+'0.0.0.0 v10.vortex-win.data.microsoft.com'+$crlf+'0.0.0.0 v10.events.data.microsoft.com'+$crlf+'0.0.0.0 telecommand.telemetry.microsoft.com'+$crlf+'0.0.0.0 oca.telemetry.microsoft.com'+$crlf+'0.0.0.0 watson.telemetry.microsoft.com'+$crlf+'0.0.0.0 watsonc.microsoft.com'+$crlf+'# --- End Telemetry Block ---'+$crlf+'# Telemetry Block End'; try { if (Test-Path $h) { $esc=[regex]::Escape($s)+'.*?'+[regex]::Escape($e); $cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII); if ($cur -match ('(?s)'+$esc)) { $cur=$cur -replace ('(?s)'+$esc), $nb } else { $sep=''; if ($cur.Trim().Length -gt 0) { $sep=$crlf+$crlf }; $cur=$cur.TrimEnd()+$sep+$nb }; (Get-Item $h).Attributes='Normal'; $tmp=$h+'.tmp'; [System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII); Move-Item -Path $tmp -Destination $h -Force }; exit 0 } catch { Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue; exit 1 }"
 
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Domaines mis a jour ^(Telemetrie bloquee, doublons nettoyes^)%COLOR_RESET%
 ) else (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec de la mise a jour du fichier hosts%COLOR_RESET%
 )
-attrib +r "%HOSTS%" >nul 2>&1
+:: (re-protection hosts DELIBEREMENT differee : le 2nd bloc qui suit doit pouvoir ecrire)
 
 :: Vidage du cache DNS pour appliquer immediatement les modifications du hosts
 ipconfig /flushdns >nul 2>&1
@@ -902,9 +902,10 @@ for %%D in (
     "azurewatson.microsoft.com"
 ) do (
     findstr /b /i /c:"0.0.0.0 %%~D" "%HOSTS%" >nul 2>&1 || (
-        >>"%HOSTS%" echo 0.0.0.0 %%~D
+        >>"%HOSTS%" echo 0.0.0.0 %%~D>nul 2>&1
     )
 )
+attrib +r "%HOSTS%" >nul 2>&1
 ipconfig /flushdns >nul 2>&1
 set "HOSTS="
 
@@ -1444,8 +1445,8 @@ echo.
 
 :: 5.1 - MMCSS reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration MMCSS reseau...%COLOR_RESET%
-:: NetworkThrottlingIndex : defaut Windows = 10 quand la cle est absente, ecrire 10 = placebo. On supprime.
-reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /f >nul 2>&1
+:: NetworkThrottlingIndex : ecrit 10 = defaut Windows (MS KB confirme defaut = 10). Absent = 10 aussi, mais explicite.
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
 :: SystemResponsiveness : Gaming = 10 (min valide, <10 clampe a 20). Normal = defaut Windows (20), on ne force pas.
 if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul 2>&1
@@ -1472,10 +1473,18 @@ if "!PROFIL_POWER!"=="0" (
     netsh int tcp set global rsc=enabled >nul 2>&1
 )
 
-:: BBR2 applique aux deux profils (GAMING + NORMAL) - meilleur debit/stabilite sur Win11 24H2/25H2
-:: Seul le template Internet est utilise sur client Windows (datacenter/compat = Server SKU)
+:: BBR2 applique sur tous les templates pour couvrir tous les profils reseau
 netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif (template Internet)%COLOR_RESET%
+netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif (tous les templates : Internet, InternetCustom, Datacenter, DatacenterCustom, Compat)%COLOR_RESET%
+
+:: TCP Pacing + ECN : essentiels pour BBR2 (pacing = parametre principal de BBR, ECN = signaux precoces congestion)
+netsh int tcp set global pacingprofile=always >nul 2>&1
+netsh int tcp set global ecncapability=enabled >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%TCP Pacing (always) + ECN Capability actives pour BBR2%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desactive pour eviter les bugs locaux%COLOR_RESET%
 
 :: 5.3 - Parametres TCP registre
@@ -1487,13 +1496,16 @@ if "!PROFIL_USAGE!"=="0" (
     reg delete "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v Size /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Registre TCP configure%COLOR_RESET%
-:: 5.4 - MSI Mode cartes reseau
+:: 5.4 - DefaultTTL
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 64 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DefaultTTL defini a 64%COLOR_RESET%
+:: 5.5 - MSI Mode cartes reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI Mode cartes reseau...%COLOR_RESET%
 powershell -NoProfile -Command "Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ Set-ItemProperty -Path $p -Name 'MSISupported' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MSI Mode active sur cartes reseau%COLOR_RESET%
 
 
-:: 5.5 - Optimisation BITS
+:: 5.6 - Optimisation BITS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyForLocal" /t REG_DWORD /d 1 /f >nul 2>&1
 :: Nettoyage des cles MaxBandwidthOn/Off-Schedule : noms non conformes a la spec MS (vrai nom = MaxBandwidthSchedules, valeur binaire)
@@ -1502,41 +1514,55 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOn-Sc
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOff-Schedule" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise \(cles invalides supprimees, WU preserve\)%COLOR_RESET%
 
-:: 5.6 - DNS Provider Priorities (suppression : ce sont les defaults hardcodés Windows, placebo)
+:: 5.7 - DNS Provider Priorities (suppression : ce sont les defaults hardcodés Windows, placebo)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage cles DNS Provider \(defaults hardcodés Windows, placebo\)...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "LocalPriority" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "HostsPriority" /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider supprimees - defaults Windows utilises%COLOR_RESET%
 
-:: 5.7 - Nagle/DelACK (Gaming uniquement)
+:: 5.8 - Nagle/DelACK (Gaming uniquement)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif ^(Gaming^)...%COLOR_RESET%
-    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 1 -Force | Out-Null } }" >nul 2>&1
+    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
 ) else (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves%COLOR_RESET%
 )
 
-:: 5.8 - QoS Psched (retire la limite de reserve bandwidth pour liberer le QoS Fortnite DSCP)
+:: 5.9 - QoS Psched (retire la limite de reserve bandwidth pour liberer le QoS Fortnite DSCP)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage reserve bandwidth QoS \(libere QoS Fortnite DSCP\)...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reserve QoS retiree - QoS DSCP Fortnite fonctionnel%COLOR_RESET%
 
-:: 5.9 - Optimisation cartes reseau
+:: 5.10 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC MaxPerf ^(RSS ON, RSC/LSO OFF, Flow Control OFF^)...%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC MaxPerf ^(RSS ON, RSC/LSO OFF, EEE OFF, Buffers max^)...%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSS/RSC/LSO ON, Flow Control OFF, Energie ON^)...%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSS/RSC/LSO ON, Energie ON, Wi-Fi optimise^)...%COLOR_RESET%
 )
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('!PROFIL_POWER!' -eq '1'); function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}}" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('!PROFIL_POWER!' -eq '1'); $modified=@(); function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; $global:modified+=$a; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); Set-Prop $n '*GreenGbe' @('0'); Set-Prop $n '*RscIPv6' @('0'); Set-Prop $n '*PacketCoalescing' @('0'); Set-Prop $n 'EnableExtraPowerSaving' @('0'); if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){Set-Prop $n 'RoamAggressiveness' @('2','1'); Set-Prop $n 'MIMOPowerSaveMode' @('3'); Set-Prop $n 'uAPSDSupport' @('0'); Set-Prop $n 'FatChannelIntolerant' @('0')}; $maxRcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); $maxTcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); if($maxRcv -gt 0){Set-Prop $n '*ReceiveBuffers' @($maxRcv.ToString())}; if($maxTcv -gt 0){Set-Prop $n '*TransmitBuffers' @($maxTcv.ToString())}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -ErrorAction SilentlyContinue; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min($p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction SilentlyContinue}}}}; $global:modified=$global:modified|Select-Object -Unique; if($global:modified){Restart-NetAdapter -Name $global:modified -ErrorAction SilentlyContinue}" >nul 2>&1
 if "!PROFIL_POWER!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(MaxPerf^)%COLOR_RESET%
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
 )
 
-:: 5.10 - QoS Fortnite DSCP 46
+:: 5.11 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation gestion energie USB ^(selective suspend + USB 3 LPM^)...%COLOR_RESET%
+:: Desactiver power management sur controleurs USB via WMI (desactive la case "Autoriser l'arret de cet appareil")
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=true' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $false} -ErrorAction SilentlyContinue" >nul 2>&1
+:: Desactiver USB selective suspend (empeche la mise en veille des peripheriques USB inactifs)
+powercfg /setacvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+powercfg /setdcvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+:: Desactiver USB 3 Link Power Management (empeche les transitions U1/U2 qui ajoutent de la latence)
+powercfg /setacvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
+powercfg /setdcvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
+:: Appliquer les changements
+powercfg /setactive scheme_current >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee%COLOR_RESET%
+
+:: 5.12 - QoS Fortnite DSCP 46
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /v "Version" /t REG_SZ /d "1.0" /f >nul 2>&1
@@ -1557,19 +1583,19 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "Remote I
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "DSCP Value" /t REG_SZ /d "46" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite activee%COLOR_RESET%
 
-:: 5.11 - Nettoyage des protocoles reseau
+:: 5.13 - Nettoyage des protocoles reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protocoles reseau inutiles (Bindings)...%COLOR_RESET%
 powershell -NoProfile -Command "Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.Virtual -eq $false } | ForEach-Object { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lldp','ms_lltdio','ms_implat','ms_rspndr' -ErrorAction SilentlyContinue }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Bindings reseau nettoyes (LLDP, LLTDIO, etc.)%COLOR_RESET%
 
-:: 5.12 - Desactivation NetBIOS over TCP/IP
+:: 5.14 - Desactivation NetBIOS over TCP/IP
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de NetBIOS over TCP/IP...%COLOR_RESET%
 for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" /s ^| findstr /i /r "\\Tcpip_.*$" 2^>nul') do (
   reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NetBIOS desactive%COLOR_RESET%
 
-:: 5.13 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
+:: 5.15 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu=1 ^(Gaming : interrupts NIC sur CPU 1+^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Ndis\Parameters" /v RssBaseCpu /t REG_DWORD /d 1 /f >nul 2>&1
@@ -3870,4 +3896,9 @@ endlocal
 :: Ferme le setlocal EnableDelayedExpansion global (ligne 5)
 endlocal
 exit /b 0
+
+
+
+
+
 
