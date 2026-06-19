@@ -10,7 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
 
 **Conçu pour le Gaming Compétitif, le Multitâche intensif et la Confidentialité.**  
-*100% Transparent • Open Source • Valeurs réseau vérifiées Microsoft Docs*
+*100% Transparent • Open Source • Script d'optimisation Windows*
 
 </div>
 
