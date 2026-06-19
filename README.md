@@ -70,7 +70,6 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations de latence restent actives et réduisent l'autonomie.
 
-> **Thread Director** reste dans les optimisations **Système** : **GAMING** préfère les cœurs performants sur secteur, tandis que **NORMAL** reste en Auto. Sur portable, le mode batterie reste en Auto pour éviter de sacrifier inutilement l'autonomie.
 
 #### Règle d'attribution (design interne)
 Chaque réglage est piloté par **un seul axe**, jamais les deux, pour éviter les conflits :
