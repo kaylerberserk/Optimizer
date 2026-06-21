@@ -259,8 +259,10 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %COLOR_GREEN%[1] GAMING%COLOR_RESET% - Priorite jeux, input lag, ping et reactivite
 echo %COLOR_CYAN%[2] NORMAL%COLOR_RESET% - Bureautique, multimedia, creation, stabilite
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_RESET%
 echo.
-choice /C 12 /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez votre usage [1=Gaming / 2=Normal]: %COLOR_RESET%"
+choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez votre usage [1=Gaming / 2=Normal / M=Retour]: %COLOR_RESET%"
+if !errorlevel! EQU 3 set "PROFILE_PROMPT=" & exit /b 1
 if !errorlevel! EQU 1 set "PROFIL_USAGE=0"
 if !errorlevel! EQU 2 set "PROFIL_USAGE=1"
 if /i "!PROFILE_PROMPT!"=="USAGE" goto :CHOISIR_PROFILS_DONE
@@ -281,25 +283,25 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %COLOR_GREEN%[1] ECO%COLOR_RESET% - Autonomie, chauffe, silence, offloads/economies conserves
 echo %COLOR_RED%[2] MAX PERF%COLOR_RESET% - Plan Ultimate Performance, economie d'energie coupee
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_RESET%
 echo.
-choice /C 12 /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez l'energie [1=Eco / 2=MaxPerf]: %COLOR_RESET%"
+choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez l'energie [1=Eco / 2=MaxPerf / M=Retour]: %COLOR_RESET%"
+if !errorlevel! EQU 3 set "PROFILE_PROMPT=" & exit /b 1
 if !errorlevel! EQU 1 set "PROFIL_POWER=1"
 if !errorlevel! EQU 2 set "PROFIL_POWER=0"
 
 :CHOISIR_PROFILS_DONE
 call :INIT_PROFILS
-if /i "!PROFILE_PROMPT!"=="BOTH" (
-    if "!IS_GAMING_ECO!"=="1" (
-        echo.
-        echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%Profil GAMING + ECO selectionne.%COLOR_RESET%
-        echo %COLOR_WHITE%    Les optimisations de latence restent actives et reduiront l'autonomie.%COLOR_RESET%
-        echo %COLOR_WHITE%    Si l'autonomie est prioritaire, preferez NORMAL + ECO.%COLOR_RESET%
-        echo.
-        choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Continuer quand meme ? [O/N]: %COLOR_RESET%"
-        if !errorlevel! EQU 2 (
-            set "PROFILE_PROMPT="
-            exit /b 1
-        )
+if "!IS_GAMING_ECO!"=="1" (
+    echo.
+    echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%Profil GAMING + ECO selectionne.%COLOR_RESET%
+    echo %COLOR_WHITE%    Les optimisations de latence restent actives et reduiront l'autonomie.%COLOR_RESET%
+    echo %COLOR_WHITE%    Si l'autonomie est prioritaire, preferez NORMAL + ECO.%COLOR_RESET%
+    echo.
+    choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Continuer quand meme ? [O/N]: %COLOR_RESET%"
+    if !errorlevel! EQU 2 (
+        set "PROFILE_PROMPT="
+        exit /b 1
     )
 )
 set "PROFILE_PROMPT="
@@ -437,6 +439,8 @@ call :OPTIMISATIONS_DISQUES
 goto :MENU_PRINCIPAL
 
 :DO_MEMOIRE
+call :CHOISIR_PROFILS "CONFIGURATION PROFILS - MEMOIRE" "POWER"
+if !errorlevel! NEQ 0 goto :MENU_PRINCIPAL
 call :OPTIMISATIONS_MEMOIRE
 goto :MENU_PRINCIPAL
 
@@ -498,7 +502,7 @@ goto :MENU_GESTION_WINDOWS
 
 :TOUT_OPTIMISER
 call :CHOISIR_PROFILS "TOUT OPTIMISER - CONFIGURATION" "BOTH"
-if !errorlevel! NEQ 0 goto :TOUT_OPTIMISER
+if !errorlevel! NEQ 0 goto :MENU_PRINCIPAL
 goto :TOUT_OPTIMISER_COMMON
 
 :TOUT_OPTIMISER_COMMON
@@ -727,12 +731,17 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Planification CPU configuree%COLOR_RESET%
 
-:: 1.2 - Profil Gaming MMCSS (taches jeux)
+:: 1.2 - Profil Gaming MMCSS + NoLazyMode SystemProfile
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil gaming (MMCSS)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "GPU Priority" /t REG_DWORD /d 8 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "SFIO Priority" /t REG_SZ /d "High" /f >nul 2>&1
+if "!PROFIL_USAGE!"=="0" (
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /t REG_DWORD /d 1 /f >nul 2>&1
+) else (
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NoLazyMode /f >nul 2>&1
+)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil gaming (MMCSS) configure%COLOR_RESET%
 
 :: 1.3 - Interface Windows
@@ -902,7 +911,7 @@ for %%D in (
     "azurewatson.microsoft.com"
 ) do (
     findstr /b /i /c:"0.0.0.0 %%~D" "%HOSTS%" >nul 2>&1 || (
-        >>"%HOSTS%" echo 0.0.0.0 %%~D>nul 2>&1
+        >>"%HOSTS%" echo 0.0.0.0 %%~D
     )
 )
 attrib +r "%HOSTS%" >nul 2>&1
@@ -1047,12 +1056,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\PerfTrack" /v Disabled /t REG_
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Diagnostics\PerfTrack" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Privacy avancee appliquee%COLOR_RESET%
 
-:: Pare-feu telemetrie : remplace par blocage domaine hosts (HaGeZi native.winoffice)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Blocage telemetrie par domaine...%COLOR_RESET%
-
-:: Batterie - Energy Saver (seuil 100%% active l'economiseur en permanence)
-:: powercfg /setdcvalueindex SCHEME_CURRENT SUB_ENERGYSAVER ESBATTTHRESHOLD 100 >nul 2>&1
-
 :: 1.9 - Navigateurs
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation navigateurs...%COLOR_RESET%
 :: Microsoft Edge
@@ -1143,6 +1146,7 @@ exit /b
 
 :OPTIMISATIONS_MEMOIRE
 cls
+call :INIT_PROFILS
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 2 : OPTIMISATIONS MEMOIRE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1150,13 +1154,22 @@ echo.
 echo %COLOR_WHITE%  Cette section optimise la gestion de la RAM et du fichier d'echange%COLOR_RESET%
 echo %COLOR_WHITE%  pour de meilleures performances et une latence reduite.%COLOR_RESET%
 echo.
+if "!PROFIL_POWER!"=="0" (
+    echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%MAX PERF%COLOR_RESET%%COLOR_WHITE% - compression memoire OFF si RAM ^> 8 Go%COLOR_RESET%
+) else (
+    echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%ECO%COLOR_RESET%%COLOR_WHITE% - compression memoire conservee ^(autonomie^)%COLOR_RESET%
+)
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 
 :: 2.1 - Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la gestion memoire...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "ClearPageFileAtShutdown" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagingExecutive" /t REG_DWORD /d 1 /f >nul 2>&1
+if "!PROFIL_POWER!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagingExecutive" /t REG_DWORD /d 1 /f >nul 2>&1
+) else (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagingExecutive" /t REG_DWORD /d 0 /f >nul 2>&1
+)
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "SystemPages" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v LargeSystemCache /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion memoire optimisee%COLOR_RESET%
@@ -1181,12 +1194,16 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Analyse de la memoire physique.
 for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB)"') do set "RAM_GB=%%A"
 if not defined RAM_GB set "RAM_GB=0"
 echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
-if !RAM_GB! GTR 8 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM ^> 8 Go : desactivation de la compression memoire ^(charge CPU reduite^)...%COLOR_RESET%
-    powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee%COLOR_RESET%
+if "!PROFIL_POWER!"=="1" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil ECO : compression memoire conservee ^(autonomie^)%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire conservee ^(RAM ^<= 8 Go^)%COLOR_RESET%
+    if !RAM_GB! GTR 8 (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM ^> 8 Go - MAX PERF : desactivation de la compression memoire ^(charge CPU reduite^)...%COLOR_RESET%
+        powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }" >nul 2>&1
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee%COLOR_RESET%
+    ) else (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM ^<= 8 Go : compression memoire conservee%COLOR_RESET%
+    )
 )
 
 call :FINISH_ACTION "Optimisations memoire" "appliquees"
@@ -1441,17 +1458,21 @@ if "!PROFIL_POWER!"=="0" (
 ) else (
     echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%ECO%COLOR_RESET%%COLOR_WHITE% - offloads NIC conserves, autonomie prioritaire%COLOR_RESET%
 )
+if "!IS_GAMING_ECO!"=="1" (
+    echo %COLOR_YELLOW%  [^!]%COLOR_RESET% %COLOR_WHITE%GAMING + ECO : tweaks TCP agressifs ^(Nagle, initialrto^) neutralises pour preserver l'autonomie Wi-Fi.%COLOR_RESET%
+    echo %COLOR_WHITE%     Latence GPU/input conservee, debit/stabilite mobile favorises.%COLOR_RESET%
+)
 echo.
 
 :: 5.1 - MMCSS reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration MMCSS reseau...%COLOR_RESET%
 :: NetworkThrottlingIndex : ecrit 10 = defaut Windows (MS KB confirme defaut = 10). Absent = 10 aussi, mais explicite.
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
-:: SystemResponsiveness : Gaming = 10 (min valide, <10 clampe a 20). Normal = defaut Windows (20), on ne force pas.
+:: SystemResponsiveness : Gaming = 10 (10% CPU aux taches faible priorite). Normal = 20 (defaut Windows).
 if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul 2>&1
 ) else (
-    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MMCSS reseau configure%COLOR_RESET%
 
@@ -1463,7 +1484,11 @@ netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 
 if "!PROFIL_USAGE!"=="0" (
-    netsh int tcp set global rss=enabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
+    if "!IS_GAMING_ECO!"=="0" (
+        netsh int tcp set global rss=enabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
+    ) else (
+        netsh int tcp set global rss=enabled >nul 2>&1
+    )
 ) else (
     netsh int tcp set global rss=enabled >nul 2>&1
 )
@@ -1521,12 +1546,16 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "Ho
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider supprimees - defaults Windows utilises%COLOR_RESET%
 
-:: 5.8 - Nagle/DelACK (Gaming uniquement)
-if "!PROFIL_USAGE!"=="0" (
+:: 5.8 - Nagle/DelACK (Gaming uniquement, neutralise en Gaming+Eco pour l'autonomie Wi-Fi)
+if "!PROFIL_USAGE!"=="0" if "!IS_GAMING_ECO!"=="1" (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves ^(Gaming+Eco : autonomie Wi-Fi prioritaire^)%COLOR_RESET%
+)
+if "!PROFIL_USAGE!"=="0" if "!IS_GAMING_ECO!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif ^(Gaming^)...%COLOR_RESET%
     powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
-) else (
+)
+if "!PROFIL_USAGE!"=="1" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves%COLOR_RESET%
 )
 
@@ -1541,27 +1570,24 @@ if "!PROFIL_POWER!"=="0" (
 ) else (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSS/RSC/LSO ON, Energie ON, Wi-Fi optimise^)...%COLOR_RESET%
 )
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('!PROFIL_POWER!' -eq '1'); $modified=@(); function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; $global:modified+=$a; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); Set-Prop $n '*GreenGbe' @('0'); Set-Prop $n '*RscIPv6' @('0'); Set-Prop $n '*PacketCoalescing' @('0'); Set-Prop $n 'EnableExtraPowerSaving' @('0'); if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){Set-Prop $n 'RoamAggressiveness' @('2','1'); Set-Prop $n 'MIMOPowerSaveMode' @('3'); Set-Prop $n 'uAPSDSupport' @('0'); Set-Prop $n 'FatChannelIntolerant' @('0')}; $maxRcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); $maxTcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); if($maxRcv -gt 0){Set-Prop $n '*ReceiveBuffers' @($maxRcv.ToString())}; if($maxTcv -gt 0){Set-Prop $n '*TransmitBuffers' @($maxTcv.ToString())}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -ErrorAction SilentlyContinue; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min($p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction SilentlyContinue}}}}; $global:modified=$global:modified|Select-Object -Unique; if($global:modified){Restart-NetAdapter -Name $global:modified -ErrorAction SilentlyContinue}" >nul 2>&1
+call :SET_NIC_PROFILE !PROFIL_POWER!
 if "!PROFIL_POWER!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(MaxPerf^)%COLOR_RESET%
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
 )
-
 :: 5.11 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation gestion energie USB ^(selective suspend + USB 3 LPM^)...%COLOR_RESET%
-:: Desactiver power management sur controleurs USB via WMI (desactive la case "Autoriser l'arret de cet appareil")
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=true' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $false} -ErrorAction SilentlyContinue" >nul 2>&1
-:: Desactiver USB selective suspend (empeche la mise en veille des peripheriques USB inactifs)
-powercfg /setacvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-powercfg /setdcvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-:: Desactiver USB 3 Link Power Management (empeche les transitions U1/U2 qui ajoutent de la latence)
-powercfg /setacvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
-powercfg /setdcvalueindex scheme_current 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
-:: Appliquer les changements
-powercfg /setactive scheme_current >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee%COLOR_RESET%
-
+if "!PROFIL_POWER!"=="1" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preservation gestion energie USB ^(selective suspend conserve^)...%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation gestion energie USB ^(selective suspend + USB 3 LPM^)...%COLOR_RESET%
+)
+call :SET_USB_POWER !PROFIL_POWER!
+if "!PROFIL_POWER!"=="1" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%USB Selective Suspend preserve - Economie batterie maintenue%COLOR_RESET%
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee - Latence minimale%COLOR_RESET%
+)
 :: 5.12 - QoS Fortnite DSCP 46
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1897,12 +1923,9 @@ powercfg /hibernate off >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Hibernation desactivee - Espace disque libere%COLOR_RESET%
 
 :: 7.9 - USB Selective Suspend (Optimisation latence)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation USB - Desactivation de la mise en veille selective...%COLOR_RESET%
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation USB - Gestion energie desactivee (selective suspend + USB 3 LPM + WMI)...%COLOR_RESET%
+call :SET_USB_POWER 0
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%USB optimise - Latence minimale ^(Selective Suspend OFF^)%COLOR_RESET%
-
 :: 7.10 - Configuration generale du systeme d'alimentation
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du systeme d'alimentation...%COLOR_RESET%
 :: ASPM est configure correctement a la section 7.20 ci-dessous avec SUB_PCIEXPRESS (501a4d13...)
@@ -1990,9 +2013,9 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v "*WakeOnPattern" /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-:: 7.19 - Cartes reseau (aligne section 5.9)
+:: 7.19 - Cartes reseau (helper NIC profile sans restart)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des fonctions d'economie d'energie reseau...%COLOR_RESET%
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object {$n=$_.Name; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}" >nul 2>&1
+call :SET_NIC_PROFILE 0
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie et optimisations reseau appliquees sur toutes les cartes%COLOR_RESET%
 
 :: 7.20 - Energie PCIe
@@ -2301,14 +2324,18 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v DisableBranchPrediction /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mitigations CPU desactivees%COLOR_RESET%
 
-:: 8.4 - HVCI et CFG conserves pour compatibilite anti-cheat
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Conservation du VBS/HVCI/CFG (requis pour Valorant, Fortnite, etc.)...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
+if "!PROFIL_USAGE!"=="0" (
+:: 8.4 - Mode Gaming VBS/HVCI (compatible anti-cheat FaceIT/Vanguard)
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des mitigations CPU (gain FPS)...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application Mode Gaming VBS/HVCI (HVCI=1, VBS=1, CFG=1, LSA=0)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
-REM CFG doit rester ACTIVE pour Vanguard (Valorant)
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI/CFG conserves (compatibilite anti-cheat)%COLOR_RESET%
-
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Gaming VBS/HVCI applique (compatible FaceIT/Vanguard)%COLOR_RESET%
+)
 :: Vulnerable Driver Blocklist
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation CI Policy (Driver Blocklist)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2378,14 +2405,14 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 3 cls & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_DEFENDER_SECTION
 
-  goto :TOGGLE_DEFENDER
+  goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_DEFENDER_SECTION
-goto :TOGGLE_DEFENDER
+goto :MENU_GESTION_WINDOWS
 
 :: ___DEFENDER_ULT_EMBEDDED_SUBS___
 :ACTIVER_DEFENDER_SECTION
@@ -2541,8 +2568,18 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 choice /C 123M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, 3, M]: %COLOR_RESET%"
-if !errorlevel! EQU 4 goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 4 cls & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 3 (
+  cls
+  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+  echo %STYLE_BOLD%%COLOR_WHITE% MODE GAMING - VBS/HVCI%COLOR_RESET%
+  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+  echo.
+  echo %COLOR_WHITE%  HVCI=1, VBS=1, CFG=1, LSA=0 - Compatible FaceIT/Vanguard%COLOR_RESET%
+  echo %COLOR_WHITE%  Mitigations CPU desactivees pour gain FPS%COLOR_RESET%
+  echo.
+  echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+  echo.
   echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du Mode Gaming ^(Performance + Compatibilite^)...%COLOR_RESET%
   REM Desactiver Mitigations CPU (Gain FPS)
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2554,9 +2591,18 @@ if !errorlevel! EQU 3 (
   powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
   echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Gaming active ^(Optimisation CPU + Compatibilite Anti-cheat^).%COLOR_RESET%
   call :FINISH_ACTION "VBS/HVCI" "configure (Mode Gaming)"
-  goto :TOGGLE_VBS_HVCI
+  goto :MENU_GESTION_WINDOWS
 )
 if !errorlevel! EQU 2 (
+  cls
+  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+  echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION VBS / HVCI%COLOR_RESET%
+  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+  echo.
+  echo %COLOR_WHITE%  Desactive VBS, HVCI et Credential Guard pour performances Gaming%COLOR_RESET%
+  echo.
+  echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+  echo.
   echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation complete de VBS, HVCI et Credential Guard...%COLOR_RESET%
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2564,8 +2610,17 @@ if !errorlevel! EQU 2 (
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
   echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard desactives.%COLOR_RESET%
   call :FINISH_ACTION "VBS/HVCI" "desactive"
-  goto :TOGGLE_VBS_HVCI
+  goto :MENU_GESTION_WINDOWS
 )
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION VBS / HVCI%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Active VBS, HVCI et Credential Guard pour securite maximale%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de VBS, HVCI et Credential Guard...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2574,7 +2629,7 @@ REM CFG doit rester ACTIVE pour Vanguard (Valorant)
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard actives.%COLOR_RESET%
 call :FINISH_ACTION "VBS/HVCI" "active"
-goto :TOGGLE_VBS_HVCI
+goto :MENU_GESTION_WINDOWS
 
 :TOGGLE_UAC
 cls
@@ -2596,10 +2651,10 @@ choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: 
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_UAC_SECTION
-  goto :TOGGLE_UAC
+  goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_UAC_SECTION
-goto :TOGGLE_UAC
+goto :MENU_GESTION_WINDOWS
 
 :ACTIVER_UAC_SECTION
 cls
@@ -2681,13 +2736,13 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 choice /C 12M /N /M "%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 3 cls & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_ANIMATIONS_SECTION
-  goto :TOGGLE_ANIMATIONS
+  goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_ANIMATIONS_SECTION
-goto :TOGGLE_ANIMATIONS
+goto :MENU_GESTION_WINDOWS
 
 :ACTIVER_ANIMATIONS_SECTION
 cls
@@ -3119,7 +3174,7 @@ echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%%~1 %~2%COLOR_
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
 echo.
-if "%SKIP_PAUSE%"=="1" goto :FINISH_ACTION_EXIT
+if "!SKIP_PAUSE!"=="1" goto :FINISH_ACTION_EXIT
 choice /C ON /N /M "%STYLE_BOLD%%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
 if !errorlevel! EQU 2 goto :FINISH_ACTION_EXIT
 shutdown /r /t 5 /c "Redemarrage apres modification"
@@ -3902,3 +3957,26 @@ exit /b 0
 
 
 
+:: =================================================================================
+:: HELPERS MATERIEL (NIC / USB) - factorisation des blocs reseaux/energie
+:: =================================================================================
+:: %~1 = 1 (Eco) | 0 (MaxPerf). Configure RSS/RSC/LSO, offloads, gestion d'energie NIC,
+:: proprietes Wi-Fi (Intel/Wireless), buffers max et redemarrage des cartes modifiees.
+:: Source unique de verite pour les sections 5.10 et 7.19 (evite la divergence des deux blocs).
+:SET_NIC_PROFILE
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); Set-Prop $n '*GreenGbe' @('0'); Set-Prop $n '*RscIPv6' @('0'); Set-Prop $n '*PacketCoalescing' @('0'); Set-Prop $n 'EnableExtraPowerSaving' @('0'); if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){Set-Prop $n 'RoamAggressiveness' @('2','1'); Set-Prop $n 'MIMOPowerSaveMode' @('3'); Set-Prop $n 'uAPSDSupport' @('0'); Set-Prop $n 'FatChannelIntolerant' @('0')}; $maxRcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); $maxTcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); if($maxRcv -gt 0){Set-Prop $n '*ReceiveBuffers' @($maxRcv.ToString())}; if($maxTcv -gt 0){Set-Prop $n '*TransmitBuffers' @($maxTcv.ToString())}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -ErrorAction SilentlyContinue; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min($p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction SilentlyContinue}}}}" >nul 2>&1
+exit /b
+
+:: Desactive la gestion d'energie USB : WMI (case "Autoriser l'arret"),
+:: USB Selective Suspend, USB 3 Link Power Management et cle registre DisableSelectiveSuspend.
+:: Source unique pour les sections 5.11 et 7.9 (supprime la triple duplication powercfg).
+:SET_USB_POWER
+if "%~1"=="1" exit /b 0
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=true' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $false} -ErrorAction SilentlyContinue" >nul 2>&1
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
+powercfg /setactive SCHEME_CURRENT >nul 2>&1
+exit /b 0

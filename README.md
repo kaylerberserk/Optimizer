@@ -68,7 +68,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 | **[2]** | **MAX PERF** | Plan Ultimate Performance, BBR2 + TCP Pacing + ECN, RSC/LSO OFF, Flow Control OFF, Interrupt Moderation Minimal (ITR 200), EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers max, gestion énergie USB désactivée (selective suspend + USB 3 LPM), compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
-> **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations de latence restent actives et réduisent l'autonomie.
+> **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations GPU/input/CPU restent actives ; Nagle et les timers réseau agressifs sont neutralisés pour préserver l'autonomie Wi-Fi.
 
 
 #### Règle d'attribution (design interne)
