@@ -212,12 +212,7 @@ set "HAS_NVIDIA=0"
 echo !HW_GPU! | findstr /i "NVIDIA" >nul && (
     for /f "usebackq delims=" %%V in (`powershell -NoProfile -Command "try { $v=Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' -and $_.Name -notmatch 'Virtual|Parsec|Remote|Indirect|Mirror|Microsoft Basic' }; if(-not $v){ '0'; exit }; $m=Get-CimInstance Win32_ComputerSystem; if($m.Model -match 'Virtual|VMware|VirtualBox|KVM|QEMU|Xen|Parallels'){ '0'; exit }; '1' } catch { '0' }"`) do set "HAS_NVIDIA=%%V"
     if not defined HAS_NVIDIA set "HAS_NVIDIA=0"
-    if "!HAS_NVIDIA!"=="1" (
-        echo [^!] GPU NVIDIA physique detecte
-    ) else (
-        set "HAS_NVIDIA=0"
-        echo [^!] GPU NVIDIA virtuel ignore (VM detectee)
-    )
+    if not "!HAS_NVIDIA!"=="1" set "HAS_NVIDIA=0"
 )
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
 exit /b
