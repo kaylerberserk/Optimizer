@@ -39,3 +39,4 @@ build/
 *.tmp
 *.temp
 ~$*
+.hermes/
