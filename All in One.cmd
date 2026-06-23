@@ -57,6 +57,7 @@ set "PROFIL_POWER=0"
 set "IS_GAMING_ECO=0"
 set "DETECTE_PORTABLE=0"
 set "HAS_NVIDIA=0"
+set "IS_VM=0"
 set "DESACTIVER_SECURITE=0"
 set "DESACTIVER_DEFENDER=0"
 set "DESACTIVER_ANIMATIONS=0"
@@ -206,7 +207,18 @@ if exist "%TEMP%\hw_info.tmp" (
     )
     del "%TEMP%\hw_info.tmp" >nul 2>&1
 )
-echo !HW_GPU! | findstr /i "NVIDIA" >nul && set "HAS_NVIDIA=1"
+:: Detection intelligente NVIDIA : verifie que le GPU est physique (pas un GPU virtuel de VM)
+set "HAS_NVIDIA=0"
+echo !HW_GPU! | findstr /i "NVIDIA" >nul && (
+    for /f "usebackq delims=" %%V in (`powershell -NoProfile -Command "try { $v=Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' -and $_.Name -notmatch 'Virtual|Parsec|Remote|Indirect|Mirror|Microsoft Basic' }; if(-not $v){ '0'; exit }; $m=Get-CimInstance Win32_ComputerSystem; if($m.Model -match 'Virtual|VMware|VirtualBox|KVM|QEMU|Xen|Parallels'){ '0'; exit }; '1' } catch { '0' }"`) do set "HAS_NVIDIA=%%V"
+    if not defined HAS_NVIDIA set "HAS_NVIDIA=0"
+    if "!HAS_NVIDIA!"=="1" (
+        echo [^!] GPU NVIDIA physique detecte
+    ) else (
+        set "HAS_NVIDIA=0"
+        echo [^!] GPU NVIDIA virtuel ignore (VM detectee)
+    )
+)
 if /i "%HW_OS%"=="Windows" for /f "tokens=2 delims=[]" %%i in ('ver') do set "HW_OS=%%i"
 exit /b
 
@@ -884,6 +896,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Gestion du blocage telemetrie d
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
+:: Backup du fichier hosts avant modification
+copy "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
 :: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
 powershell -NoProfile -Command "$h='%HOSTS%'; $ErrorActionPreference='Stop'; $crlf=[char]13+[char]10; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb='# Telemetry Block Start'+$crlf+'# --- Telemetry Block ---'+$crlf+'0.0.0.0 vortex.data.microsoft.com'+$crlf+'0.0.0.0 vortex-win.data.microsoft.com'+$crlf+'0.0.0.0 v10.vortex-win.data.microsoft.com'+$crlf+'0.0.0.0 v10.events.data.microsoft.com'+$crlf+'0.0.0.0 telecommand.telemetry.microsoft.com'+$crlf+'0.0.0.0 oca.telemetry.microsoft.com'+$crlf+'0.0.0.0 watson.telemetry.microsoft.com'+$crlf+'0.0.0.0 watsonc.microsoft.com'+$crlf+'# --- End Telemetry Block ---'+$crlf+'# Telemetry Block End'; try { if (Test-Path $h) { $esc=[regex]::Escape($s)+'.*?'+[regex]::Escape($e); $cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII); if ($cur -match ('(?s)'+$esc)) { $cur=$cur -replace ('(?s)'+$esc), $nb } else { $sep=''; if ($cur.Trim().Length -gt 0) { $sep=$crlf+$crlf }; $cur=$cur.TrimEnd()+$sep+$nb }; (Get-Item $h).Attributes='Normal'; $tmp=$h+'.tmp'; [System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII); Move-Item -Path $tmp -Destination $h -Force }; exit 0 } catch { Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue; exit 1 }"
 
@@ -1205,15 +1219,15 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%FTH desactive - Performances me
 
 :: 2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Analyse de la memoire physique...%COLOR_RESET%
-for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB)"') do set "RAM_GB=%%A"
-if not defined RAM_GB set "RAM_GB=0"
+set "RAM_GB=0"
+for /f %%A in ('powershell -NoProfile -Command "[math]::Floor((Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB)"') do if not "%%A"=="" set "RAM_GB=%%A"
 echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil ECO : compression memoire conservee [autonomie]%COLOR_RESET%
 ) else (
     if !RAM_GB! GTR 8 (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM superieure a 8 Go - MAX PERF : desactivation de la compression memoire [charge CPU reduite]...%COLOR_RESET%
-        REM powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { Write-Warning 'MMAgent non supporte sur cette version' }"
+        powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { exit 0 }" >nul 2>&1
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee%COLOR_RESET%
     ) else (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM de 8 Go ou moins : compression memoire conservee%COLOR_RESET%
@@ -1471,8 +1485,6 @@ echo.
 
 :: 5.1 - MMCSS reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration MMCSS reseau...%COLOR_RESET%
-:: NetworkThrottlingIndex : ecrit 10 = defaut Windows (MS KB confirme defaut = 10). Absent = 10 aussi, mais explicite.
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
 :: SystemResponsiveness : Gaming = 10 (10% CPU aux taches faible priorite). Normal = 20 (defaut Windows).
 if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 10 /f >nul 2>&1
@@ -1729,9 +1741,9 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI activees sur 
 :: X - Fronts 25H2 (Recall / CloudExperienceHost / PhoneLink - YourPhone - Win11 24H2/25H2)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 (Recall / CEH / PhoneLink)...%COLOR_RESET%
 
-:: X.1 - Recall (Copilot+ ARM64 ou NPU x64) - desactive la capture IA
-powershell -NoProfile -Command "$a=(Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue).Architecture;$n=(Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object {$_.PNPClass -eq 'System' -and $_.DeviceID -match 'NPU'} | Select-Object -First 1);if($a -eq 12 -or $n){if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null};Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force;if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null};Set-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force;echo 'Recall: DisableAIDataAnalysis=1 (Copilot+ detecte)'}else{echo 'Recall: ignore (pas de NPU/ARM64 detecte)'}" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - politique appliquee si Copilot+ detected^%COLOR_RESET%
+:: X.1 - Recall (Win11 24H2/25H2 tous les Copilot+) - desactive la capture IA
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=0; if($os.UBR){$build=[int]$os.CurrentBuild}; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; Set-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force; Write-Output 'Recall: DisableAIDataAnalysis=1 (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - politique appliquee si Win11 24H2/25H2%COLOR_RESET%
 
 :: X.2 - CloudExperienceHost mute via Scheduled Task + politique CloudContent (sans Remove-AppxPackage)
 schtasks /Change /Disable /TN "\Microsoft\Windows\CloudExperienceHost\CreateObjectTask" >nul 2>&1
@@ -2329,9 +2341,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mitigations CPU desactivees%COL
 
 if "!PROFIL_USAGE!"=="0" (
 REM 8.4 - Mode Gaming VBS/HVCI compatible anti-cheat FaceIT/Vanguard
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des mitigations CPU - gain FPS...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application Mode Gaming VBS/HVCI [HVCI=1, VBS=1, CFG=1, LSA=0]...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -3358,8 +3367,7 @@ if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" (
     pushd "%ProgramFiles(x86)%\Microsoft\Edge\Application" >nul 2>&1
     for /d %%i in (*) do (
         if exist "%%i\Installer\setup.exe" (
-            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Execution setup.exe...%COLOR_RESET%
-            "%%i\Installer\setup.exe" --uninstall --system-level --verbose-logging --force-uninstall
+            "%%i\Installer\setup.exe" --uninstall --system-level --force-uninstall >nul 2>&1
         )
     )
     popd >nul 2>&1
@@ -3641,7 +3649,10 @@ ipconfig /flushdns >nul 2>&1
 :: ETAPE 13
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
-for /f "tokens=*" %%G in ('wevtutil el 2^>nul ^| findstr /v /i /c:"{54849625-5478-4994-a5ba-3e3b0328c30d}" /c:"{bf022046-1f4a-4b91-8a96-bcdb4d6c39f1}"') do wevtutil cl "%%G" >nul 2>&1
+:: Nettoyage avec timeout de 30s par journal pour eviter de bloquer sur un journal volumineux
+for /f "tokens=*" %%G in ('wevtutil el 2^>nul ^| findstr /v /i /c:"{54849625-5478-4994-a5ba-3e3b0328c30d}" /c:"{bf022046-1f4a-4b91-8a96-bcdb4d6c39f1}"') do (
+    powershell -NoProfile -Command "$p=Start-Process -FilePath 'wevtutil' -ArgumentList 'cl ""%%G""' -NoNewWindow -PassThru; Wait-Process -Id $p.Id -Timeout 30 -ErrorAction SilentlyContinue; if(-not $p.HasExited){ Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+)
 
 :: ETAPE 14
 set /a "CLEAN_STEP+=1"
@@ -3661,10 +3672,15 @@ defrag %SystemDrive% /O /H >nul 2>&1
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
+:: Supprimer les StateFlags des runs precedents pour eviter l'accumulation
+for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" /s /f "StateFlags" /d 2^>nul ^| findstr /i "StateFlags"') do (
+    reg delete "%%R" /f >nul 2>&1
+) 2>nul
 for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Previous Installations" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "User file versions" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows ESD installation files" "Windows Upgrade Log Files") do (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
 )
-cleanmgr /sagerun:%SAGEID% /d C: >nul 2>&1
+:: Verifier que cleanmgr n'est pas deja en cours avant de lancer
+powershell -NoProfile -Command "$p=Get-Process cleanmgr -ErrorAction SilentlyContinue; if(-not $p){ Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID% /d C:' -NoNewWindow -PassThru }" >nul 2>&1
 powershell -NoProfile -Command "$waitCount=0; while((Get-Process cleanmgr -ErrorAction SilentlyContinue) -and ($waitCount -lt 120)){ Start-Sleep -s 1; $waitCount++ }" >nul 2>&1
 
 :: ETAPE 17
@@ -3963,15 +3979,18 @@ exit /b 0
 :: =================================================================================
 :: HELPERS MATERIEL (NIC / USB) - factorisation des blocs reseaux/energie
 :: =================================================================================
-:: %~1 = 1 (Eco) | 0 (MaxPerf). Configure RSS/RSC/LSO, offloads, gestion d'energie NIC,
-:: proprietes Wi-Fi (Intel/Wireless), buffers max et redemarrage des cartes modifiees.
+:: Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
+:: MaxPerf (0) : RSC/LSO OFF, EEE OFF, PowerManagement OFF, wake OFF, buffers max.
+:: Eco (1) : RSC/LSO ON, PowerManagement ON, Wi-Fi optimise.
 :: Source unique de verite pour les sections 5.10 et 7.19 (evite la divergence des deux blocs).
 :SET_NIC_PROFILE
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); Set-Prop $n '*GreenGbe' @('0'); Set-Prop $n '*RscIPv6' @('0'); Set-Prop $n '*PacketCoalescing' @('0'); Set-Prop $n 'EnableExtraPowerSaving' @('0'); if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){Set-Prop $n 'RoamAggressiveness' @('2','1'); Set-Prop $n 'MIMOPowerSaveMode' @('3'); Set-Prop $n 'uAPSDSupport' @('0'); Set-Prop $n 'FatChannelIntolerant' @('0')}; $maxRcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); $maxTcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); if($maxRcv -gt 0){Set-Prop $n '*ReceiveBuffers' @($maxRcv.ToString())}; if($maxTcv -gt 0){Set-Prop $n '*TransmitBuffers' @($maxTcv.ToString())}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -ErrorAction SilentlyContinue; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min($p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction SilentlyContinue}}}}" >nul 2>&1
 exit /b
 
-:: Desactive la gestion d'energie USB : WMI (case "Autoriser l'arret"),
-:: USB Selective Suspend, USB 3 Link Power Management et cle registre DisableSelectiveSuspend.
+:: Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
+:: MaxPerf (0) : desactive la gestion d'energie USB (WMI "Autoriser l'arret",
+::   USB Selective Suspend, USB 3 LPM, DisableSelectiveSuspend).
+:: Eco (1) : sort immediatement (ne touche pas a la gestion d'energie USB).
 :: Source unique pour les sections 5.11 et 7.9 (supprime la triple duplication powercfg).
 :SET_USB_POWER
 if "%~1"=="1" exit /b 0
