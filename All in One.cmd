@@ -3644,9 +3644,9 @@ ipconfig /flushdns >nul 2>&1
 :: ETAPE 13
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
-:: Nettoyage avec timeout de 30s par journal pour eviter de bloquer sur un journal volumineux
+:: Nettoyage avec timeout de 5s par journal pour eviter de bloquer sur un journal volumineux
 for /f "tokens=*" %%G in ('wevtutil el 2^>nul ^| findstr /v /i /c:"{54849625-5478-4994-a5ba-3e3b0328c30d}" /c:"{bf022046-1f4a-4b91-8a96-bcdb4d6c39f1}"') do (
-    powershell -NoProfile -Command "$p=Start-Process -FilePath 'wevtutil' -ArgumentList 'cl ""%%G""' -NoNewWindow -PassThru; Wait-Process -Id $p.Id -Timeout 30 -ErrorAction SilentlyContinue; if(-not $p.HasExited){ Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+    powershell -NoProfile -Command "$p=Start-Process -FilePath 'wevtutil' -ArgumentList 'cl ""%%G""' -NoNewWindow -PassThru; Wait-Process -Id $p.Id -Timeout 5 -ErrorAction SilentlyContinue; if(-not $p.HasExited){ Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 )
 
 :: ETAPE 14
