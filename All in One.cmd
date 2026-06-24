@@ -1025,8 +1025,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableInventor
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "DisableUAR" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\AppCompat" /v "AITEnable" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Configuration Manager" /v EnablePeriodicBackup /t REG_DWORD /d 1 /f >nul 2>&1
-:: bootuxdisabled = Gaming uniquement (Normal preserve l'animation de demarrage)
-if "!PROFIL_USAGE!"=="0" bcdedit /set bootuxdisabled on >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "01" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" /v "04" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1481,6 +1479,7 @@ if "!PROFIL_USAGE!"=="0" (
 ) else (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
 )
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MMCSS reseau configure%COLOR_RESET%
 
 :: 5.2 - Pile TCP/IP Win11
@@ -1489,6 +1488,7 @@ netsh int tcp set global autotuninglevel=normal >nul 2>&1
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
+netsh int tcp set global minRto=300 >nul 2>&1
 
 if "!PROFIL_USAGE!"=="0" (
     if "!IS_GAMING_ECO!"=="0" (
@@ -1527,6 +1527,10 @@ if "!PROFIL_USAGE!"=="0" (
     REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, force = placebo. Supprime.
     reg delete "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v Size /f >nul 2>&1
 )
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v EnablePMTUDiscovery /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpMaxDataRetransmissions /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Registre TCP configure%COLOR_RESET%
 :: 5.4 - DefaultTTL
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 64 /f >nul 2>&1
@@ -1637,6 +1641,7 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu : defaut Windows conserve ^(Normal^)%COLOR_RESET%
 )
 
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Mise a jour des politiques groupe ^(gpupdate^)...%COLOR_RESET%
 gpupdate /target:computer /force >nul 2>&1
 nbtstat -R >nul 2>&1
 nbtstat -RR >nul 2>&1
@@ -1950,13 +1955,25 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v Coales
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
+:: TimerCoalescing - Options (une seule activee a la fois, choisis celle qui te convient le mieux)
+:: Option 1 (RECOMMANDEE si OK) : 64 bytes REG_BINARY - semble ameliorer le feeling souris / input lag, ne crashe pas
+:: reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 0000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
+:: Option 2 (A TESTER) : 80 bytes REG_BINARY - version "complete" du noyau, mais PEUT CRASHER ou rendre instable sur certaines configs
+:: reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
+:: Option 3 (A TESTER) : REG_DWORD 1 - effet inconnu/noque (le noyau lit du REG_BINARY, mais a tester si mieux que option 1)
+:: reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_DWORD /d 1 /f >nul 2>&1
+:: Option 4 (A TESTER) : REG_DWORD 0 - retour au comportement par defaut (coalescing actif, pertes possibles)
+:: reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_DWORD /d 0 /f >nul 2>&1
+:: Option 5 : Supprimer la valeur (comportement noyau par defaut) - utilise reg delete ci-dessous si necessaire
+:: reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\ModernSleep" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\ControlSet001\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+:: DisableDynamicTick : desactive l'horloge dynamique (interruptions plus predictibles)
+bcdedit /set disabledynamictick yes >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing desactive - Latence reduite%COLOR_RESET%
 
 :: 7.12 - Installation SetTimerResolution
@@ -2106,6 +2123,8 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Managem
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /f >nul 2>&1
+:: Reactive DynamicTick (horloge dynamique)
+bcdedit /deletevalue disabledynamictick >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing reactive%COLOR_RESET%
 
 :: 7.5 - SetTimerResolution du demarrage
@@ -2362,8 +2381,8 @@ echo.
 :: 8.2 - Mitigations Spectre/Meltdown et CPU
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des mitigations Spectre/Meltdown et CPU...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v MoveImages /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableGdsMitigation /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v PerformMmioMitigation /f >nul 2>&1
@@ -2790,8 +2809,6 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v
 :: Supprimer la politique DisableStartupAnimation
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /f >nul 2>&1
 
-:: Reactiver l'animation de demarrage Windows
-bcdedit /set bootuxdisabled off >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Animations Windows activees.%COLOR_RESET%
 call :FINISH_ACTION "Animations" "activees"
 exit /b
@@ -2853,8 +2870,6 @@ reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "0" /f >nul 2>
 :: Animation demarrage OFF
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
 
-:: Desactivation de l'animation de demarrage Windows
-bcdedit /set bootuxdisabled on >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Animations Windows desactivees.%COLOR_RESET%
 call :FINISH_ACTION "Animations" "desactivees"
 exit /b
@@ -3975,7 +3990,7 @@ exit /b 0
 :: Eco (1) : RSC/LSO ON, PowerManagement ON, Wi-Fi optimise.
 :: Source unique de verite pour les sections 5.10 et 7.19 (evite la divergence des deux blocs).
 :SET_NIC_PROFILE
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); function Set-Prop($a,$kw,$vals){$props=Get-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -ErrorAction SilentlyContinue; foreach($p in $props){foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $p.RegistryKeyword -RegistryValue $v -ErrorAction Stop; break}catch{}}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; Set-Prop $n '*FlowControl' @('0'); Set-Prop $n '*InterruptModeration' @('1'); Set-Prop $n '*IPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv4' @('3'); Set-Prop $n '*TCPChecksumOffloadIPv6' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv4' @('3'); Set-Prop $n '*UDPChecksumOffloadIPv6' @('3'); Set-Prop $n '*GreenGbe' @('0'); Set-Prop $n '*RscIPv6' @('0'); Set-Prop $n '*PacketCoalescing' @('0'); Set-Prop $n 'EnableExtraPowerSaving' @('0'); if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Set-Prop $n '*EEE' @('0'); Set-Prop $n 'AdvancedEEE' @('0'); Set-Prop $n 'EnableGreenEthernet' @('0'); Set-Prop $n 'PowerSavingMode' @('0'); Set-Prop $n 'GigaLite' @('0'); Set-Prop $n 'ReduceSpeedOnPowerDown' @('0'); Set-Prop $n '*InterruptModerationRate' @('Minimal','32','1'); Set-Prop $n 'ITR' @('200','32','65535'); Set-Prop $n '*WakeOnMagicPacket' @('0'); Set-Prop $n '*WakeOnPattern' @('0'); Set-Prop $n 'S5WakeOnLan' @('0'); Set-Prop $n '*ShutdownLinkSpeed' @('0'); Set-Prop $n 'S3S4WolLinkSpeed' @('0')}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){Set-Prop $n 'RoamAggressiveness' @('2','1'); Set-Prop $n 'MIMOPowerSaveMode' @('3'); Set-Prop $n 'uAPSDSupport' @('0'); Set-Prop $n 'FatChannelIntolerant' @('0')}; $maxRcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); $maxTcv=[math]::Min(([int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue),99999)[[int]((Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -ErrorAction SilentlyContinue).NumericParameterMaxValue -gt 0)],2048); if($maxRcv -gt 0){Set-Prop $n '*ReceiveBuffers' @($maxRcv.ToString())}; if($maxTcv -gt 0){Set-Prop $n '*TransmitBuffers' @($maxTcv.ToString())}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=Get-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -ErrorAction SilentlyContinue; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min($p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction SilentlyContinue}}}}" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return}; $p=$cache[$kw]; foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop; break}catch{}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; $props=@{}; Get-NetAdapterAdvancedProperty -Name $n -ErrorAction SilentlyContinue | ForEach-Object {$props[$_.RegistryKeyword]=$_}; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; SetP $n '*FlowControl' @('0') $props; SetP $n '*InterruptModeration' @('1') $props; SetP $n '*IPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv6' @('3') $props; SetP $n '*UDPChecksumOffloadIPv4' @('3') $props; SetP $n '*UDPChecksumOffloadIPv6' @('3') $props; SetP $n '*GreenGbe' @('0') $props; SetP $n '*RscIPv6' @('0') $props; SetP $n '*PacketCoalescing' @('0') $props; SetP $n 'EnableExtraPowerSaving' @('0') $props; if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*EEE' @('0') $props; SetP $n 'AdvancedEEE' @('0') $props; SetP $n 'EnableGreenEthernet' @('0') $props; SetP $n 'PowerSavingMode' @('0') $props; SetP $n 'GigaLite' @('0') $props; SetP $n 'ReduceSpeedOnPowerDown' @('0') $props; SetP $n '*InterruptModerationRate' @('Minimal','32','1') $props; SetP $n 'ITR' @('200','32','65535') $props; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props; SetP $n '*ShutdownLinkSpeed' @('0') $props; SetP $n 'S3S4WolLinkSpeed' @('0') $props}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'RoamAggressiveness' @('2','1') $props; SetP $n 'MIMOPowerSaveMode' @('3') $props; SetP $n 'uAPSDSupport' @('0') $props; SetP $n 'FatChannelIntolerant' @('0') $props}; $rxp=$props['*ReceiveBuffers']; if($rxp -and $rxp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$rxp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; $txp=$props['*TransmitBuffers']; if($txp -and $txp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$txp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw]; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop}catch{}}}}}" >nul 2>&1
 exit /b
 
 :: Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
