@@ -38,7 +38,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 1. **Téléchargement** : Accédez au fichier [**All in One.cmd**](https://github.com/kaylerberserk/WindowsOptimizer/blob/main/All%20in%20One.cmd) et cliquez sur le bouton **Download**.
 2. **Exécution** : Clic droit sur le fichier → **Exécuter en tant qu'administrateur**.
 3. **Sécurité** : Appuyez sur **[R]** pour créer un point de restauration avant toute modification.
-4. **Optimisation** : Appuyez sur **[O]** pour tout optimiser d'un coup. Le script vous pose **2 questions simples** (votre usage, puis votre priorité énergie/performance) et applique automatiquement le bon profil.
+4. **Optimisation** : Appuyez sur **[O]** pour tout optimiser d'un coup. Le script vous pose quelques questions (usage, énergie, options) et applique automatiquement le profil adapté.
 5. **Redémarrage** : Un redémarrage est nécessaire pour appliquer l'ensemble des changements.
 
 ---
@@ -47,7 +47,7 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 ### 🌟 Système de Profils à 2 Axes (All-in-One [O])
 
-L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose 2 questions et en déduit automatiquement la configuration optimale.
+L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose quelques questions (profil + options) et en déduit automatiquement la configuration optimale.
 
 Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage, et **Réseau** demande les deux.
 
@@ -91,7 +91,7 @@ Cela évite notamment le double-pilotage de RSC (Receive Segment Coalescing) : l
 
 ### 🧰 Outils & Utilitaires
 
-- **[N] Nettoyage Avancé** : Grand ménage en 18 étapes des fichiers temporaires, caches et logs.
+- **[N] Nettoyage Avancé** : Nettoyage système complet en 26 étapes (fichiers temporaires, caches W11, Widgets/Copilot/Recall, icônes, OneDrive, Defender, etc.).
 - **[R] Point de Restauration** : Crée un point de restauration système avant toute modification.
 - **[G] Gestion Windows** : Menu dédié (Defender, UAC, VBS/HVCI, Edge, OneDrive…).
 - **[W] MAS** : Lien vers l'outil d'activation communautaire pour Windows et Office.
@@ -160,18 +160,18 @@ R : Oui, ils peuvent être réinstallés via le site officiel de Microsoft à to
 **Q : Quels "Bloatwares" sont supprimés ?**  
 R : Le script effectue un nettoyage ciblé pour supprimer les éléments publicitaires ou non-essentiels, tout en garantissant la stabilité du système.
 
-### 🗑️ Ce qui est rigoureusement SUPPRIMÉ :
-| Catégorie | Applications Supprimées (Bloatwares) |
+#### 🗑️ Supprimé
+| Catégorie | Applications |
 | :--- | :--- |
 | **Jeux & Pubs** | Candy Crush (Saga & Soda), Solitaire Collection. |
 | **Social / Liens** | Skype, People, Microsoft Family, Your Phone (Lien avec le téléphone). |
 | **Utilitaires** | Cartes (Maps), Feedback Hub, Get Help, Get Started, Mixed Reality Portal, Assistance rapide. |
 | **Services** | Office Hub (Web stub), OneConnect (Forfaits mobiles), Bing News (Actualités). |
 
-### ✅ Ce qui est rigoureusement CONSERVÉ :
-| Catégorie | Applications Maintenues (Sécurisées) |
+#### ✅ Conservé
+| Catégorie | Applications |
 | :--- | :--- |
-| **Gaming** | Toute la suite **Xbox** (Game Bar, App), DirectX, Game Mode. |
+| **Gaming** | Suite **Xbox** (Game Bar, App), DirectX, Game Mode. |
 | **Quotidien** | Météo, Sports, Finances, Alarmes, Caméra, Enregistreur vocal. |
 | **Multimédia** | Musique (Groove), Films et TV, Photos, Paint. |
 | **Productivité** | Calculatrice, Bloc-notes, Courrier & Calendrier, Sticky Notes. |
