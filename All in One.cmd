@@ -89,7 +89,7 @@ set "HW_RAM=Detection..."
 :: [TERMINE]   VERT  = Section completee
 :: [INFO]      JAUNE = Information / Conseil
 :: [SKIP]      CYAN  = Action ignoree volontairement / non applicable
-:: [^!]        JAUNE = Avertissement (attention requise)
+:: [*]        JAUNE = Avertissement (attention requise)
 :: [-]         ROUGE = Suppression / Action negative
 :: [ERREUR]    ROUGE = Erreur critique / Echec
 :: [ATTENTION] ROUGE = Risque de securite
@@ -190,7 +190,7 @@ if not "%~1"=="1" (
 :: Detection materiel en une seule commande pour eviter les scripts temporaires fragiles en CMD.
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $res+='GPU:'+($gn -join ' / ')}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}elseif($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines((Join-Path $env:TEMP 'hw_info.tmp'), $res)" >nul 2>&1
 if !errorlevel! NEQ 0 (
-    echo [^!] %COLOR_YELLOW%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
+    echo [*] %COLOR_YELLOW%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
 )
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
@@ -301,7 +301,7 @@ if !errorlevel! EQU 2 set "PROFIL_POWER=0"
 call :INIT_PROFILS
 if "!IS_GAMING_ECO!"=="1" (
     echo.
-    echo %COLOR_YELLOW%[^!]%COLOR_RESET% %COLOR_WHITE%Profil GAMING + ECO selectionne.%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Profil GAMING + ECO selectionne.%COLOR_RESET%
     echo %COLOR_WHITE%    Les optimisations de latence restent actives et reduiront l'autonomie.%COLOR_RESET%
     echo %COLOR_WHITE%    Si l'autonomie est prioritaire, preferez NORMAL + ECO.%COLOR_RESET%
     echo.
@@ -393,7 +393,7 @@ echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie%COLOR_R
 echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite - Desactiver ou Restaurer%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
-echo %COLOR_YELLOW%[O]%COLOR_RESET% %COLOR_WHITE%Tout optimiser %COLOR_GREEN%- repondez a 2 questions, le script gere le reste%COLOR_RESET%
+echo %COLOR_YELLOW%[O]%COLOR_RESET% %COLOR_WHITE%Tout optimiser %COLOR_GREEN%- repondez aux questions, le script gere le reste%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_YELLOW%[N]%COLOR_RESET% %COLOR_CYAN%Nettoyage Avance de Windows%COLOR_RESET%
@@ -1427,7 +1427,7 @@ if "!HAS_NVIDIA!"=="1" (
         echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA global ignore en profil NORMAL pour preserver autonomie, chauffe et silence%COLOR_RESET%
     )
 ) else (
-    echo [^!] GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
+    echo [*] GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
 )
 
 call :FINISH_ACTION "Optimisations GPU" "terminees"
@@ -1446,7 +1446,7 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
 if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
-    echo [^!] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
+    echo [*] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations reseau peuvent impacter :%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Wi-Fi%COLOR_RESET% : Nagle/DelACK OFF peut destabiliser le Wi-Fi%COLOR_RESET%
@@ -1466,7 +1466,7 @@ if "!PROFIL_POWER!"=="0" (
     echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%ECO%COLOR_RESET%%COLOR_WHITE% - offloads NIC conserves, autonomie prioritaire%COLOR_RESET%
 )
 if "!IS_GAMING_ECO!"=="1" (
-    echo %COLOR_YELLOW%  [^!]%COLOR_RESET% %COLOR_WHITE%GAMING + ECO : tweaks TCP agressifs ^(Nagle, initialrto^) neutralises pour preserver l'autonomie Wi-Fi.%COLOR_RESET%
+    echo %COLOR_YELLOW%  [*]%COLOR_RESET% %COLOR_WHITE%GAMING + ECO : tweaks TCP agressifs ^(Nagle, initialrto^) neutralises pour preserver l'autonomie Wi-Fi.%COLOR_RESET%
     echo %COLOR_WHITE%     Latence GPU/input conservee, debit/stabilite mobile favorises.%COLOR_RESET%
 )
 echo.
@@ -1664,7 +1664,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 
 :: Avertissement mode manuel sur PC portable : profil NORMAL conserve une acceleration trackpad legere.
 if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
-    echo [^!] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
+    echo [*] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations peripheriques peuvent impacter :%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Trackpad%COLOR_RESET% : Acceleration OFF rend le trackpad moins naturel%COLOR_RESET%
@@ -2294,7 +2294,7 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : DESACTIVATION DES PROTECTIONS DE SECURITE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo [^!] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
+echo [*] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
 echo %COLOR_WHITE%  Cette section desactive les protections contre les vulnerabilites%COLOR_RESET%
 echo %COLOR_WHITE%  materielles (Spectre, Meltdown) et certaines mitigations noyau.%COLOR_RESET%
 echo.
@@ -2577,7 +2577,7 @@ echo.
 echo %COLOR_WHITE%  VBS (Virtualization Based Security) et HVCI (Memory Integrity) securisent le noyau%COLOR_RESET%
 echo %COLOR_WHITE%  mais impactent lourdement les performances en jeu (jusqu'a -25%% FPS).%COLOR_RESET%
 echo.
-echo [^!] %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains anti-cheats (Vanguard/Valorant, FaceIT, Ricochet)%COLOR_RESET%
+echo [*] %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains anti-cheats (Vanguard/Valorant, FaceIT, Ricochet)%COLOR_RESET%
 echo %COLOR_YELLOW%peuvent exiger que VBS/HVCI soit ACTIVE pour lancer le jeu.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer VBS / HVCI (Securite maximale)%COLOR_RESET%
@@ -2714,7 +2714,7 @@ echo %COLOR_WHITE%- La desactivation supprime ces invites : un malware peut agir
 echo %COLOR_WHITE%- Ce script desactive aussi des avertissements SmartScreen / marquage zone Internet.%COLOR_RESET%
 echo %COLOR_WHITE%- Reserve aux bancs de test ou utilisateurs conscients du risque.%COLOR_RESET%
 echo.
-echo [^!] %COLOR_YELLOW%LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.%COLOR_RESET%
+echo [*] %COLOR_YELLOW%LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_UAC_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC et les avertissements lies ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
@@ -3350,7 +3350,7 @@ if !errorlevel! EQU 2 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Les donnees utilisateur seront preservees.%COLOR_RESET%
 ) else (
     set "SUPPR_DATA=1"
-    echo [^!] Les donnees utilisateur seront supprimees.
+    echo [*] Les donnees utilisateur seront supprimees.
 )
 
 echo.
@@ -3535,7 +3535,7 @@ goto :MENU_PRINCIPAL
 :NETTOYAGE_AVANCE_WINDOWS
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE AVANCE WINDOWS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
@@ -3543,9 +3543,11 @@ echo.
 for /f %%a in ('powershell -nologo -command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
 if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
 
-echo [^!] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
+echo [*] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
 echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, caches,%COLOR_RESET%
-echo %COLOR_WHITE%  rapports d'erreurs, corbeille, et anciens pilotes dupliques.%COLOR_RESET%
+echo %COLOR_WHITE%  rapports d'erreurs, corbeille, caches navigateurs,%COLOR_RESET%
+echo %COLOR_WHITE%  caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
+echo %COLOR_WHITE%  notifications, OneDrive, Defender, et pilotes orphelins.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Continuer ? [O/N]: %COLOR_RESET%"
 choice /C ON /N
@@ -3553,54 +3555,62 @@ if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE DE WINDOWS AVANCE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE AVANCE WINDOWS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-:: Initialiser la barre de progression (18 etapes)
-set /a "CLEAN_TOTAL=18"
+:: Initialiser la barre de progression (26 etapes - caches de perf conserves)
+set /a "CLEAN_TOTAL=26"
 set /a "CLEAN_STEP=0"
 
-:: ETAPE 1
+:: ETAPE 1 - Fichiers temporaires utilisateur (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires utilisateur"
 del /s /q /f "%temp%\*.*" >nul 2>&1
 for /d %%d in ("%temp%\*") do rd /s /q "%%d" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\Office\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Office\*.tmp" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.log" del /s /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.log" >nul 2>&1
 
-:: ETAPE 2
+:: ETAPE 2 - Fichiers temporaires Windows (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires Windows"
 del /s /q /f "%SystemRoot%\Temp\*.*" >nul 2>&1
 for /d %%d in ("%SystemRoot%\Temp\*") do rd /s /q "%%d" >nul 2>&1
+if exist "%SystemRoot%\Servicing\LC\*.tmp" del /s /q /f "%SystemRoot%\Servicing\LC\*.tmp" >nul 2>&1
 
-:: ETAPE 3
+:: ETAPE 3 - Logs systeme (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs systeme"
 del /s /q /f "%SystemRoot%\Logs\*.log" >nul 2>&1
 del /s /q /f "%SystemRoot%\System32\LogFiles\*.log" >nul 2>&1
 del /s /q /f "%SystemRoot%\Panther\*.log" >nul 2>&1
 
-:: ETAPE 4
+:: ETAPE 4 - Fichiers de crash / dumps (ameliore)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers de crash"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers de crash et dumps"
 del /s /q /f "%SystemRoot%\Minidump\*.*" >nul 2>&1
 del /q /f "%SystemRoot%\*.dmp" >nul 2>&1
 del /s /q /f "%SystemRoot%\memory.dmp" >nul 2>&1
+del /s /q /f "%SystemRoot%\LiveKernelReports\*.dmp" >nul 2>&1
+del /s /q /f "%SystemRoot%\System32\Sysdata\*.dmp" >nul 2>&1
+del /s /q /f "%LOCALAPPDATA%\CrashDumps\*.*" >nul 2>&1
 
-:: ETAPE 5
+:: ETAPE 5 - Rapports d'erreurs et Telemetrie
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Rapports d'erreurs et Telemetrie"
 rd /s /q "%ProgramData%\Microsoft\Windows\WER" >nul 2>&1
 if not exist "%ProgramData%\Microsoft\Windows\WER" md "%ProgramData%\Microsoft\Windows\WER" >nul 2>&1
 rd /s /q "%ProgramData%\Microsoft\Diagnosis" >nul 2>&1
 if not exist "%ProgramData%\Microsoft\Diagnosis" md "%ProgramData%\Microsoft\Diagnosis" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\Windows\WER" rd /s /q "%LOCALAPPDATA%\Microsoft\Windows\WER" >nul 2>&1
 
-:: ETAPE 6
+:: ETAPE 6 - Cache Windows Update, SoftwareDistribution, Delivery Optimization (ameliore)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Update & SoftwareDistribution"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Update et Delivery Optimization"
 net stop wuauserv >nul 2>&1
 net stop bits >nul 2>&1
 net stop cryptsvc >nul 2>&1
+net stop dosvc >nul 2>&1
 timeout /t 2 /nobreak >nul
 rd /s /q "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
 rd /s /q "%SystemRoot%\SoftwareDistribution\DataStore" >nul 2>&1
@@ -3608,7 +3618,6 @@ rd /s /q "%SystemRoot%\SoftwareDistribution\PostRebootEventCache" >nul 2>&1
 del /s /q /f "%SystemRoot%\SoftwareDistribution\ReportingEvents.log" >nul 2>&1
 md "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
 md "%SystemRoot%\SoftwareDistribution\DataStore" >nul 2>&1
-:: Nettoyage Delivery Optimization (WUDO)
 if exist "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" (
     rd /s /q "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" >nul 2>&1
     md "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" >nul 2>&1
@@ -3617,23 +3626,25 @@ net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
 net start cryptsvc >nul 2>&1
 
-:: ETAPE 7
+:: ETAPE 7 - Corbeille
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Corbeille"
 powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
 
-:: ETAPE 8
+:: ETAPE 8 - Fichiers Prefetch
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers Prefetch"
 del /s /q /f "%SystemRoot%\Prefetch\*.*" >nul 2>&1
 
-:: ETAPE 9
+:: ETAPE 9 - Journaux composants Windows (ameliore)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux CBS/DISM"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux composants Windows"
 del /s /q /f "%SystemRoot%\Logs\CBS\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\Logs\CBS\*.cab" >nul 2>&1
 del /s /q /f "%SystemRoot%\Logs\DISM\*.log" >nul 2>&1
+del /s /q /f "%SystemRoot%\Logs\DISM\*.cab" >nul 2>&1
 
-:: ETAPE 10
+:: ETAPE 10 - Cache de polices
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache de polices"
 net stop FontCache >nul 2>&1
@@ -3642,63 +3653,137 @@ del /s /q /f "%SystemRoot%\ServiceProfiles\LocalService\AppData\Local\FontCache\
 del /q /f "%SystemRoot%\System32\FNTCACHE.DAT" >nul 2>&1
 net start FontCache >nul 2>&1
 
-:: ETAPE 11
+:: ETAPE 11 - Cache Windows Store et applications (ameliore)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Store"
-powershell -NoProfile -Command "Get-ChildItem -Path ""$env:LOCALAPPDATA\Packages"" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'Edge|WebView|Microsoft\.Windows' } | ForEach-Object { Remove-Item -Path ""$($_.FullName)\AC\INetCache\*"" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ""$($_.FullName)\AC\Temp\*"" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Store et applications"
+powershell -NoProfile -Command "Get-ChildItem -Path ""$env:LOCALAPPDATA\Packages"" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'Edge|WebView|Microsoft\.Windows' } | ForEach-Object { Remove-Item -Path ""$($_.FullName)\AC\INetCache\*"" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ""$($_.FullName)\AC\Temp\*"" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ""$($_.FullName)\LocalState\Cache\*"" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+:: wsreset.exe supprime (ouvre UI Store + 5-15s); vidage PS du cache suffit
 
-:: ETAPE 12
+:: ETAPE 12 - Cache DNS
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache DNS"
 ipconfig /flushdns >nul 2>&1
 
-:: ETAPE 13
+:: ETAPE 13 - Journaux Event Viewer (async - lancement parallele, gain ~1-3min)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
-:: Nettoyage avec timeout de 5s par journal pour eviter de bloquer sur un journal volumineux
-for /f "tokens=*" %%G in ('wevtutil el 2^>nul ^| findstr /v /i /c:"{54849625-5478-4994-a5ba-3e3b0328c30d}" /c:"{bf022046-1f4a-4b91-8a96-bcdb4d6c39f1}"') do (
-    powershell -NoProfile -Command "$p=Start-Process -FilePath 'wevtutil' -ArgumentList 'cl ""%%G""' -NoNewWindow -PassThru; Wait-Process -Id $p.Id -Timeout 5 -ErrorAction SilentlyContinue; if(-not $p.HasExited){ Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }" >nul 2>&1
-)
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer (async)"
+powershell -NoProfile -Command "$logs=wevtutil el 2>$null; foreach($l in $logs){ if($l -notmatch '54849625-5478-4994-a5ba-3e3b0328c30d' -and $l -notmatch 'bf022046-1f4a-4b91-8a96-bcdb4d6c39f1'){ Start-Process wevtutil -ArgumentList @('cl', $l) -NoNewWindow -ErrorAction SilentlyContinue } }" >nul 2>&1
+ping -n 3 127.0.0.1 >nul 2>&1
 
-:: ETAPE 14
+:: ETAPE 14 - Windows.old + $SysReset + ~BT (ameliore)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Dossier Windows.old"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Anciennes installations Windows"
 if exist "%SystemDrive%\Windows.old" (
     takeown /f "%SystemDrive%\Windows.old" /r /d y >nul 2>&1
     icacls "%SystemDrive%\Windows.old" /grant administrators:F /t >nul 2>&1
     rd /s /q "%SystemDrive%\Windows.old" >nul 2>&1
 )
+if exist "%SystemDrive%\$SysReset" (
+    takeown /f "%SystemDrive%\$SysReset" /r /d y >nul 2>&1
+    icacls "%SystemDrive%\$SysReset" /grant administrators:F /t >nul 2>&1
+    rd /s /q "%SystemDrive%\$SysReset" >nul 2>&1
+)
+if exist "%SystemDrive%\$Windows.~BT" rd /s /q "%SystemDrive%\$Windows.~BT" >nul 2>&1
+if exist "%SystemDrive%\$Windows.~WS" rd /s /q "%SystemDrive%\$Windows.~WS" >nul 2>&1
 
-:: ETAPE 15
+:: ETAPE 15 - Optimisation disque (TRIM/Defrag)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation disque (TRIM/Defrag)"
 defrag %SystemDrive% /O /H >nul 2>&1
 
-:: ETAPE 16
+:: ETAPE 16 - Nettoyage Windows Cleanmgr (ameliore - plus de categories 2026)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
-:: Supprimer les StateFlags des runs precedents pour eviter l'accumulation
 for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" /s /f "StateFlags" /d 2^>nul ^| findstr /i "StateFlags"') do (
     reg delete "%%R" /f >nul 2>&1
 ) 2>nul
 for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Previous Installations" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "User file versions" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows ESD installation files" "Windows Upgrade Log Files") do (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
 )
-:: Verifier que cleanmgr n'est pas deja en cours avant de lancer
 powershell -NoProfile -Command "$p=Get-Process cleanmgr -ErrorAction SilentlyContinue; if(-not $p){ Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID% /d C:' -NoNewWindow -PassThru }" >nul 2>&1
 powershell -NoProfile -Command "$waitCount=0; while((Get-Process cleanmgr -ErrorAction SilentlyContinue) -and ($waitCount -lt 120)){ Start-Sleep -s 1; $waitCount++ }" >nul 2>&1
 
-:: ETAPE 17
+:: ETAPE 17 - Nettoyage composants systeme (via DISM)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache de Manifest (WinSxS)"
-del /s /q /f "%SystemRoot%\WinSxS\ManifestCache\*.*" >nul 2>&1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Composants systeme (nettoyage)"
+powershell -NoProfile -Command "dism /online /Cleanup-Image /StartComponentCleanup /Quiet 2>&1 | Out-Null" >nul 2>&1
+:: /SPSuperseded obsolete sur W11 (MS docs), StartComponentCleanup suffit
 
-:: ETAPE 18
+:: ETAPE 18 - Fichiers temporaires profil systeme (ameliore)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires profil systeme"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Profil systeme et caches Internet"
 del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\Local\*.tmp" >nul 2>&1
 del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\Local\Microsoft\Windows\INetCache\*.*" >nul 2>&1
+del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\LocalLow\*.tmp" >nul 2>&1
+
+:: ETAPE 19 - Cache d'icones (securise - redemarre l'explorateur)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache d'icones"
+taskkill /f /im explorer.exe >nul 2>&1
+timeout /t 1 /nobreak >nul
+del /q /f "%LOCALAPPDATA%\Microsoft\Windows\Explorer\iconcache_*" >nul 2>&1
+del /q /f "%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*" >nul 2>&1
+start explorer.exe >nul 2>&1
+
+:: ETAPE 20 - Caches Windows 11 : Widgets, Copilot, Recall (nouveau W11 2026)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Widgets, Copilot, Recall"
+if exist "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\AC\INetCache" rd /s /q "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\AC\INetCache" >nul 2>&1
+if exist "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\LocalCache" rd /s /q "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\LocalCache" >nul 2>&1
+if exist "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.WebExperience_cw5n1h2txyewy\AC\INetCache" rd /s /q "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.WebExperience_cw5n1h2txyewy\AC\INetCache" >nul 2>&1
+if exist "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.WebExperience_cw5n1h2txyewy\LocalCache" rd /s /q "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.WebExperience_cw5n1h2txyewy\LocalCache" >nul 2>&1
+:: Copilot (W11 24H2+)
+if exist "%LOCALAPPDATA%\Packages\Microsoft.Windows.Copilot_*\AC\INetCache" for /d %%d in ("%LOCALAPPDATA%\Packages\Microsoft.Windows.Copilot_*") do (
+    if exist "%%d\AC\INetCache" rd /s /q "%%d\AC\INetCache" >nul 2>&1
+    if exist "%%d\LocalCache" rd /s /q "%%d\LocalCache" >nul 2>&1
+)
+:: Recall / AI Explorer (W11 2025+) - caches INet temporaires uniquement
+if exist "%LOCALAPPDATA%\Packages\Microsoft.Windows.AI.Explorer_*\AC\Temp" for /d %%d in ("%LOCALAPPDATA%\Packages\Microsoft.Windows.AI.Explorer_*") do (
+    if exist "%%d\AC\Temp" rd /s /q "%%d\AC\Temp" >nul 2>&1
+)
+:: Recall snapshots vivent dans CoreAIPlatform.00 (MS docs, gagne du temps)
+if exist "%LOCALAPPDATA%\CoreAIPlatform.00\LocalState" rd /s /q "%LOCALAPPDATA%\CoreAIPlatform.00\LocalState" >nul 2>&1
+
+:: ETAPE 21 - Cache notifications logs (inofensif)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs notifications"
+if exist "%LOCALAPPDATA%\Microsoft\Windows\Notifications" (
+    del /s /q /f "%LOCALAPPDATA%\Microsoft\Windows\Notifications\*.log" >nul 2>&1
+)
+
+:: ETAPE 22 - Logs et setup OneDrive (inofensif)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs OneDrive"
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\logs" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\logs" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\setup" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\*.tmp" >nul 2>&1
+
+:: ETAPE 23 - Logs support Windows Defender (inofensif)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs support Defender"
+if exist "%ProgramData%\Microsoft\Windows Defender\Support" rd /s /q "%ProgramData%\Microsoft\Windows Defender\Support" >nul 2>&1
+if exist "%ProgramData%\Microsoft\Windows Defender\Scans\*.tmp" del /s /q /f "%ProgramData%\Microsoft\Windows Defender\Scans\*.tmp" >nul 2>&1
+
+:: ETAPE 24 - Optimisation indexation Windows Search (compacte uniquement)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation indexation recherche"
+net stop WSearch >nul 2>&1
+timeout /t 1 /nobreak >nul
+if exist "%ProgramData%\Microsoft\Search\Data\Applications\Windows\*.log" del /s /q /f "%ProgramData%\Microsoft\Search\Data\Applications\Windows\*.log" >nul 2>&1
+net start WSearch >nul 2>&1
+
+:: ETAPE 25 - Cache RDP / Bureau a distance (nouveau)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Bureau a distance (RDP)"
+if exist "%LOCALAPPDATA%\Microsoft\TerminalServerClient\Cache" rd /s /q "%LOCALAPPDATA%\Microsoft\TerminalServerClient\Cache" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\Remote Desktop Connection Manager\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Remote Desktop Connection Manager\*.tmp" >nul 2>&1
+
+:: ETAPE 26 - Logs et temps Office (inofensif)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Temporaires Office"
+if exist "%LOCALAPPDATA%\Microsoft\Office\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Office\*.tmp" >nul 2>&1
+if exist "%TEMP%\Microsoft\Office\*.tmp" del /s /q /f "%TEMP%\Microsoft\Office\*.tmp" >nul 2>&1
 
 :: Calcul final (PowerShell pour la precision des decimales)
 for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive C).Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ""$beforeGB $afterGB $freedGB"""') do (
@@ -3712,7 +3797,7 @@ set "CLEAN_TOTAL="
 
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%Nettoyage de Windows termine%COLOR_RESET%
+echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%Nettoyage avance termine%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%SPACE_BEFORE_GB% Go%COLOR_RESET%
@@ -3814,7 +3899,7 @@ if %VC2015X86%==0 (
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
         if !errorlevel! NEQ 0 (
-            echo [^!] %COLOR_YELLOW%VC++ 2015-2022 x86 : l'installateur a retourne une erreur.%COLOR_RESET%
+            echo [*] %COLOR_YELLOW%VC++ 2015-2022 x86 : l'installateur a retourne une erreur.%COLOR_RESET%
         )
     )
 )
@@ -3829,7 +3914,7 @@ if %VC2015X64%==0 (
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
         if !errorlevel! NEQ 0 (
-            echo [^!] %COLOR_YELLOW%VC++ 2015-2022 x64 : l'installateur a retourne une erreur.%COLOR_RESET%
+            echo [*] %COLOR_YELLOW%VC++ 2015-2022 x64 : l'installateur a retourne une erreur.%COLOR_RESET%
         )
     )
 )
@@ -3959,7 +4044,7 @@ pause
 goto :MENU_GESTION_WINDOWS
 
 :END_SCRIPT
-:: Sans expansion retardee : evite que les "!" dans les textes ([^!], AU REVOIR!, etc.) cassent la fin du script
+:: Sans expansion retardee : evite que les "!" dans les textes ([*], AU REVOIR!, etc.) cassent la fin du script
 setlocal DisableDelayedExpansion
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
