@@ -1499,7 +1499,7 @@ if "!PROFIL_USAGE!"=="0" (
 ) else (
     netsh int tcp set global rss=enabled >nul 2>&1
 )
-if "!PROFIL_POWER!"=="0" (
+if "!PROFIL_POWER!"=="0" if "!PROFIL_USAGE!"=="0" (
     netsh int tcp set global rsc=disabled >nul 2>&1
 ) else (
     netsh int tcp set global rsc=enabled >nul 2>&1
@@ -1557,16 +1557,15 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "Ho
 reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider supprimees - defaults Windows utilises%COLOR_RESET%
 
-:: 5.8 - Nagle/DelACK (Gaming uniquement, neutralise en Gaming+Eco pour l'autonomie Wi-Fi)
-if "!PROFIL_USAGE!"=="0" if "!IS_GAMING_ECO!"=="1" (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves ^(Gaming+Eco : autonomie Wi-Fi prioritaire^)%COLOR_RESET%
-)
-if "!PROFIL_USAGE!"=="0" if "!IS_GAMING_ECO!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif ^(Gaming^)...%COLOR_RESET%
+:: 5.8 - Nagle/DelACK (ECO→neutre, Gaming+MaxPerf→agressif, Normal→defaut)
+if "!PROFIL_POWER!"=="1" (
+    echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : valeurs neutres pour autonomie Wi-Fi ^(TcpNoDelay=0, TcpAckFrequency=2^)%COLOR_RESET%
+    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 2 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 0 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 1 -Force | Out-Null } }" >nul 2>&1
+) else if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif ^(Gaming+MaxPerf^)...%COLOR_RESET%
     powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
-)
-if "!PROFIL_USAGE!"=="1" (
+) else (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves%COLOR_RESET%
 )
 
@@ -1577,13 +1576,21 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reserve QoS retiree - QoS DSCP 
 
 :: 5.10 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC MaxPerf ^(RSS ON, RSC/LSO OFF, EEE OFF, Buffers max^)...%COLOR_RESET%
+    if "!PROFIL_USAGE!"=="0" (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO OFF, ITR Minimal, EEE OFF^)...%COLOR_RESET%
+    ) else (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Normal+MaxPerf ^(RSC/LSO ON, ITR defaut, EEE OFF^)...%COLOR_RESET%
+    )
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSS/RSC/LSO ON, Energie ON, Wi-Fi optimise^)...%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSC/LSO ON, Energie ON, Wi-Fi optimise^)...%COLOR_RESET%
 )
-call :SET_NIC_PROFILE !PROFIL_POWER!
+call :SET_NIC_PROFILE !PROFIL_POWER! !PROFIL_USAGE!
 if "!PROFIL_POWER!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence ^(MaxPerf^)%COLOR_RESET%
+    if "!PROFIL_USAGE!"=="0" (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence gaming ^(Gaming+MaxPerf^)%COLOR_RESET%
+    ) else (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour usage general ^(Normal+MaxPerf^)%COLOR_RESET%
+    )
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
 )
@@ -4070,12 +4077,14 @@ exit /b 0
 :: =================================================================================
 :: HELPERS MATERIEL (NIC / USB) - factorisation des blocs reseaux/energie
 :: =================================================================================
-:: Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
-:: MaxPerf (0) : RSC/LSO OFF, EEE OFF, PowerManagement OFF, wake OFF, buffers max.
-:: Eco (1) : RSC/LSO ON, PowerManagement ON, Wi-Fi optimise.
+:: Parametres : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
+::              %~2 = PROFIL_USAGE (0=Gaming, 1=Normal).
+:: Gaming+MaxPerf (0,0) : RSC/LSO OFF, ITR Minimal, EEE/Wake OFF, buffers max.
+:: Normal+MaxPerf (0,1) : RSC/LSO ON, ITR defaut, EEE/Wake OFF, buffers max.
+:: Eco (1,*) : RSC/LSO ON, PowerManagement ON, Wi-Fi optimise.
 :: Source unique de verite pour les sections 5.10 et 7.19 (evite la divergence des deux blocs).
 :SET_NIC_PROFILE
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return}; $p=$cache[$kw]; foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop; break}catch{}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; $props=@{}; Get-NetAdapterAdvancedProperty -Name $n -ErrorAction SilentlyContinue | ForEach-Object {$props[$_.RegistryKeyword]=$_}; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; SetP $n '*FlowControl' @('0') $props; SetP $n '*InterruptModeration' @('1') $props; SetP $n '*IPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv6' @('3') $props; SetP $n '*UDPChecksumOffloadIPv4' @('3') $props; SetP $n '*UDPChecksumOffloadIPv6' @('3') $props; SetP $n '*GreenGbe' @('0') $props; SetP $n '*RscIPv6' @('0') $props; SetP $n '*PacketCoalescing' @('0') $props; SetP $n 'EnableExtraPowerSaving' @('0') $props; if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*EEE' @('0') $props; SetP $n 'AdvancedEEE' @('0') $props; SetP $n 'EnableGreenEthernet' @('0') $props; SetP $n 'PowerSavingMode' @('0') $props; SetP $n 'GigaLite' @('0') $props; SetP $n 'ReduceSpeedOnPowerDown' @('0') $props; SetP $n '*InterruptModerationRate' @('Minimal','32','1') $props; SetP $n 'ITR' @('200','32','65535') $props; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props; SetP $n '*ShutdownLinkSpeed' @('0') $props; SetP $n 'S3S4WolLinkSpeed' @('0') $props}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'RoamAggressiveness' @('2','1') $props; SetP $n 'MIMOPowerSaveMode' @('3') $props; SetP $n 'uAPSDSupport' @('0') $props; SetP $n 'FatChannelIntolerant' @('0') $props}; $rxp=$props['*ReceiveBuffers']; if($rxp -and $rxp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$rxp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; $txp=$props['*TransmitBuffers']; if($txp -and $txp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$txp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw]; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop}catch{}}}}}" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); $gaming=('%~2' -eq '0'); function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return}; $p=$cache[$kw]; foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop; break}catch{}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; $props=@{}; Get-NetAdapterAdvancedProperty -Name $n -ErrorAction SilentlyContinue | ForEach-Object {$props[$_.RegistryKeyword]=$_}; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap -or !$gaming){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; SetP $n '*FlowControl' @('0') $props; SetP $n '*InterruptModeration' @('1') $props; SetP $n '*IPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv6' @('3') $props; SetP $n '*UDPChecksumOffloadIPv4' @('3') $props; SetP $n '*UDPChecksumOffloadIPv6' @('3') $props; SetP $n '*GreenGbe' @('0') $props; SetP $n '*RscIPv6' @('0') $props; SetP $n '*PacketCoalescing' @('0') $props; SetP $n 'EnableExtraPowerSaving' @('0') $props; if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*EEE' @('0') $props; SetP $n 'AdvancedEEE' @('0') $props; SetP $n 'EnableGreenEthernet' @('0') $props; SetP $n 'PowerSavingMode' @('0') $props; SetP $n 'GigaLite' @('0') $props; SetP $n 'ReduceSpeedOnPowerDown' @('0') $props; if($gaming){SetP $n '*InterruptModerationRate' @('Minimal','32','1') $props; SetP $n 'ITR' @('200','32','65535') $props}; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props; SetP $n '*ShutdownLinkSpeed' @('0') $props; SetP $n 'S3S4WolLinkSpeed' @('0') $props}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props; SetP $n 'uAPSDSupport' @('0') $props; SetP $n 'FatChannelIntolerant' @('0') $props}; $rxp=$props['*ReceiveBuffers']; if($rxp -and $rxp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$rxp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; $txp=$props['*TransmitBuffers']; if($txp -and $txp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$txp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw]; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop}catch{}}}}}" >nul 2>&1
 exit /b
 
 :: Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
