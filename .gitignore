@@ -40,3 +40,6 @@ build/
 *.temp
 ~$*
 .hermes/
+
+# Agent lock files
+skills-lock.json
