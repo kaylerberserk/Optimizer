@@ -3293,7 +3293,7 @@ cls
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
 timeout /t 5 /nobreak >nul
-exit
+exit /b
 :FINISH_ACTION_EXIT
 exit /b
 
@@ -3338,6 +3338,7 @@ if exist "%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe" (
     "%SYSTEMROOT%\System32\OneDriveSetup.exe" /uninstall
 )
 
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression des cles de registre OneDrive - operation irreversible.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des cles de registre OneDrive...%COLOR_RESET%
 reg delete "HKEY_CLASSES_ROOT\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f >nul 2>&1
 reg delete "HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f >nul 2>&1
@@ -3362,6 +3363,7 @@ for /f "tokens=1 delims=," %%x in ('schtasks /query /fo csv 2^>nul ^| find "OneD
 )
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstallation de OneDrive terminee (si installe).%COLOR_RESET%
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression definitive des dossiers OneDrive restants (takeown + rd).%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des dossiers OneDrive restants...%COLOR_RESET%
 if exist "%LocalAppData%\Microsoft\OneDrive" rd "%LocalAppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%AppData%\Microsoft\OneDrive" rd "%AppData%\Microsoft\OneDrive" /q /s >nul 2>&1
@@ -3470,10 +3472,12 @@ if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" (
     popd >nul 2>&1
 )
 
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression definitive des dossiers programme Edge - irrversible.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage force des dossiers programme...%COLOR_RESET%
 rd "%ProgramFiles%\Microsoft\Edge" /s /q >nul 2>&1
 rd "%ProgramFiles(x86)%\Microsoft\Edge" /s /q >nul 2>&1
 
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression des cles de registre Edge - operation irreversible.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des cles de registre Edge...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Microsoft\Edge" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Wow6432Node\Microsoft\Edge" /f >nul 2>&1
@@ -3482,6 +3486,7 @@ reg delete "HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall
 
 :: Gestion conditionnelle des donnees utilisateur
 if "%SUPPR_DATA%"=="1" (
+    echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression definitive des donnees utilisateur Edge (profils, favoris, mots de passe).%COLOR_RESET%
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression des donnees utilisateur Edge...%COLOR_RESET%
     if exist "%LOCALAPPDATA%\Microsoft\Edge" rd "%LOCALAPPDATA%\Microsoft\Edge" /s /q >nul 2>&1
     if exist "%APPDATA%\Microsoft\Edge" rd "%APPDATA%\Microsoft\Edge" /s /q >nul 2>&1
@@ -3494,6 +3499,7 @@ if "%SUPPR_DATA%"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Donnees utilisateur preservees.%COLOR_RESET%
 )
 
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression des donnees systeme Edge (PROGRAMDATA) - definitive.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des donnees systeme communes...%COLOR_RESET%
 rd "%PROGRAMDATA%\Microsoft\Edge" /s /q >nul 2>&1
 
@@ -3505,6 +3511,7 @@ del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" /f /q >
 del "%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" /f /q >nul 2>&1
 del "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Microsoft Edge.lnk" /f /q >nul 2>&1
 
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression des associations de fichiers Edge - definitive.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression des associations de fichiers...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Classes\MSEdgeHTM" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Classes\MSEdgePDF" /f >nul 2>&1
