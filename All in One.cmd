@@ -266,7 +266,7 @@ echo %COLOR_CYAN%[2] NORMAL%COLOR_RESET% - Bureautique, multimedia, creation, st
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez votre usage [1=Gaming / 2=Normal / M=Retour]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 set "PROFILE_PROMPT=" & exit /b 1
 if !errorlevel! EQU 1 set "PROFIL_USAGE=0"
 if !errorlevel! EQU 2 set "PROFIL_USAGE=1"
@@ -291,7 +291,7 @@ echo %COLOR_RED%[2] MAX PERF%COLOR_RESET% - Plan Ultimate Performance, economie 
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez l'energie [1=Eco / 2=MaxPerf / M=Retour]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 set "PROFILE_PROMPT=" & exit /b 1
 if !errorlevel! EQU 1 set "PROFIL_POWER=1"
 if !errorlevel! EQU 2 set "PROFIL_POWER=0"
@@ -305,7 +305,7 @@ if "!IS_GAMING_ECO!"=="1" (
     echo %COLOR_WHITE%    Si l'autonomie est prioritaire, preferez NORMAL + ECO.%COLOR_RESET%
     echo.
     <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Continuer quand meme ? [O/N]: %COLOR_RESET%"
-    choice /C ON /N
+    call :AZCHOICE ON
     if !errorlevel! EQU 2 (
         set "PROFILE_PROMPT="
         exit /b 1
@@ -334,7 +334,7 @@ exit /b
 :: Confirmation O/N - %~1 = message, retourne 0 pour Oui, 1 pour Non
 :ASK_CONFIRM
 <nul set /p ="%~1"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 exit /b 1
 exit /b 0
 
@@ -350,13 +350,76 @@ exit /b 0
 :COMMON_YES_NO
 set "%~2=0"
 <nul set /p ="%~1"
-choice /C ONM /N
+call :AZCHOICE ONM
 if !errorlevel! EQU 3 (
     cls
     exit /b 2
 )
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
+
+:: Lecture d'une touche compatible clavier AZERTY (selection SANS Shift).
+:: %~1 = jeu de touches valide (comme choice /C). Retourne la position via errorlevel, exactement comme choice.
+:: Accepte le chiffre (Shift ou pave num) ET la touche non-shift AZERTY : & e " ' ( - e _ c a -> 1..0,
+:: plus les lettres insensibles a la casse. Repli automatique sur choice si la lecture de touche echoue.
+:AZCHOICE
+:AZCHOICE_READ
+set "AZ_CODE="
+for /f "delims=" %%K in ('powershell -NoProfile -Command "try{[int]([Console]::ReadKey($true).KeyChar)}catch{-1}"') do set "AZ_CODE=%%K"
+if not defined AZ_CODE goto :AZCHOICE_FALLBACK
+if "!AZ_CODE!"=="-1" goto :AZCHOICE_FALLBACK
+set "AZ_CH="
+if "!AZ_CODE!"=="48"  set "AZ_CH=0"
+if "!AZ_CODE!"=="49"  set "AZ_CH=1"
+if "!AZ_CODE!"=="50"  set "AZ_CH=2"
+if "!AZ_CODE!"=="51"  set "AZ_CH=3"
+if "!AZ_CODE!"=="52"  set "AZ_CH=4"
+if "!AZ_CODE!"=="53"  set "AZ_CH=5"
+if "!AZ_CODE!"=="54"  set "AZ_CH=6"
+if "!AZ_CODE!"=="55"  set "AZ_CH=7"
+if "!AZ_CODE!"=="56"  set "AZ_CH=8"
+if "!AZ_CODE!"=="57"  set "AZ_CH=9"
+if "!AZ_CODE!"=="38"  set "AZ_CH=1"
+if "!AZ_CODE!"=="233" set "AZ_CH=2"
+if "!AZ_CODE!"=="34"  set "AZ_CH=3"
+if "!AZ_CODE!"=="39"  set "AZ_CH=4"
+if "!AZ_CODE!"=="40"  set "AZ_CH=5"
+if "!AZ_CODE!"=="45"  set "AZ_CH=6"
+if "!AZ_CODE!"=="232" set "AZ_CH=7"
+if "!AZ_CODE!"=="95"  set "AZ_CH=8"
+if "!AZ_CODE!"=="231" set "AZ_CH=9"
+if "!AZ_CODE!"=="224" set "AZ_CH=0"
+if "!AZ_CODE!"=="79"  set "AZ_CH=O"
+if "!AZ_CODE!"=="111" set "AZ_CH=O"
+if "!AZ_CODE!"=="78"  set "AZ_CH=N"
+if "!AZ_CODE!"=="110" set "AZ_CH=N"
+if "!AZ_CODE!"=="77"  set "AZ_CH=M"
+if "!AZ_CODE!"=="109" set "AZ_CH=M"
+if "!AZ_CODE!"=="82"  set "AZ_CH=R"
+if "!AZ_CODE!"=="114" set "AZ_CH=R"
+if "!AZ_CODE!"=="71"  set "AZ_CH=G"
+if "!AZ_CODE!"=="103" set "AZ_CH=G"
+if "!AZ_CODE!"=="87"  set "AZ_CH=W"
+if "!AZ_CODE!"=="119" set "AZ_CH=W"
+if "!AZ_CODE!"=="84"  set "AZ_CH=T"
+if "!AZ_CODE!"=="116" set "AZ_CH=T"
+if "!AZ_CODE!"=="81"  set "AZ_CH=Q"
+if "!AZ_CODE!"=="113" set "AZ_CH=Q"
+if "!AZ_CODE!"=="68"  set "AZ_CH=D"
+if "!AZ_CODE!"=="100" set "AZ_CH=D"
+if not defined AZ_CH goto :AZCHOICE_READ
+set "AZ_SET=%~1"
+set "AZ_POS=0"
+:AZCHOICE_FIND
+if not defined AZ_SET goto :AZCHOICE_READ
+set /a "AZ_POS+=1"
+set "AZ_C=!AZ_SET:~0,1!"
+set "AZ_SET=!AZ_SET:~1!"
+if /i "!AZ_C!"=="!AZ_CH!" exit /b !AZ_POS!
+goto :AZCHOICE_FIND
+:AZCHOICE_FALLBACK
+choice /C %~1 /N
+exit /b
 
 :MENU_PRINCIPAL
 cls
@@ -406,7 +469,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Veuillez choisir une option [1-8, O, N, R, G, W, T, Q]: %COLOR_RESET%"
-choice /C 12345678ONRGWTQ /N
+call :AZCHOICE 12345678ONRGWTQ
 
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
 if !errorlevel! EQU 15 goto :END_SCRIPT
@@ -493,7 +556,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-9, M]: %COLOR_RESET%"
-choice /C 123456789M /N
+call :AZCHOICE 123456789M
 :: Gestion des choix (EQU = egalite stricte, ordre sans importance)
 if !errorlevel! EQU 10 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 9  goto :SUPPRIMER_BLOATWARES
@@ -708,7 +771,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommand
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer votre PC maintenant ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 exit /b
 if !errorlevel! EQU 1 (
     shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
@@ -1798,7 +1861,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 2 goto :DO_RESTAURER_ECONOMIES
 if !errorlevel! EQU 1 goto :DO_DESACTIVER_ECONOMIES
@@ -2285,7 +2348,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 2 goto :DO_RESTAURER_PROTECTIONS
 if !errorlevel! EQU 1 goto :DO_DESACTIVER_PROTECTIONS
@@ -2440,7 +2503,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 cls & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_DEFENDER_SECTION
@@ -2603,7 +2666,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, 3, M]: %COLOR_RESET%"
-choice /C 123M /N
+call :AZCHOICE 123M
 if !errorlevel! EQU 4 cls & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 3 (
   cls
@@ -2684,7 +2747,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_UAC_SECTION
@@ -2773,7 +2836,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
-choice /C 12M /N
+call :AZCHOICE 12M
 if !errorlevel! EQU 3 cls & goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_ANIMATIONS_SECTION
@@ -2918,7 +2981,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-6, D, M]: %COLOR_RESET%"
-choice /C 123456DM /N
+call :AZCHOICE 123456DM
 if !errorlevel! EQU 8 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 7 (
   call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
@@ -3211,7 +3274,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommand
 echo.
 if "!SKIP_PAUSE!"=="1" goto :FINISH_ACTION_EXIT
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :FINISH_ACTION_EXIT
 shutdown /r /t 5 /c "Redemarrage apres modification"
 cls
@@ -3238,7 +3301,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%La suite arretera OneDrive, net
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Cela peut prendre quelques instants.%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desinstaller OneDrive ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :MENU_GESTION_WINDOWS
 
 :: Arreter les processus OneDrive
@@ -3339,7 +3402,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%La desinstallation d'Edge es
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le risque de compatibilite est plus limite tant que WebView2 reste present.%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desinstaller Microsoft Edge ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :MENU_GESTION_WINDOWS
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3360,7 +3423,7 @@ echo %COLOR_WHITE%- Extensions et themes%COLOR_RESET%
 echo %COLOR_WHITE%- Parametres et preferences%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de supprimer les donnees utilisateur Edge ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 (
     set "SUPPR_DATA=0"
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Les donnees utilisateur seront preservees.%COLOR_RESET%
@@ -3566,7 +3629,7 @@ echo %COLOR_WHITE%  caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_
 echo %COLOR_WHITE%  notifications, OneDrive, Defender, et pilotes orphelins.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Continuer ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
 
 cls
@@ -3823,7 +3886,7 @@ echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 1 (
     shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
     cls
@@ -4049,7 +4112,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont supprimes : News, Solitaire, Skype, 
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Sont gardes   : Courrier, Meteo, Musique, Video, Calculatrice, Store, Photos, Notes, etc.
 echo.
 <nul set /p ="%COLOR_YELLOW%Voulez-vous supprimer les bloatwares ? [O/N]: %COLOR_RESET%"
-choice /C ON /N
+call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :MENU_GESTION_WINDOWS
 
 echo.
