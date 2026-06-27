@@ -43,3 +43,6 @@ build/
 
 # Agent lock files
 skills-lock.json
+
+# Optimizer Verify reports (local only, not pushed)
+reports/
