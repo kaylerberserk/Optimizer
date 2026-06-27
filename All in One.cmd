@@ -624,6 +624,9 @@ cls
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Mode automatique : vos reponses ci-dessus s'appliquent sans nouvelle confirmation.%COLOR_RESET%
 echo.
 set "SKIP_PAUSE=1"
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%TOUT_OPTIMISER execute : %COLOR_RED%Defender, SmartScreen/UAC, VBS/HVCI, animations, IA%COLOR_RESET% et optimisations systeme.%COLOR_RESET%
+echo %COLOR_WHITE%  Utilisez TOUT RESTAURER (menu Gestion Windows) pour annuler.%COLOR_RESET%
+echo.
 call :INSTALLER_VISUAL_REDIST
 call :OPTIMISATIONS_SYSTEME
 call :OPTIMISATIONS_MEMOIRE
@@ -1488,7 +1491,7 @@ netsh int tcp set global autotuninglevel=normal >nul 2>&1
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
-netsh int tcp set global minRto=300 >nul 2>&1
+REM minRto n'est pas un parametre 'set global' valide (uniquement 'set supplemental') et 300ms est deja le plancher par defaut : ligne retiree (no-op).
 
 if "!PROFIL_USAGE!"=="0" (
     if "!IS_GAMING_ECO!"=="0" (
@@ -1648,8 +1651,9 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu : defaut Windows conserve ^(Normal^)%COLOR_RESET%
 )
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Mise a jour des politiques groupe ^(gpupdate^)...%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Mise a jour des politiques groupe (gpupdate)...%COLOR_RESET%
 gpupdate /target:computer /force >nul 2>&1
+ipconfig /flushdns >nul 2>&1
 nbtstat -R >nul 2>&1
 nbtstat -RR >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pile reseau optimisee (DNS/NetBIOS purges)%COLOR_RESET%
@@ -1744,7 +1748,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI activees sur 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 (Recall / CEH / PhoneLink)...%COLOR_RESET%
 
 :: X.1 - Recall (Win11 24H2/25H2 tous les Copilot+) - desactive la capture IA
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=0; if($os.UBR){$build=[int]$os.CurrentBuild}; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; Set-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force; Write-Output 'Recall: DisableAIDataAnalysis=1 (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=[int]$os.CurrentBuild; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; Set-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; Set-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -Value 1 -Type DWORD -Force; Write-Output 'Recall: DisableAIDataAnalysis=1 (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - politique appliquee si Win11 24H2/25H2%COLOR_RESET%
 
 :: X.2 - CloudExperienceHost mute via Scheduled Task + politique CloudContent (sans Remove-AppxPackage)
@@ -2699,6 +2703,7 @@ echo %COLOR_WHITE%  Reactive le Controle de Compte Utilisateur (UAC) et les aver
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Le controle de compte utilisateur (UAC) sera active - confirmez les invites d'elevation si demande.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de l'UAC...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f >nul 2>&1
