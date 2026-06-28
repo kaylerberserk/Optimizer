@@ -896,40 +896,12 @@ attrib -r "%HOSTS%" >nul 2>&1
 :: Backup du fichier hosts avant modification
 copy "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
 :: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
-powershell -NoProfile -Command "$h='%HOSTS%'; $ErrorActionPreference='Stop'; $crlf=[char]13+[char]10; $s='# Telemetry Block Start'; $e='# Telemetry Block End'; $nb='# Telemetry Block Start'+$crlf+'# --- Telemetry Block ---'+$crlf+'0.0.0.0 vortex.data.microsoft.com'+$crlf+'0.0.0.0 vortex-win.data.microsoft.com'+$crlf+'0.0.0.0 v10.vortex-win.data.microsoft.com'+$crlf+'0.0.0.0 v10.events.data.microsoft.com'+$crlf+'0.0.0.0 telecommand.telemetry.microsoft.com'+$crlf+'0.0.0.0 oca.telemetry.microsoft.com'+$crlf+'0.0.0.0 watson.telemetry.microsoft.com'+$crlf+'0.0.0.0 watsonc.microsoft.com'+$crlf+'# --- End Telemetry Block ---'+$crlf+'# Telemetry Block End'; try { if (Test-Path $h) { $esc=[regex]::Escape($s)+'.*?'+[regex]::Escape($e); $cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII); if ($cur -match ('(?s)'+$esc)) { $cur=$cur -replace ('(?s)'+$esc), $nb } else { $sep=''; if ($cur.Trim().Length -gt 0) { $sep=$crlf+$crlf }; $cur=$cur.TrimEnd()+$sep+$nb }; (Get-Item $h).Attributes='Normal'; $tmp=$h+'.tmp'; [System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII); Move-Item -Path $tmp -Destination $h -Force }; exit 0 } catch { Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue; exit 1 }"
+powershell -NoProfile -Command "$h='%HOSTS%';$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII);$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;(Get-Item $h).Attributes='Normal';$tmp=$h+'.tmp';[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);Move-Item -Path $tmp -Destination $h -Force};exit 0}catch{Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
 
 if !errorlevel! EQU 0 (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Domaines mis a jour ^(Telemetrie bloquee, doublons nettoyes^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Domaines telemetrie bloques ^(bloc unique, adaptatif^)%COLOR_RESET%
 ) else (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec de la mise a jour du fichier hosts%COLOR_RESET%
-)
-:: (re-protection hosts DELIBEREMENT differee : le 2nd bloc qui suit doit pouvoir ecrire)
-
-:: Vidage du cache DNS pour appliquer immediatement les modifications du hosts
-ipconfig /flushdns >nul 2>&1
-set "HOSTS="
-
-:: Domaines telemetrie supplementaires (HaGeZi native.winoffice)
-set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
-for %%D in (
-    "settings.data.microsoft.com"
-    "settings-win.data.microsoft.com"
-    "mobile.events.data.microsoft.com"
-    "browser.events.data.microsoft.com"
-    "self.events.data.microsoft.com"
-    "v20.events.data.microsoft.com"
-    "telemetry.microsoft.com"
-    "telemetrycollector.microsoft.com"
-    "pipe.aria.microsoft.com"
-    "diagnostics.office.com"
-    "activity.windows.com"
-    "modern.watson.data.microsoft.com"
-    "applicationinsights.microsoft.com"
-    "azurewatson.microsoft.com"
-) do (
-    findstr /b /i /c:"0.0.0.0 %%~D" "%HOSTS%" >nul 2>&1 || (
-        >>"%HOSTS%" echo 0.0.0.0 %%~D
-    )
 )
 attrib +r "%HOSTS%" >nul 2>&1
 ipconfig /flushdns >nul 2>&1
@@ -1995,16 +1967,22 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing desactive - La
 
 :: 7.12 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTimerResolution...%COLOR_RESET%
-set "STR_EXE=%ProgramFiles%\OptimizerAllInOne\SetTimerResolution.exe"
+set "STR_DIR=%ProgramFiles%\OptimizerAllInOne"
+set "STR_EXE=%STR_DIR%\SetTimerResolution.exe"
+set "STR_SRC=%~dp0Tools\Timer & Interrupt\SetTimerResolution.exe"
 set "STR_STARTUP_LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
+:: Le dossier de destination doit exister AVANT toute copie/telechargement (sinon echec)
+if not exist "%STR_DIR%" mkdir "%STR_DIR%" >nul 2>&1
 if exist "%STR_EXE%" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %ProgramFiles%\OptimizerAllInOne%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %STR_DIR%%COLOR_RESET%
 ) else (
-    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+    :: Priorite a la copie locale (livree avec le script), telechargement GitHub en secours
+    if exist "%STR_SRC%" copy /Y "%STR_SRC%" "%STR_EXE%" >nul 2>&1
+    if not exist "%STR_EXE%" powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
     if exist "%STR_EXE%" (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution installe dans %ProgramFiles%\OptimizerAllInOne%COLOR_RESET%
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution installe dans %STR_DIR%%COLOR_RESET%
     ) else (
-        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de SetTimerResolution%COLOR_RESET%
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec de l'installation de SetTimerResolution%COLOR_RESET%
     )
 )
 if exist "%STR_EXE%" (
