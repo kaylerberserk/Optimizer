@@ -35,6 +35,13 @@ Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est univ
 
 ## 🚀 Démarrage Rapide (Moins de 5 minutes)
 
+### Option A — PowerShell (recommandé)
+```powershell
+irm "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1" | iex
+```
+Collez cette commande dans **PowerShell (non-admin)** — elle télécharge, s'élève automatiquement en administrateur et lance le script.
+
+### Option B — Téléchargement manuel
 1. **Téléchargement** : Accédez au fichier [**All in One.cmd**](https://github.com/kaylerberserk/WindowsOptimizer/blob/main/All%20in%20One.cmd) et cliquez sur le bouton **Download**.
 2. **Exécution** : Clic droit sur le fichier → **Exécuter en tant qu'administrateur**.
 3. **Sécurité** : Appuyez sur **[R]** pour créer un point de restauration avant toute modification.
