@@ -358,66 +358,9 @@ if !errorlevel! EQU 3 (
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
 
-:: Lecture d'une touche compatible clavier AZERTY (selection SANS Shift).
-:: %~1 = jeu de touches valide (comme choice /C). Retourne la position via errorlevel, exactement comme choice.
-:: Accepte le chiffre (Shift ou pave num) ET la touche non-shift AZERTY : & e " ' ( - e _ c a -> 1..0,
-:: plus les lettres insensibles a la casse. Repli automatique sur choice si la lecture de touche echoue.
+:: Lecture d'une touche (choice natif, rapide). Insensible a la casse.
+:: %~1 = jeu de touches valides. Retourne la position via errorlevel.
 :AZCHOICE
-:AZCHOICE_READ
-set "AZ_CODE="
-for /f "delims=" %%K in ('powershell -NoProfile -Command "try{[int]([Console]::ReadKey($true).KeyChar)}catch{-1}"') do set "AZ_CODE=%%K"
-if not defined AZ_CODE goto :AZCHOICE_FALLBACK
-if "!AZ_CODE!"=="-1" goto :AZCHOICE_FALLBACK
-set "AZ_CH="
-if "!AZ_CODE!"=="48"  set "AZ_CH=0"
-if "!AZ_CODE!"=="49"  set "AZ_CH=1"
-if "!AZ_CODE!"=="50"  set "AZ_CH=2"
-if "!AZ_CODE!"=="51"  set "AZ_CH=3"
-if "!AZ_CODE!"=="52"  set "AZ_CH=4"
-if "!AZ_CODE!"=="53"  set "AZ_CH=5"
-if "!AZ_CODE!"=="54"  set "AZ_CH=6"
-if "!AZ_CODE!"=="55"  set "AZ_CH=7"
-if "!AZ_CODE!"=="56"  set "AZ_CH=8"
-if "!AZ_CODE!"=="57"  set "AZ_CH=9"
-if "!AZ_CODE!"=="38"  set "AZ_CH=1"
-if "!AZ_CODE!"=="233" set "AZ_CH=2"
-if "!AZ_CODE!"=="34"  set "AZ_CH=3"
-if "!AZ_CODE!"=="39"  set "AZ_CH=4"
-if "!AZ_CODE!"=="40"  set "AZ_CH=5"
-if "!AZ_CODE!"=="45"  set "AZ_CH=6"
-if "!AZ_CODE!"=="232" set "AZ_CH=7"
-if "!AZ_CODE!"=="95"  set "AZ_CH=8"
-if "!AZ_CODE!"=="231" set "AZ_CH=9"
-if "!AZ_CODE!"=="224" set "AZ_CH=0"
-if "!AZ_CODE!"=="79"  set "AZ_CH=O"
-if "!AZ_CODE!"=="111" set "AZ_CH=O"
-if "!AZ_CODE!"=="78"  set "AZ_CH=N"
-if "!AZ_CODE!"=="110" set "AZ_CH=N"
-if "!AZ_CODE!"=="77"  set "AZ_CH=M"
-if "!AZ_CODE!"=="109" set "AZ_CH=M"
-if "!AZ_CODE!"=="82"  set "AZ_CH=R"
-if "!AZ_CODE!"=="114" set "AZ_CH=R"
-if "!AZ_CODE!"=="71"  set "AZ_CH=G"
-if "!AZ_CODE!"=="103" set "AZ_CH=G"
-if "!AZ_CODE!"=="87"  set "AZ_CH=W"
-if "!AZ_CODE!"=="119" set "AZ_CH=W"
-if "!AZ_CODE!"=="84"  set "AZ_CH=T"
-if "!AZ_CODE!"=="116" set "AZ_CH=T"
-if "!AZ_CODE!"=="81"  set "AZ_CH=Q"
-if "!AZ_CODE!"=="113" set "AZ_CH=Q"
-if "!AZ_CODE!"=="68"  set "AZ_CH=D"
-if "!AZ_CODE!"=="100" set "AZ_CH=D"
-if not defined AZ_CH goto :AZCHOICE_READ
-set "AZ_SET=%~1"
-set "AZ_POS=0"
-:AZCHOICE_FIND
-if not defined AZ_SET goto :AZCHOICE_READ
-set /a "AZ_POS+=1"
-set "AZ_C=!AZ_SET:~0,1!"
-set "AZ_SET=!AZ_SET:~1!"
-if /i "!AZ_C!"=="!AZ_CH!" exit /b !AZ_POS!
-goto :AZCHOICE_FIND
-:AZCHOICE_FALLBACK
 choice /C %~1 /N
 exit /b
 
@@ -1549,6 +1492,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MMCSS reseau configure%COLOR_RE
 :: 5.2 - Pile TCP/IP Win11
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Pile TCP/IP Win11 ^(BBR2, fix loopback localhost^)...%COLOR_RESET%
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
+netsh int tcp set global chimney=disabled >nul 2>&1
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
@@ -1590,6 +1534,7 @@ if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpTimedWaitDelay /t REG_DWORD /d 30 /f >nul 2>&1
     REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, force = placebo. Supprime.
     reg delete "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v Size /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /t REG_DWORD /d 1500 /f >nul 2>&1
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1641,7 +1586,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reserve QoS retiree - QoS DSCP 
 :: 5.10 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
     if "!PROFIL_USAGE!"=="0" (
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO OFF, ITR Minimal, EEE OFF^)...%COLOR_RESET%
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO OFF, ITR 200 + registre force, EEE OFF^)...%COLOR_RESET%
     ) else (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Normal+MaxPerf ^(RSC/LSO ON, ITR defaut, EEE OFF^)...%COLOR_RESET%
     )
@@ -4174,12 +4119,12 @@ exit /b 0
 :: =================================================================================
 :: Parametres : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
 ::              %~2 = PROFIL_USAGE (0=Gaming, 1=Normal).
-:: Gaming+MaxPerf (0,0) : RSC/LSO OFF, ITR Minimal, EEE/Wake OFF, buffers max.
+:: Gaming+MaxPerf (0,0) : RSC/LSO OFF, ITR 200, EEE/Wake OFF, buffers max.
 :: Normal+MaxPerf (0,1) : RSC/LSO ON, ITR defaut, EEE/Wake OFF, buffers max.
 :: Eco (1,*) : RSC/LSO ON, PowerManagement ON, Wi-Fi optimise.
 :: Source unique de verite pour les sections 5.10 et 7.19 (evite la divergence des deux blocs).
 :SET_NIC_PROFILE
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); $gaming=('%~2' -eq '0'); function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return}; $p=$cache[$kw]; foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop; break}catch{}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; $props=@{}; Get-NetAdapterAdvancedProperty -Name $n -ErrorAction SilentlyContinue | ForEach-Object {$props[$_.RegistryKeyword]=$_}; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap -or !$gaming){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; SetP $n '*FlowControl' @('0') $props; SetP $n '*InterruptModeration' @('1') $props; SetP $n '*IPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv6' @('3') $props; SetP $n '*UDPChecksumOffloadIPv4' @('3') $props; SetP $n '*UDPChecksumOffloadIPv6' @('3') $props; SetP $n '*GreenGbe' @('0') $props; SetP $n '*RscIPv6' @('0') $props; SetP $n '*PacketCoalescing' @('0') $props; SetP $n 'EnableExtraPowerSaving' @('0') $props; if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*EEE' @('0') $props; SetP $n 'AdvancedEEE' @('0') $props; SetP $n 'EnableGreenEthernet' @('0') $props; SetP $n 'PowerSavingMode' @('0') $props; SetP $n 'GigaLite' @('0') $props; SetP $n 'ReduceSpeedOnPowerDown' @('0') $props; if($gaming){SetP $n '*InterruptModerationRate' @('Minimal','32','1') $props; SetP $n 'ITR' @('200','32','65535') $props}; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props; SetP $n '*ShutdownLinkSpeed' @('0') $props; SetP $n 'S3S4WolLinkSpeed' @('0') $props}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props; SetP $n 'uAPSDSupport' @('0') $props; SetP $n 'FatChannelIntolerant' @('0') $props}; $rxp=$props['*ReceiveBuffers']; if($rxp -and $rxp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$rxp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; $txp=$props['*TransmitBuffers']; if($txp -and $txp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$txp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw]; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop}catch{}}}}}" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $lap=('%~1' -eq '1'); $gaming=('%~2' -eq '0'); function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return}; $p=$cache[$kw]; foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop; break}catch{}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; $props=@{}; Get-NetAdapterAdvancedProperty -Name $n -ErrorAction SilentlyContinue | ForEach-Object {$props[$_.RegistryKeyword]=$_}; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($lap -or !$gaming){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; SetP $n '*FlowControl' @('0') $props; SetP $n '*InterruptModeration' @('1') $props; SetP $n '*IPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv6' @('3') $props; SetP $n '*UDPChecksumOffloadIPv4' @('3') $props; SetP $n '*UDPChecksumOffloadIPv6' @('3') $props; SetP $n '*GreenGbe' @('0') $props; SetP $n '*RscIPv6' @('0') $props; SetP $n '*PacketCoalescing' @('0') $props; SetP $n 'EnableExtraPowerSaving' @('0') $props; if(!$lap){Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*EEE' @('0') $props; SetP $n 'AdvancedEEE' @('0') $props; SetP $n 'EnableGreenEthernet' @('0') $props; SetP $n 'PowerSavingMode' @('0') $props; SetP $n 'GigaLite' @('0') $props; SetP $n 'ReduceSpeedOnPowerDown' @('0') $props; if($gaming){try{$desc=$_.InterfaceDescription;$w=Get-WmiObject Win32_NetworkAdapter|?{$_.Name-eq$desc};if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k;Set-ItemProperty -Path $r -Name 'ITR' -Value 200 -Type DWord -Force;Set-ItemProperty -Path $r -Name 'TxIntDelay' -Value 0 -Type DWord -Force}}catch{}}; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props; SetP $n '*ShutdownLinkSpeed' @('0') $props; SetP $n 'S3S4WolLinkSpeed' @('0') $props; SetP $n 'EnableDynamicPowerGating' @('0') $props; SetP $n 'AutoPowerSaveModeEnabled' @('0') $props; SetP $n 'EnableConnectedPowerGating' @('0') $props; SetP $n '*NicAutoPowerSaver' @('0') $props; SetP $n 'TxIntDelay' @('0') $props}else{Disable-NetAdapterPowerManagement -Name $n -WakeOnMagicPacket -WakeOnPattern -ErrorAction SilentlyContinue}; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props; SetP $n 'uAPSDSupport' @('0') $props; SetP $n 'FatChannelIntolerant' @('0') $props}; $rxp=$props['*ReceiveBuffers']; if($rxp -and $rxp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$rxp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; $txp=$props['*TransmitBuffers']; if($txp -and $txp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$txp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw]; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop}catch{}}}}}" >nul 2>&1
 exit /b
 
 :: Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
