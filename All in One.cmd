@@ -267,7 +267,10 @@ echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_R
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez votre usage [1=Gaming / 2=Normal / M=Retour]: %COLOR_RESET%"
 call :AZCHOICE 12M
-if !errorlevel! EQU 3 set "PROFILE_PROMPT=" & exit /b 1
+if !errorlevel! EQU 3 (
+    set "PROFILE_PROMPT="
+    exit /b 1
+)
 if !errorlevel! EQU 1 set "PROFIL_USAGE=0"
 if !errorlevel! EQU 2 set "PROFIL_USAGE=1"
 if /i "!PROFILE_PROMPT!"=="USAGE" goto :CHOISIR_PROFILS_DONE
@@ -292,7 +295,10 @@ echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_R
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez l'energie [1=Eco / 2=MaxPerf / M=Retour]: %COLOR_RESET%"
 call :AZCHOICE 12M
-if !errorlevel! EQU 3 set "PROFILE_PROMPT=" & exit /b 1
+if !errorlevel! EQU 3 (
+    set "PROFILE_PROMPT="
+    exit /b 1
+)
 if !errorlevel! EQU 1 set "PROFIL_POWER=1"
 if !errorlevel! EQU 2 set "PROFIL_POWER=0"
 
@@ -2438,7 +2444,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 call :AZCHOICE 12M
-if !errorlevel! EQU 3 cls & goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_DEFENDER_SECTION
 
@@ -2600,7 +2606,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, 3, M]: %COLOR_RESET%"
 call :AZCHOICE 123M
-if !errorlevel! EQU 4 cls & goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 4 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 3 (
   cls
   echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2770,7 +2776,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 call :AZCHOICE 12M
-if !errorlevel! EQU 3 cls & goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_ANIMATIONS_SECTION
   goto :MENU_GESTION_WINDOWS
@@ -3209,12 +3215,15 @@ if "!SKIP_PAUSE!"=="1" goto :FINISH_ACTION_EXIT
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
 call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :FINISH_ACTION_EXIT
-shutdown /r /t 5 /c "Redemarrage apres modification"
-cls
-echo.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
-timeout /t 5 /nobreak >nul
-exit /b
+if !errorlevel! EQU 1 (
+    shutdown /r /t 5 /c "Redemarrage apres modification"
+    cls
+    echo.
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
+    timeout /t 5 /nobreak >nul
+    exit /b
+)
+goto :FINISH_ACTION_EXIT
 :FINISH_ACTION_EXIT
 exit /b
 
