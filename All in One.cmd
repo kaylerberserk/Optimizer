@@ -410,8 +410,8 @@ echo %STYLE_BOLD%%COLOR_BLUE%--- OUTILS ---%COLOR_RESET%
 echo %COLOR_YELLOW%[N]%COLOR_RESET% %COLOR_CYAN%Nettoyage Avance de Windows%COLOR_RESET%
 echo %COLOR_YELLOW%[R]%COLOR_RESET% %COLOR_CYAN%Creer un Point de Restauration%COLOR_RESET%
 echo %COLOR_YELLOW%[G]%COLOR_RESET% %COLOR_MAGENTA%Gestion Windows (Defender, UAC, Edge, OneDrive...)%COLOR_RESET%
-echo %COLOR_YELLOW%[W]%COLOR_RESET% %COLOR_MAGENTA%Outil activation Windows / Office (MAS)%COLOR_RESET%
-echo %COLOR_YELLOW%[T]%COLOR_RESET% %COLOR_MAGENTA%Outil Chris Titus Tech (WinUtil)%COLOR_RESET%
+echo %COLOR_YELLOW%[W]%COLOR_RESET% %COLOR_MAGENTA%Activation Windows / Office (script MAS)%COLOR_RESET%
+echo %COLOR_YELLOW%[T]%COLOR_RESET% %COLOR_MAGENTA%Tweaks communautaires (Chris Titus WinUtil)%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[Q]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%Quitter le script%COLOR_RESET%
 echo.
@@ -538,7 +538,7 @@ set "DESACTIVER_UAC=0"
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous desactiver les protections de securite (Spectre/Meltdown) ?%COLOR_RESET%
-echo %COLOR_WHITE%    (Note : VBS/HVCI/CFG seront maintenus actifs pour l'anti-cheat)%COLOR_RESET%
+echo %COLOR_WHITE%    (Note : les protections noyau VBS/HVCI et CFG restent actives pour les jeux avec anti-triche)%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%Pourquoi cette question : mitigations CPU/noyau contre fuites laterales ; desactiver%COLOR_RESET%
@@ -618,7 +618,7 @@ echo %COLOR_WHITE%Voulez-vous desactiver le Controle de Compte Utilisateur (UAC)
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%Pourquoi cette question : sans UAC, les programmes peuvent obtenir des droits admin%COLOR_RESET%
-echo %COLOR_WHITE%sans votre accord explicite ; ce script coupe aussi des avertissements lies.%COLOR_RESET%
+echo %COLOR_WHITE%sans votre accord explicite ; ce script desactive aussi la fenetre de confirmation admin.%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Ne plus demander de confirmation (Oui/Non) pour les actions admin
 echo       %COLOR_YELLOW%Reduit la securite en permettant aux applis de s'executer sans alerte%COLOR_RESET%
@@ -636,7 +636,7 @@ cls
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Mode automatique : vos reponses ci-dessus s'appliquent sans nouvelle confirmation.%COLOR_RESET%
 echo.
 set "SKIP_PAUSE=1"
-echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%TOUT_OPTIMISER execute : %COLOR_RED%Defender, SmartScreen/UAC, VBS/HVCI, animations, IA%COLOR_RESET% et optimisations systeme.%COLOR_RESET%
+echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%TOUT_OPTIMISER execute : %COLOR_RED%Defender, SmartScreen/UAC, securite noyau (VBS/HVCI), animations, IA%COLOR_RESET% et optimisations systeme.%COLOR_RESET%
 echo %COLOR_WHITE%  Utilisez TOUT RESTAURER (menu Gestion Windows) pour annuler.%COLOR_RESET%
 echo.
 call :INSTALLER_VISUAL_REDIST
@@ -647,11 +647,11 @@ call :OPTIMISATIONS_GPU
 call :OPTIMISATIONS_RESEAU
 call :OPTIMISATIONS_PERIPHERIQUES
 if "!PROFIL_POWER!"=="0" call :DESACTIVER_ECONOMIES_ENERGIE
-if "%DESACTIVER_SECURITE%"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
-if "%DESACTIVER_DEFENDER%"=="1" call :DESACTIVER_DEFENDER_SECTION
-if "%DESACTIVER_ANIMATIONS%"=="1" call :DESACTIVER_ANIMATIONS_SECTION
-if "%DESACTIVER_IA%"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
-if "%DESACTIVER_UAC%"=="1" call :DESACTIVER_UAC_SECTION
+if "!DESACTIVER_SECURITE!"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
+if "!DESACTIVER_DEFENDER!"=="1" call :DESACTIVER_DEFENDER_SECTION
+if "!DESACTIVER_ANIMATIONS!"=="1" call :DESACTIVER_ANIMATIONS_SECTION
+if "!DESACTIVER_IA!"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
+if "!DESACTIVER_UAC!"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
 call :DETECT_HARDWARE 1
 call :AFFICHER_RESUME_OPTIMISATION
@@ -758,7 +758,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\PriorityControl" /v "Win32PrioritySeparation" /t REG_DWORD /d 38 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Planification CPU configuree%COLOR_RESET%
 
-:: 1.2 - Profil Gaming MMCSS + NoLazyMode SystemProfile
+:: 1.2 - Profil Gaming MMCSS SystemProfile\Tasks\Games
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration du profil gaming (MMCSS)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Scheduling Category" /t REG_SZ /d "High" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile\Tasks\Games" /v "Priority" /t REG_DWORD /d 2 /f >nul 2>&1
@@ -902,7 +902,7 @@ attrib -r "%HOSTS%" >nul 2>&1
 :: Backup du fichier hosts avant modification
 copy "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
 :: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
-powershell -NoProfile -Command "$h='%HOSTS%';$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII);$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;(Get-Item $h).Attributes='Normal';$tmp=$h+'.tmp';[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);Move-Item -Path $tmp -Destination $h -Force};exit 0}catch{Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
+powershell -NoProfile -Command "$h='%HOSTS%';$tmp=$h+'.tmp';$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII);$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;(Get-Item $h).Attributes='Normal';[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);Move-Item -Path $tmp -Destination $h -Force};exit 0}catch{Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
 
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Domaines telemetrie bloques ^(bloc unique, adaptatif^)%COLOR_RESET%
@@ -1553,7 +1553,9 @@ if "!PROFIL_POWER!"=="1" (
     powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows conserves%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : retour aux defauts Windows ^(nettoyage cles par interface^)...%COLOR_RESET%
+    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name TcpAckFrequency,TCPNoDelay,TcpDelAckTicks -Force -ErrorAction SilentlyContinue }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows restaures%COLOR_RESET%
 )
 
 :: 5.9 - QoS Psched (retire la limite de reserve bandwidth pour liberer le QoS Fortnite DSCP)
@@ -1700,7 +1702,14 @@ if "!KEEP_MOUSE_ACCEL!"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Acceleration souris desactivee - Mouvement 1:1 actif%COLOR_RESET%
 )
 set "KEEP_MOUSE_ACCEL="
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
+if "!PROFIL_USAGE!"=="0" (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 20 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseTransmitTimeout" /t REG_DWORD /d 0 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 20 /f >nul 2>&1
+) else (
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 100 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 100 /f >nul 2>&1
+)
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsolutePointerAsAbsolute" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsoluteAsRelative" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1708,8 +1717,11 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres souris et HID optimi
 
 :: 6.2 - Clavier optimise
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la reactivite clavier...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 32 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Clavier et files d'attente optimises - Delai minimal%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%File clavier reduite ^(20^) - Profil GAMING%COLOR_RESET%
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%File clavier par defaut ^(100^) - Profil NORMAL%COLOR_RESET%
+)
 
 :: 6.3 - Win8 Scaling (Profil GAMING uniquement)
 if "!PROFIL_USAGE!"=="0" (
@@ -1982,7 +1994,7 @@ if not exist "%STR_DIR%" mkdir "%STR_DIR%" >nul 2>&1
 if exist "%STR_EXE%" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %STR_DIR%%COLOR_RESET%
 ) else (
-    :: Priorite a la copie locale (livree avec le script), telechargement GitHub en secours
+    REM Priorite a la copie locale (livree avec le script), telechargement GitHub en secours
     if exist "%STR_SRC%" copy /Y "%STR_SRC%" "%STR_EXE%" >nul 2>&1
     if not exist "%STR_EXE%" powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://github.com/kaylerberserk/WindowsOptimizer/raw/main/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe' -OutFile '%STR_EXE%' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
     if exist "%STR_EXE%" (
@@ -2277,8 +2289,8 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% GESTION DES PROTECTIONS DE SECURITE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Cette section permet de desactiver ou restaurer les mitigations%COLOR_RESET%
-echo %COLOR_WHITE%  de securite sensibles (Spectre/Meltdown, noyau, CI policy).%COLOR_RESET%
+echo %COLOR_WHITE%  Permet de desactiver ou restaurer les protections CPU contre les failles%COLOR_RESET%
+echo %COLOR_WHITE%  Spectre/Meltdown et autres vulnerabilites noyau (gain FPS possible).%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_RED%Desactiver Protections Securite (mode perf)%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Restaurer Protections Securite (recommande)%COLOR_RESET%
@@ -2322,8 +2334,8 @@ echo %COLOR_WHITE%  Pourquoi demander une confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%  - Les mitigations Spectre/Meltdown et noyau limitent les fuites de donnees%COLOR_RESET%
 echo %COLOR_WHITE%    via le CPU ; les desactiver peut ameliorer perfs/latence mais affaiblit la defense.%COLOR_RESET%
 echo %COLOR_WHITE%  - La blocklist de pilotes vulnerables aide Windows a bloquer des drivers dangereux.%COLOR_RESET%
-echo %COLOR_WHITE%  - Ces cles de registre sont sensibles : erreur = instabilite ou surface d'attaque.%COLOR_RESET%
-echo %COLOR_WHITE%  - Indique surtout pour bench/jeux competitifs sur machine isolee et maitrisee.%COLOR_RESET%
+echo %COLOR_WHITE%  - Ces reglages sont sensibles : une erreur peut rendre le systeme instable.%COLOR_RESET%
+echo %COLOR_WHITE%  - Recommande surtout pour jeux competitifs sur machine personnelle et controlee.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_PROTECTIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
@@ -2333,7 +2345,7 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DES PROTECTIONS DE SECURITE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Desactive les mitigations Spectre/Meltdown, noyau et CI policy%COLOR_RESET%
+echo %COLOR_WHITE%  Desactive les protections CPU (Spectre/Meltdown) et les blocages de pilotes dangereux%COLOR_RESET%
 echo %COLOR_WHITE%  pour reduire la latence CPU sur machine isolee.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
@@ -2590,15 +2602,18 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% GERER VBS / HVCI (ISOLATION DU NOYAU)%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  VBS (Virtualization Based Security) et HVCI (Memory Integrity) securisent le noyau%COLOR_RESET%
-echo %COLOR_WHITE%  mais impactent lourdement les performances en jeu (jusqu'a -25%% FPS).%COLOR_RESET%
+echo %COLOR_WHITE%  VBS (= Virtualization Based Security) et HVCI (= Memory Integrity) sont des protections%COLOR_RESET%
+echo %COLOR_WHITE%  du noyau Windows. Elles renforcent la securite mais coutent jusqu'a -25%% de FPS en jeu.%COLOR_RESET%
 echo.
-echo [*] %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains anti-cheats (Vanguard/Valorant, FaceIT, Ricochet)%COLOR_RESET%
-echo %COLOR_YELLOW%peuvent exiger que VBS/HVCI soit ACTIVE pour lancer le jeu.%COLOR_RESET%
+echo [*] %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains jeux avec anti-triche (Valorant, CS2, Call of Duty)%COLOR_RESET%
+echo %COLOR_YELLOW%exigent que VBS/HVCI soit ACTIVE pour pouvoir lancer le jeu.%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer VBS / HVCI (Securite maximale)%COLOR_RESET%
-echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver VBS / HVCI (Performances Gaming maximales)%COLOR_RESET%
-echo %COLOR_YELLOW%[3]%COLOR_RESET% %STYLE_BOLD%%COLOR_CYAN%Mode Gaming (FaceIT/Vanguard compatible) - %COLOR_GREEN%RECOMMANDE%COLOR_RESET%
+echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer VBS/HVCI (Securite maximale)%COLOR_RESET%
+echo       %COLOR_WHITE%Active toutes les protections noyau. Perf reduite, securite maximale.%COLOR_RESET%
+echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver VBS/HVCI (100%% performances)%COLOR_RESET%
+echo       %COLOR_WHITE%Desactive tout. Gain FPS max, mais certains jeux anti-triche peuvent refuser de lancer.%COLOR_RESET%
+echo %COLOR_YELLOW%[3]%COLOR_RESET% %STYLE_BOLD%%COLOR_CYAN%Mode Mixte (recommandee)%COLOR_RESET%
+echo       %COLOR_WHITE%VBS/HVCI restent actifs ^(jeux compatibles^), mais les mitigations CPU sont desactivees pour les perfs.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
@@ -2620,7 +2635,7 @@ if !errorlevel! EQU 3 (
   echo.
   echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du Mode Gaming ^(Performance + Compatibilite^)...%COLOR_RESET%
   REM Desactiver Mitigations CPU - Gain FPS
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKVAShadow /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
   REM HVCI = 1, VBS = 1, CFG = 1, LSA = 0 - Mode optimal pour anti-cheat + perfs
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
@@ -3236,10 +3251,11 @@ echo.
 echo %COLOR_WHITE%Pourquoi demander confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%- OneDrive synchronise Documents/Bureau/Images vers le cloud Microsoft.%COLOR_RESET%
 echo %COLOR_WHITE%- Le desinstaller coupe la sync et les liens vers le nuage ; Office peut perdre l'auto-save cloud.%COLOR_RESET%
-echo %COLOR_WHITE%- Les chemins du dossier OneDrive (%USERPROFILE%\OneDrive) seront supprimes si presents.%COLOR_RESET%
-echo %COLOR_WHITE%- Pratique pour liberer ressources et vie privee ; gardez une copie locale avant de valider.%COLOR_RESET%
+echo %COLOR_WHITE%- Le dossier OneDrive (%USERPROFILE%\OneDrive) sera supprime ; sauvegardez vos fichiers%COLOR_RESET%
+echo %COLOR_WHITE%  importants presents dans Documents/Bureau/Images synchronises avant de continuer.%COLOR_RESET%
+echo %COLOR_WHITE%- Pratique pour liberer des ressources et gagner en vie privee.%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%La suite arretera OneDrive, nettoiera registre et raccourcis, puis desinstallera.%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%La suite arretera OneDrive, nettoiera les reglages Windows et les raccourcis.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Cela peut prendre quelques instants.%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desinstaller OneDrive ? [O/N]: %COLOR_RESET%"
@@ -3295,11 +3311,9 @@ for /f "tokens=1 delims=," %%x in ('schtasks /query /fo csv 2^>nul ^| find "OneD
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstallation de OneDrive terminee (si installe).%COLOR_RESET%
 echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression definitive des dossiers OneDrive restants (takeown + rd).%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des dossiers OneDrive restants...%COLOR_RESET%
-if exist "%LocalAppData%\Microsoft\OneDrive" rd "%LocalAppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%AppData%\Microsoft\OneDrive" rd "%AppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%SystemDrive%\OneDriveTemp" rd "%SystemDrive%\OneDriveTemp" /q /s >nul 2>&1
 :: Wildcards : rd ne supporte pas les wildcards, il faut une enumeration for /d
-for /d %%C in ("%LocalAppData%\Temp\OneDrive*") do rd "%%C" /q /s >nul 2>&1
 for /d %%C in ("%Temp%\OneDrive*") do rd "%%C" /q /s >nul 2>&1
 if exist "%USERPROFILE%\OneDrive" (
     takeown /f "%USERPROFILE%\OneDrive" /r /d y >nul 2>&1
@@ -3340,9 +3354,9 @@ echo %COLOR_WHITE%Pourquoi demander confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%- Ce script retire Edge mais preserve WebView2.%COLOR_RESET%
 echo %COLOR_WHITE%- Les applis qui utilisent WebView2 continuent generalement de fonctionner.%COLOR_RESET%
 echo %COLOR_WHITE%- Windows Update peut tenter de reinstaller un navigateur de base ; comportement variable selon version.%COLOR_RESET%
-echo %COLOR_WHITE%- Quelques fonctions Windows peuvent toutefois preferer Edge sur certaines versions.%COLOR_RESET%
+echo %COLOR_WHITE%- Certaines fonctions Windows (widgets, flux RSS) peuvent utiliser Edge par defaut.%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%La desinstallation d'Edge est surtout un choix de preference / allegement.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%La desinstallation libere ~1 Go et reduit les processus en arriere-plan.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le risque de compatibilite est plus limite tant que WebView2 reste present.%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desinstaller Microsoft Edge ? [O/N]: %COLOR_RESET%"
@@ -3356,9 +3370,10 @@ echo.
 
 echo %COLOR_WHITE%Pourquoi une question separee :%COLOR_RESET%
 echo %COLOR_WHITE%- Sans suppression, profils et caches restent sur le disque ^(reinstall ou autre navigateur^).%COLOR_RESET%
-echo %COLOR_WHITE%- Avec suppression, favoris et mots de passe locaux peuvent etre perdus sans recuperation facile.%COLOR_RESET%
+echo %COLOR_WHITE%- Avec suppression, favoris, mots de passe et donnees locales seront perdus.%COLOR_RESET%
+echo %COLOR_WHITE%  Exportez vos favoris depuis Edge avant si vous souhaitez les conserver.%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% Voulez-vous supprimer les donnees utilisateur d'Edge ?
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Voulez-vous supprimer les donnees utilisateur d'Edge ?%COLOR_RESET%
 echo %COLOR_WHITE%- Historique de navigation%COLOR_RESET%
 echo %COLOR_WHITE%- Cookies et donnees de sites%COLOR_RESET%
 echo %COLOR_WHITE%- Favoris/Signets%COLOR_RESET%
@@ -3373,7 +3388,7 @@ if !errorlevel! EQU 2 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Les donnees utilisateur seront preservees.%COLOR_RESET%
 ) else (
     set "SUPPR_DATA=1"
-    echo [*] Les donnees utilisateur seront supprimees.
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Les donnees utilisateur seront supprimees.%COLOR_RESET%
 )
 
 echo.
@@ -3572,10 +3587,10 @@ for /f %%a in ('powershell -nologo -command "[int]((Get-PSDrive -Name C).Free / 
 if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
 
 echo [*] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
-echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, caches,%COLOR_RESET%
-echo %COLOR_WHITE%  rapports d'erreurs, corbeille, caches navigateurs,%COLOR_RESET%
-echo %COLOR_WHITE%  caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
-echo %COLOR_WHITE%  notifications, OneDrive, Defender, et pilotes orphelins.%COLOR_RESET%
+echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, rapports d'erreurs,%COLOR_RESET%
+echo %COLOR_WHITE%  corbeille, caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
+echo %COLOR_WHITE%  notifications et journaux systeme.%COLOR_RESET%
+echo %COLOR_WHITE%  %STYLE_BOLD%Aucune donnee personnelle (favoris, mots de passe, documents) n'est touchee.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Continuer ? [O/N]: %COLOR_RESET%"
 call :AZCHOICE ON
@@ -3587,8 +3602,8 @@ echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE AVANCE WINDOWS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-:: Initialiser la barre de progression (26 etapes - caches de perf conserves)
-set /a "CLEAN_TOTAL=26"
+:: Initialiser la barre de progression (25 etapes - caches de perf conserves)
+set /a "CLEAN_TOTAL=25"
 set /a "CLEAN_STEP=0"
 
 :: ETAPE 1 - Fichiers temporaires utilisateur (ameliore)
@@ -3653,18 +3668,14 @@ if exist "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" (
 net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
 net start cryptsvc >nul 2>&1
+net start dosvc >nul 2>&1
 
 :: ETAPE 7 - Corbeille
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Corbeille"
 powershell -NoProfile -Command "Clear-RecycleBin -Force -ErrorAction SilentlyContinue" >nul 2>&1
 
-:: ETAPE 8 - Fichiers Prefetch
-set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers Prefetch"
-del /s /q /f "%SystemRoot%\Prefetch\*.*" >nul 2>&1
-
-:: ETAPE 9 - Journaux composants Windows (ameliore)
+:: ETAPE 8 - Journaux composants Windows (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux composants Windows"
 del /s /q /f "%SystemRoot%\Logs\CBS\*.log" >nul 2>&1
@@ -3672,7 +3683,7 @@ del /s /q /f "%SystemRoot%\Logs\CBS\*.cab" >nul 2>&1
 del /s /q /f "%SystemRoot%\Logs\DISM\*.log" >nul 2>&1
 del /s /q /f "%SystemRoot%\Logs\DISM\*.cab" >nul 2>&1
 
-:: ETAPE 10 - Cache de polices
+:: ETAPE 9 - Cache de polices
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache de polices"
 net stop FontCache >nul 2>&1
@@ -3681,24 +3692,24 @@ del /s /q /f "%SystemRoot%\ServiceProfiles\LocalService\AppData\Local\FontCache\
 del /q /f "%SystemRoot%\System32\FNTCACHE.DAT" >nul 2>&1
 net start FontCache >nul 2>&1
 
-:: ETAPE 11 - Cache Windows Store et applications (ameliore)
+:: ETAPE 10 - Cache Windows Store et applications (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Store et applications"
 powershell -NoProfile -Command "Get-ChildItem -Path ""$env:LOCALAPPDATA\Packages"" -Directory -ErrorAction SilentlyContinue | Where-Object { $_.Name -notmatch 'Edge|WebView|Microsoft\.Windows' } | ForEach-Object { Remove-Item -Path ""$($_.FullName)\AC\INetCache\*"" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ""$($_.FullName)\AC\Temp\*"" -Recurse -Force -ErrorAction SilentlyContinue; Remove-Item -Path ""$($_.FullName)\LocalState\Cache\*"" -Recurse -Force -ErrorAction SilentlyContinue }" >nul 2>&1
 :: wsreset.exe supprime (ouvre UI Store + 5-15s); vidage PS du cache suffit
 
-:: ETAPE 12 - Cache DNS
+:: ETAPE 11 - Cache DNS
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache DNS"
 ipconfig /flushdns >nul 2>&1
 
-:: ETAPE 13 - Journaux Event Viewer (async - lancement parallele, gain ~1-3min)
+:: ETAPE 12 - Journaux Event Viewer (async - lancement parallele, gain ~1-3min)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer (async)"
 powershell -NoProfile -Command "$logs=wevtutil el 2>$null; foreach($l in $logs){ if($l -notmatch '54849625-5478-4994-a5ba-3e3b0328c30d' -and $l -notmatch 'bf022046-1f4a-4b91-8a96-bcdb4d6c39f1'){ Start-Process wevtutil -ArgumentList @('cl', $l) -NoNewWindow -ErrorAction SilentlyContinue } }" >nul 2>&1
 ping -n 3 127.0.0.1 >nul 2>&1
 
-:: ETAPE 14 - Windows.old + $SysReset + ~BT (ameliore)
+:: ETAPE 13 - Windows.old + $SysReset + ~BT (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Anciennes installations Windows"
 if exist "%SystemDrive%\Windows.old" (
@@ -3720,12 +3731,12 @@ if exist "%SystemDrive%\$SysReset" (
 if exist "%SystemDrive%\$Windows.~BT" rd /s /q "%SystemDrive%\$Windows.~BT" >nul 2>&1
 if exist "%SystemDrive%\$Windows.~WS" rd /s /q "%SystemDrive%\$Windows.~WS" >nul 2>&1
 
-:: ETAPE 15 - Optimisation disque (TRIM/Defrag)
+:: ETAPE 14 - Optimisation disque (TRIM/Defrag)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation disque (TRIM/Defrag)"
 defrag %SystemDrive% /O /H >nul 2>&1
 
-:: ETAPE 16 - Nettoyage Windows Cleanmgr (ameliore - plus de categories 2026)
+:: ETAPE 15 - Nettoyage Windows Cleanmgr (ameliore - plus de categories 2026)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
@@ -3738,20 +3749,20 @@ for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" 
 powershell -NoProfile -Command "$p=Get-Process cleanmgr -ErrorAction SilentlyContinue; if(-not $p){ Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID% /d C:' -NoNewWindow -PassThru }" >nul 2>&1
 powershell -NoProfile -Command "$waitCount=0; while((Get-Process cleanmgr -ErrorAction SilentlyContinue) -and ($waitCount -lt 120)){ Start-Sleep -s 1; $waitCount++ }" >nul 2>&1
 
-:: ETAPE 17 - Nettoyage composants systeme (via DISM)
+:: ETAPE 16 - Nettoyage composants systeme (via DISM)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Composants systeme (nettoyage)"
 powershell -NoProfile -Command "dism /online /Cleanup-Image /StartComponentCleanup /Quiet 2>&1 | Out-Null" >nul 2>&1
 :: /SPSuperseded obsolete sur W11 (MS docs), StartComponentCleanup suffit
 
-:: ETAPE 18 - Fichiers temporaires profil systeme (ameliore)
+:: ETAPE 17 - Fichiers temporaires profil systeme (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Profil systeme et caches Internet"
 del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\Local\*.tmp" >nul 2>&1
 del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\Local\Microsoft\Windows\INetCache\*.*" >nul 2>&1
 del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\LocalLow\*.tmp" >nul 2>&1
 
-:: ETAPE 19 - Cache d'icones (securise - redemarre l'explorateur)
+:: ETAPE 18 - Cache d'icones (securise - redemarre l'explorateur)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache d'icones"
 taskkill /f /im explorer.exe >nul 2>&1
@@ -3760,7 +3771,7 @@ del /q /f "%LOCALAPPDATA%\Microsoft\Windows\Explorer\iconcache_*" >nul 2>&1
 del /q /f "%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*" >nul 2>&1
 start explorer.exe >nul 2>&1
 
-:: ETAPE 20 - Caches Windows 11 : Widgets, Copilot, Recall (nouveau W11 2026)
+:: ETAPE 19 - Caches Windows 11 : Widgets, Copilot, Recall (nouveau W11 2026)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Widgets, Copilot, Recall"
 if exist "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\AC\INetCache" rd /s /q "%LOCALAPPDATA%\Packages\MicrosoftWindows.Client.CBS_cw5n1h2txyewy\AC\INetCache" >nul 2>&1
@@ -3776,30 +3787,29 @@ if exist "%LOCALAPPDATA%\Packages\Microsoft.Windows.Copilot_*\AC\INetCache" for 
 if exist "%LOCALAPPDATA%\Packages\Microsoft.Windows.AI.Explorer_*\AC\Temp" for /d %%d in ("%LOCALAPPDATA%\Packages\Microsoft.Windows.AI.Explorer_*") do (
     if exist "%%d\AC\Temp" rd /s /q "%%d\AC\Temp" >nul 2>&1
 )
-:: Recall snapshots vivent dans CoreAIPlatform.00 (MS docs, gagne du temps)
-if exist "%LOCALAPPDATA%\CoreAIPlatform.00\LocalState" rd /s /q "%LOCALAPPDATA%\CoreAIPlatform.00\LocalState" >nul 2>&1
+:: Recall snapshots conserves (donnees personnelles)
 
-:: ETAPE 21 - Cache notifications logs (inofensif)
+:: ETAPE 20 - Cache notifications logs (inofensif)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs notifications"
 if exist "%LOCALAPPDATA%\Microsoft\Windows\Notifications" (
     del /s /q /f "%LOCALAPPDATA%\Microsoft\Windows\Notifications\*.log" >nul 2>&1
 )
 
-:: ETAPE 22 - Logs et setup OneDrive (inofensif)
+:: ETAPE 21 - Logs et setup OneDrive (inofensif)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs OneDrive"
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\logs" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\logs" >nul 2>&1
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\setup" >nul 2>&1
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\*.tmp" >nul 2>&1
 
-:: ETAPE 23 - Logs support Windows Defender (inofensif)
+:: ETAPE 22 - Logs support Windows Defender (inofensif)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs support Defender"
 if exist "%ProgramData%\Microsoft\Windows Defender\Support" rd /s /q "%ProgramData%\Microsoft\Windows Defender\Support" >nul 2>&1
 if exist "%ProgramData%\Microsoft\Windows Defender\Scans\*.tmp" del /s /q /f "%ProgramData%\Microsoft\Windows Defender\Scans\*.tmp" >nul 2>&1
 
-:: ETAPE 24 - Optimisation indexation Windows Search (compacte uniquement)
+:: ETAPE 23 - Optimisation indexation Windows Search (compacte uniquement)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation indexation recherche"
 net stop WSearch >nul 2>&1
@@ -3807,13 +3817,13 @@ timeout /t 1 /nobreak >nul
 if exist "%ProgramData%\Microsoft\Search\Data\Applications\Windows\*.log" del /s /q /f "%ProgramData%\Microsoft\Search\Data\Applications\Windows\*.log" >nul 2>&1
 net start WSearch >nul 2>&1
 
-:: ETAPE 25 - Cache RDP / Bureau a distance (nouveau)
+:: ETAPE 24 - Cache RDP / Bureau a distance (nouveau)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Bureau a distance (RDP)"
 if exist "%LOCALAPPDATA%\Microsoft\TerminalServerClient\Cache" rd /s /q "%LOCALAPPDATA%\Microsoft\TerminalServerClient\Cache" >nul 2>&1
 if exist "%LOCALAPPDATA%\Microsoft\Remote Desktop Connection Manager\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Remote Desktop Connection Manager\*.tmp" >nul 2>&1
 
-:: ETAPE 26 - Logs et temps Office (inofensif)
+:: ETAPE 25 - Logs et temps Office (inofensif)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Temporaires Office"
 if exist "%LOCALAPPDATA%\Microsoft\Office\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Office\*.tmp" >nul 2>&1
@@ -3900,7 +3910,7 @@ if %VCINSTALLED_COUNT%==2 (
     set "VC2015X64="
     set "VCINSTALLED_COUNT="
     set "REG_DUMP="
-    if "%SKIP_PAUSE%"=="0" (
+    if "!SKIP_PAUSE!"=="0" (
         echo.
         pause
     )
