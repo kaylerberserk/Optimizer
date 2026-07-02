@@ -391,14 +391,12 @@ if !errorlevel! EQU 3 (
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
 
-:: Lecture d'une touche. Retourne la position via errorlevel.
-:: Compatible AZERTY : les touches top-row D1..D0 sont mappees vers 1..0 meme sans Shift.
+:: Lecture native d'une touche. Retourne la position via errorlevel.
+:: choice.exe est instantane et accepte les lettres minuscules sans traitement PowerShell.
 :AZCHOICE
 set "AZ_KEYS=%~1"
-set "AZ_ERRORLEVEL="
-for /f "usebackq delims=" %%E in (`powershell -NoProfile -Command "$valid='%AZ_KEYS%'.ToUpperInvariant(); while($true){ $k=[Console]::ReadKey($true); $ch=[char]::ToUpperInvariant($k.KeyChar); if($k.Key -match '^D([0-9])$'){ $ch=$Matches[1][0] } elseif($k.Key -match '^NumPad([0-9])$'){ $ch=$Matches[1][0] }; $idx=$valid.IndexOf([string]$ch); if($idx -ge 0){ [Console]::Write($idx+1); exit } }"`) do set "AZ_ERRORLEVEL=%%E"
-if not defined AZ_ERRORLEVEL set "AZ_ERRORLEVEL=1"
-exit /b !AZ_ERRORLEVEL!
+choice /n /c "%AZ_KEYS%" >nul
+exit /b !errorlevel!
 
 :MENU_PRINCIPAL
 cls
