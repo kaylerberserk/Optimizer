@@ -56,7 +56,7 @@ Collez cette commande dans **PowerShell (non-admin)** — elle télécharge, s'�
 
 L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose quelques questions (profil + options) et en déduit automatiquement la configuration optimale.
 
-Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage, et **Réseau** demande les deux.
+Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage, **Réseau** demande les deux, et **Énergie/Sécurité** redemandent l'usage uniquement quand un réglage dépend de Gaming vs Normal.
 
 #### Axe 1 — Usage (`PROFIL_USAGE`)
 > *Pilote la **latence applicative** : périphériques d'entrée, pile TCP, latence GPU.*
@@ -64,15 +64,15 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
 | **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, BBR2 + TCP Pacing + ECN, DefaultTTL=64, initialrto=1000, TcpTimedWaitDelay=30, SystemResponsiveness=10, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. |
-| **[2]** | **NORMAL** | VRR ON, veille GPU préservée, defaults TCP conservés, SystemResponsiveness laissé au défaut Windows, accélération trackpad légère sur portable. |
+| **[2]** | **NORMAL** | BBR2 + TCP Pacing + ECN, VRR ON, veille GPU préservée, Nagle/DelACK agressif absent (défaut Windows ou neutralisé en Eco), SystemResponsiveness laissé au défaut Windows, accélération trackpad légère sur portable. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
-> *Pilote **l'énergie, les offloads CPU/NIC et le plan d'alimentation**.*
+> *Pilote **l'énergie, le niveau de tuning NIC et le plan d'alimentation**.*
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **ECO** | Plan Équilibré, BBR2 + TCP Pacing + ECN, RSC/LSO ON, offloads NIC ON, Interrupt Moderation Adaptive, EEE ON, Wi-Fi roam agressif modéré (Roam=2), économies d'énergie NIC préservées (sauf WoL off), compression mémoire conservée. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, BBR2 + TCP Pacing + ECN, RSC/LSO OFF, Flow Control OFF, Interrupt Moderation Minimal (ITR 200), EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers max, gestion énergie USB désactivée (selective suspend + USB 3 LPM), compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
+| **[1]** | **ECO** | Plan Équilibré, BBR2 + TCP Pacing + ECN, RSC/LSO/checksum offloads ON, gestion d'énergie NIC activée (WoL coupé), compression mémoire conservée. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, BBR2 + TCP Pacing + ECN, RSC/LSO OFF en Gaming (conservés en Normal), Flow Control OFF, Interrupt Moderation/ITR agressif en Gaming, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers max, gestion énergie USB désactivée (selective suspend + USB 3 LPM), compression mémoire OFF (RAM > 8 Go), économies d'énergie coupées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — les optimisations GPU/input/CPU restent actives ; Nagle et les timers réseau agressifs sont neutralisés pour préserver l'autonomie Wi-Fi.
@@ -81,9 +81,9 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 #### Règle d'attribution (design interne)
 Chaque réglage est piloté par **un seul axe**, jamais les deux, pour éviter les conflits :
 - **Latence applicative** (input, I/O, stack TCP Nagle, low-latency GPU) → `PROFIL_USAGE`
-- **Énergie / offloads CPU & NIC / plan d'alimentation** → `PROFIL_POWER`
+- **Énergie / tuning NIC / plan d'alimentation** → `PROFIL_POWER`
 
-Cela évite notamment le double-pilotage de RSC (Receive Segment Coalescing) : la pile TCP **et** le matériel NIC suivent tous deux `PROFIL_POWER`, garantissant la cohérence.
+Exception réseau volontaire : RSC/LSO sont coupés uniquement en **GAMING + MAX PERF**. En **NORMAL** ou **ECO**, ils restent actifs pour préserver débit, stabilité et autonomie.
 
 ### ⚙️ Optimisations Granulaires
 
@@ -91,10 +91,10 @@ Cela évite notamment le double-pilotage de RSC (Receive Segment Coalescing) : l
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
 - **[3] Disques** : Optimisation des accès I/O pour accélérer le chargement des jeux et logiciels.
 - **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
-- **[5] Réseau** : Optimisation de la pile TCP/IP (BBR2 + TCP Pacing + ECN, DefaultTTL=64, MSI cartes réseau) et tuning fin de la carte réseau (Wi-Fi : Roam/MIMO/uAPSD, buffers max, gestion énergie USB désactivée).
+- **[5] Réseau** : Optimisation de la pile TCP/IP (BBR2 + TCP Pacing + ECN, DefaultTTL=64, MSI cartes réseau) et tuning fin de la carte réseau selon le profil (Eco : RSC/LSO/checksum ON + énergie préservée ; MaxPerf : EEE/GreenGbe/PacketCoalescing OFF, buffers max).
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
-- **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance.
-- **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU.
+- **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance, avec choix d'usage pour appliquer le bon tuning NIC.
+- **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU, avec choix d'usage pour le mode Gaming/Normal.
 
 ### 🧰 Outils & Utilitaires
 
@@ -126,7 +126,7 @@ Cela évite notamment le double-pilotage de RSC (Receive Segment Coalescing) : l
 
 - **Compatible Anti-Cheat** : Le script propose une configuration optimisée qui maintient l'intégrité du système (**HVCI** et **CFG**) requise par les anti-cheats modernes tels que **Vanguard**, **FaceIT** et **Ricochet**.
 - **Réversibilité** : Chaque modification est traçable. L'option **[R]** permet de créer un point de restauration instantané et les paramètres système peuvent être restaurés via les menus dédiés.
-- **Transparence** : Code source 100% ouvert, auditable et sans binaire tiers ou script obfusqué.
+- **Transparence** : Script principal 100% ouvert et auditable. Les utilitaires optionnels inclus sont isolés dans `Tools\` et utilisés uniquement par les sections concernées.
 - **Zéro perte de fonctions** : Les fonctionnalités vitales (Windows Update, Microsoft Store) restent opérationnelles. Les "Bloatwares" supprimés sont uniquement les apps préinstallées non-essentielles.
 - **Edge/OneDrive optionnels** : Contrairement aux bloatwares, Edge et OneDrive sont conservés par défaut mais peuvent être désinstallés via le menu **[G] → [6]** (OneDrive) ou **[G] → [7]** (Edge).
 
