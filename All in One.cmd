@@ -1558,9 +1558,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyFor
 :: Pas de suppression ici : les cles invalides/anciennes sont laissees a une section restauration/nettoyage.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(aucune suppression hors restauration^)%COLOR_RESET%
 
-:: 5.7 - DNS Provider Priorities
-echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider ignorees ^(aucune suppression hors restauration^)%COLOR_RESET%
-
 :: 5.8 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->skip)
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : valeurs neutres pour autonomie Wi-Fi ^(TcpNoDelay=0, TcpAckFrequency=2^)%COLOR_RESET%
@@ -1572,9 +1569,6 @@ if "!PROFIL_POWER!"=="1" (
 ) else (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
-
-:: 5.9 - QoS Psched
-echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Reserve bandwidth QoS ignoree ^(aucune suppression hors restauration^)%COLOR_RESET%
 
 :: 5.10 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
@@ -1755,28 +1749,6 @@ powershell -NoProfile -Command "Get-PnpDevice -Class USB -ErrorAction SilentlyCo
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI USB activees%COLOR_RESET%
 
 
-
-:: X - Fronts 25H2 (Recall / CloudExperienceHost / PhoneLink - YourPhone - Win11 24H2/25H2)
-if "!PROFIL_USAGE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 ^(Recall / CEH / PhoneLink^) - Profil GAMING...%COLOR_RESET%
-
-:: X.1 - Recall (Win11 24H2/25H2 tous les Copilot+) - desactive snapshots + disponibilite Recall
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=[int]$os.CurrentBuild; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'TurnOffSavingSnapshots' -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'AllowRecallEnablement' -PropertyType DWord -Value 0 -Force | Out-Null; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; Write-Output 'Recall: snapshots OFF + availability OFF (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - snapshots OFF + disponibilite OFF si Win11 24H2/25H2%COLOR_RESET%
-
-:: X.2 - CloudExperienceHost mute via Scheduled Task + politique CloudContent (sans Remove-AppxPackage)
-schtasks /Change /Disable /TN "\Microsoft\Windows\CloudExperienceHost\CreateObjectTask" >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableWindowsConsumerFeatures /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v DisableTailoredExperiencesWithDiagnosticData /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%CloudExperienceHost mute (CreateObjectTask + CloudContent)^%COLOR_RESET%
-
-:: X.3 - Phone Link / YourPhone block background activation (sans uninstall, garde Outlook mobile / Files)
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
-powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%PhoneLink / YourPhone background activation bloquee^%COLOR_RESET%
-) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Tweaks 25H2 Recall / CEH / PhoneLink ignores en profil NORMAL%COLOR_RESET%
-)
 
 :: 6.5 - Accessibilite OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des raccourcis d'accessibilite...%COLOR_RESET%
@@ -2967,17 +2939,25 @@ echo %STYLE_BOLD%%COLOR_BLUE%--- RECALL (Windows 11 24H2) ---%COLOR_RESET%
 echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Activer Recall%COLOR_RESET%
 echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desactiver Recall%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall)%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_BLUE%--- PHONE LINK ---%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Bloquer l'activation en arriere-plan%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall + PhoneLink)%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-6, D, M]: %COLOR_RESET%"
-call :AZCHOICE 123456DM
-if !errorlevel! EQU 8 goto :MENU_GESTION_WINDOWS
-if !errorlevel! EQU 7 (
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-7, D, M]: %COLOR_RESET%"
+call :AZCHOICE 1234567DM
+if !errorlevel! EQU 9 goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 8 (
   call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
+  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
+)
+if !errorlevel! EQU 7 (
+  call :DESACTIVER_PHONELINK_SECTION
   if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
   goto :MENU_GESTION_WINDOWS
 )
@@ -3233,32 +3213,55 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Rec
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
 exit /b
 
+:CORE_DESACTIVER_PHONELINK
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Blocage de l'activation en arriere-plan de PhoneLink...%COLOR_RESET%
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
+powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%PhoneLink / YourPhone background activation bloquee%COLOR_RESET%
+exit /b
+
+:DESACTIVER_PHONELINK_SECTION
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% BLOCAGE DE PHONE LINK / YOURPHONE%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Bloque l'activation en arriere-plan de Phone Link et YourPhone.%COLOR_RESET%
+echo %COLOR_WHITE%  L'application reste installee ^(Outlook mobile / Files preserves^).%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_DESACTIVER_PHONELINK
+call :FINISH_ACTION "Phone Link / YourPhone" "bloque"
+exit /b
+
 :DESACTIVER_TOUT_IA_WIDGETS_RECALL
 if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_TOUT_IA_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall^) ?%COLOR_RESET%
+echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + PhoneLink^) ?%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%Effet : suppression de toutes les fonctionnalites IA et widgets cloud.%COLOR_RESET%
+echo %COLOR_WHITE%Effet : suppression de toutes les fonctionnalites IA, widgets cloud et PhoneLink.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_TOUT_IA_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_TOUT_IA_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS / PHONELINK%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Desactive Copilot, les Widgets et Recall en une seule operation.%COLOR_RESET%
+echo %COLOR_WHITE%  Desactive Copilot, les Widgets, Recall et PhoneLink en une seule operation.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 call :CORE_DESACTIVER_COPILOT
 call :CORE_DESACTIVER_WIDGETS
 call :CORE_DESACTIVER_RECALL
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets et Recall desactives.%COLOR_RESET%
-call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
+call :CORE_DESACTIVER_PHONELINK
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et PhoneLink desactives.%COLOR_RESET%
+call :FINISH_ACTION "Toutes les fonctions IA/Widgets/PhoneLink" "desactivees"
 exit /b
 
 
