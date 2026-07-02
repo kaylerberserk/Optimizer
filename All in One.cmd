@@ -41,6 +41,16 @@ if not "%ESC%"=="" (
     set "COLOR_MAGENTA=" & set "COLOR_RESET=" & set "STYLE_BOLD="
 )
 
+:: Alias AZERTY non-ASCII pour la rangee numerique sans Shift : 2, 7, 9, 0.
+set "AZ_TMP=%TEMP%\wo_az_%RANDOM%"
+powershell -NoProfile -Command "$oem=(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Nls\CodePage').OEMCP; $enc=[Text.Encoding]::GetEncoding([int]$oem); $base=$env:AZ_TMP; $map=@{2=[char]233;7=[char]232;9=[char]231;0=[char]224}; foreach($k in $map.Keys){ [IO.File]::WriteAllBytes($base+'_'+$k+'.tmp',$enc.GetBytes([string]$map[$k])) }" >nul 2>&1
+if exist "%AZ_TMP%_2.tmp" set /p "AZ_KEY_2="<"%AZ_TMP%_2.tmp"
+if exist "%AZ_TMP%_7.tmp" set /p "AZ_KEY_7="<"%AZ_TMP%_7.tmp"
+if exist "%AZ_TMP%_9.tmp" set /p "AZ_KEY_9="<"%AZ_TMP%_9.tmp"
+if exist "%AZ_TMP%_0.tmp" set /p "AZ_KEY_0="<"%AZ_TMP%_0.tmp"
+del "%AZ_TMP%_*.tmp" >nul 2>&1
+set "AZ_TMP="
+
 :: =================================================================================
 :: INITIALISATION DES VARIABLES GLOBALES
 :: =================================================================================
@@ -391,12 +401,33 @@ if !errorlevel! EQU 3 (
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
 
-:: Lecture native d'une touche. Retourne la position via errorlevel.
-:: choice.exe est instantane et accepte les lettres minuscules sans traitement PowerShell.
+:: Lecture d'une entree menu. Retourne la position via errorlevel.
+:: Accepte les minuscules et la rangee numerique AZERTY sans Shift : & e " ' ( - e _ c a.
 :AZCHOICE
 set "AZ_KEYS=%~1"
-choice /n /c "%AZ_KEYS%" >nul
-exit /b !errorlevel!
+set "AZ_INPUT="
+set /p "AZ_INPUT="
+if not defined AZ_INPUT goto :AZCHOICE
+set "AZ_INPUT=!AZ_INPUT:~0,1!"
+
+if !AZ_INPUT!==^" set "AZ_INPUT=3"
+if "!AZ_INPUT!"=="&" set "AZ_INPUT=1"
+if "!AZ_INPUT!"=="!AZ_KEY_2!" set "AZ_INPUT=2"
+if "!AZ_INPUT!"=="'" set "AZ_INPUT=4"
+if "!AZ_INPUT!"=="(" set "AZ_INPUT=5"
+if "!AZ_INPUT!"=="-" set "AZ_INPUT=6"
+if "!AZ_INPUT!"=="!AZ_KEY_7!" set "AZ_INPUT=7"
+if "!AZ_INPUT!"=="_" set "AZ_INPUT=8"
+if "!AZ_INPUT!"=="!AZ_KEY_9!" set "AZ_INPUT=9"
+if "!AZ_INPUT!"=="!AZ_KEY_0!" set "AZ_INPUT=0"
+
+set "AZ_ERRORLEVEL=0"
+for /l %%I in (0,1,31) do (
+    set "AZ_KEY=!AZ_KEYS:~%%I,1!"
+    if defined AZ_KEY if /i "!AZ_INPUT!"=="!AZ_KEY!" set /a "AZ_ERRORLEVEL=%%I+1"
+)
+if !AZ_ERRORLEVEL! GTR 0 exit /b !AZ_ERRORLEVEL!
+goto :AZCHOICE
 
 :MENU_PRINCIPAL
 cls
