@@ -339,6 +339,23 @@ powershell -NoProfile -Command "try { $c=(Invoke-WebRequest -Uri ""http://www.ms
 if !errorlevel! EQU 0 set "HAS_INTERNET=1"
 exit /b
 
+:PROMPT_MANUAL_REBOOT
+if "!SKIP_PAUSE!"=="1" exit /b 0
+echo.
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer maintenant ? [O/N]: %COLOR_RESET%"
+call :AZCHOICE ON
+if !errorlevel! EQU 2 exit /b 0
+if !errorlevel! EQU 1 (
+    shutdown /r /t 10 /c "Redemarrage demande par WindowsOptimizer"
+    cls
+    echo.
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage programme dans 10 secondes...%COLOR_RESET%
+    timeout /t 5 /nobreak >nul
+    exit
+)
+echo.
+exit /b 0
+
 :: Confirmation O/N - %~1 = message, retourne 0 pour Oui, 1 pour Non
 :ASK_CONFIRM
 <nul set /p ="%~1"
@@ -722,19 +739,8 @@ set "HAS_OPT="
 
 echo %STYLE_BOLD%%COLOR_BLUE%-- PROCHAINE ETAPE --------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer votre PC maintenant ? [O/N]: %COLOR_RESET%"
-call :AZCHOICE ON
-if !errorlevel! EQU 2 exit /b
-if !errorlevel! EQU 1 (
-    shutdown /r /t 5 /c "Redemarrage pour appliquer les optimisations"
-    cls
-    echo.
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
-    timeout /t 5 /nobreak >nul
-    exit
-)
+call :PROMPT_MANUAL_REBOOT
+exit /b
 
 :OPTIMISATIONS_SYSTEME
 cls
@@ -830,7 +836,7 @@ reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableTailo
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v "TailoredExperiencesWithDiagnosticDataEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v "ActivityHistoryEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Siuf\Rules" /v "NumberOfSIUFInPeriod" /t REG_DWORD /d 0 /f >nul 2>&1
-reg delete "HKCU\SOFTWARE\Microsoft\Siuf\Rules" /v PeriodInNanoSeconds /f >nul 2>&1
+REM PeriodInNanoSeconds laisse intact : aucune suppression hors section restauration.
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v "Disabled" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Feedback" /v "AllowTelemetry" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Input\TIPC" /v "Enabled" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1192,7 +1198,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Prefetch actif, SuperFetch opti
 :: 2.3 - FTH OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du tas tolerant aux pannes (FTH)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Microsoft\FTH\State" /f >nul 2>&1
+REM Etat FTH laisse intact : aucune suppression hors section restauration.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%FTH desactive - Performances memoire ameliorees%COLOR_RESET%
 
 :: 2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
@@ -1248,7 +1254,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Support des chemins longs activ
 :: 3.3 - TRIM sur volumes SSD
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification de l'etat du TRIM sur les disques SSD...%COLOR_RESET%
 set "TRIM_STATUS="
-for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -ne 'HDD' -and $_.OperationalStatus -eq 'OK' -and $_.BusType -notin @('Virtual','FileBackedVirtual') }; if(-not $ssds -or $ssds.Count -eq 0){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and ($_.FileSystem -in @('NTFS','ReFS')) }; $done=$false; foreach($v in $vols){ $part=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue; if($part){ $phys=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.DeviceId -eq $part.DiskNumber }; if($phys -and $phys.MediaType -ne 'HDD' -and $phys.BusType -notin @('Virtual','FileBackedVirtual')){ try { Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction Stop | Out-Null; $done=$true } catch {} } } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"`) do set "TRIM_STATUS=%%a"
+for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'WindowsOptimizer'; $oldStampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $oldStampFile=Join-Path $oldStampDir 'last_retrim.txt'; if((Test-Path $oldStampFile) -and -not (Test-Path $stampFile)){ if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; Move-Item -Path $oldStampFile -Destination $stampFile -Force -ErrorAction SilentlyContinue }; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -ne 'HDD' -and $_.OperationalStatus -eq 'OK' -and $_.BusType -notin @('Virtual','FileBackedVirtual') }; if(-not $ssds -or $ssds.Count -eq 0){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and ($_.FileSystem -in @('NTFS','ReFS')) }; $done=$false; foreach($v in $vols){ $part=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue; if($part){ $phys=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.DeviceId -eq $part.DiskNumber }; if($phys -and $phys.MediaType -ne 'HDD' -and $phys.BusType -notin @('Virtual','FileBackedVirtual')){ try { Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction Stop | Out-Null; $done=$true } catch {} } } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"`) do set "TRIM_STATUS=%%a"
 if "%TRIM_STATUS%"=="TRIM_DONE" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%TRIM execute sur les volumes SSD ^(dernier passage memorise pour 30 jours^)%COLOR_RESET%
 ) else (
@@ -1481,6 +1487,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MMCSS reseau configure%COLOR_RE
 :: 5.2 - Pile TCP/IP Win11
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Pile TCP/IP Win11 ^(BBR2, fix loopback localhost^)...%COLOR_RESET%
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
+REM Conserve : "set heuristics" pilote encore forcews sur certaines builds/drivers.
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
@@ -1505,14 +1512,13 @@ if "!PROFIL_POWER!"=="0" (
     netsh int tcp set global rsc=enabled >nul 2>&1
 )
 
-:: BBR2 applique sur tous les templates pour couvrir tous les profils reseau
-netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
+:: BBR2 applique sur les templates valides listes par "netsh int tcp set supplemental ?".
 netsh int tcp set supplemental template=automatic congestionprovider=bbr2 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif (tous les templates : Internet, InternetCustom, Datacenter, DatacenterCustom, Compat, Automatic)%COLOR_RESET%
+netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=custom congestionprovider=bbr2 >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif ^(templates valides : Automatic, Internet, Datacenter, Compat, Custom^)%COLOR_RESET%
 
 :: TCP Pacing + ECN : essentiels pour BBR2 (pacing = parametre principal de BBR, ECN = signaux precoces congestion)
 netsh int tcp set global pacingprofile=always >nul 2>&1
@@ -1525,8 +1531,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLO
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 65534 /f >nul 2>&1
 if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpTimedWaitDelay /t REG_DWORD /d 30 /f >nul 2>&1
-    REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, force = placebo. Supprime.
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Services\LanmanServer\Parameters" /v Size /f >nul 2>&1
+    REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, pas de suppression hors section restauration.
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /t REG_DWORD /d 1500 /f >nul 2>&1
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1546,20 +1551,13 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MSI Mode active sur cartes rese
 :: 5.6 - Optimisation BITS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyForLocal" /t REG_DWORD /d 1 /f >nul 2>&1
-:: Nettoyage des cles MaxBandwidthOn/Off-Schedule : noms non conformes a la spec MS (vrai nom = MaxBandwidthSchedules, valeur binaire)
-:: et valeur 0 = BG_E_BLOCKED_BY_POLICY (bloque Windows Update). On supprime pour revenir au defaut Windows.
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOn-Schedule" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "MaxBandwidthOff-Schedule" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(cles invalides supprimees, WU preserve^)%COLOR_RESET%
+:: Pas de suppression ici : les cles invalides/anciennes sont laissees a une section restauration/nettoyage.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(aucune suppression hors restauration^)%COLOR_RESET%
 
-:: 5.7 - DNS Provider Priorities (suppression : ce sont les defaults hardcodes Windows, placebo)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage cles DNS Provider ^(defaults hardcodes Windows, placebo^)...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "LocalPriority" /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "HostsPriority" /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\ServiceProvider" /v "DnsPriority" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider supprimees - defaults Windows utilises%COLOR_RESET%
+:: 5.7 - DNS Provider Priorities
+echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider ignorees ^(aucune suppression hors restauration^)%COLOR_RESET%
 
-:: 5.8 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->defaut)
+:: 5.8 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->skip)
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : valeurs neutres pour autonomie Wi-Fi ^(TcpNoDelay=0, TcpAckFrequency=2^)%COLOR_RESET%
     powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 2 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 0 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 1 -Force | Out-Null } }" >nul 2>&1
@@ -1568,15 +1566,11 @@ if "!PROFIL_POWER!"=="1" (
     powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : retour aux defauts Windows ^(nettoyage cles par interface^)...%COLOR_RESET%
-    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { Remove-ItemProperty -Path $_.PSPath -Name TcpAckFrequency,TCPNoDelay,TcpDelAckTicks -Force -ErrorAction SilentlyContinue }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : defauts Windows restaures%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
 
-:: 5.9 - QoS Psched (retire la limite de reserve bandwidth pour les politiques DSCP)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage reserve bandwidth QoS ^(politiques DSCP^)...%COLOR_RESET%
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Psched" /v NonBestEffortLimit /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reserve QoS retiree - politiques DSCP autorisees%COLOR_RESET%
+:: 5.9 - QoS Psched
+echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Reserve bandwidth QoS ignoree ^(aucune suppression hors restauration^)%COLOR_RESET%
 
 :: 5.10 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
@@ -1632,9 +1626,7 @@ if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /v "DSCP Value" /t REG_SZ /d "46" /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite activee ^(Gaming^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite ignoree ^(Normal^) - nettoyage politiques jeu%COLOR_RESET%
-    reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /f >nul 2>&1
-    reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /f >nul 2>&1
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite ignoree ^(Normal^) - aucune suppression hors restauration%COLOR_RESET%
 )
 
 :: 5.13 - Nettoyage des protocoles reseau
@@ -1727,11 +1719,10 @@ if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 20 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseTransmitTimeout" /t REG_DWORD /d 0 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 20 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
 ) else (
-    reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "MouseDataQueueSize" /t REG_DWORD /d 100 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Services\kbdclass\Parameters" /v "KeyboardDataQueueSize" /t REG_DWORD /d 100 /f >nul 2>&1
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Files souris/clavier ignorees en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouclass\Parameters" /v "ThreadPriority" /t REG_DWORD /d 31 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsolutePointerAsAbsolute" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\mouhid\Parameters" /v "TreatAbsoluteAsRelative" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres souris et HID optimises%COLOR_RESET%
@@ -1741,7 +1732,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de la reactivite c
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%File clavier reduite ^(20^) - Profil GAMING%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%File clavier par defaut ^(100^) - Profil NORMAL%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%File clavier ignoree - Profil NORMAL%COLOR_RESET%
 )
 
 :: 6.3 - Win8 Scaling (Profil GAMING uniquement)
@@ -1751,22 +1742,27 @@ if "!PROFIL_USAGE!"=="0" (
     reg add "HKCU\Control Panel\Desktop" /v LogPixels /t REG_DWORD /d 96 /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling active ^(Mode 1:1 force^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling ignore en profil NORMAL ^(conserve le scaling par defaut^)%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
 
 :: 6.4 - MSI Mode Universel (Latence Peripheriques)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du MSI Mode pour tous les peripheriques compatibles...%COLOR_RESET%
-powershell -NoProfile -Command "Get-PnpDevice -Class Net,Display,USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ New-ItemProperty -Path $p -Name 'MSISupported' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI activees sur tout le materiel compatible%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du MSI Mode USB compatible ^(Gaming^)...%COLOR_RESET%
+    powershell -NoProfile -Command "Get-PnpDevice -Class USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ New-ItemProperty -Path $p -Name 'MSISupported' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI USB activees ^(Gaming^)%COLOR_RESET%
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%MSI Mode USB ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
+)
 
 
 
 :: X - Fronts 25H2 (Recall / CloudExperienceHost / PhoneLink - YourPhone - Win11 24H2/25H2)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 (Recall / CEH / PhoneLink)...%COLOR_RESET%
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 ^(Recall / CEH / PhoneLink^) - Profil GAMING...%COLOR_RESET%
 
-:: X.1 - Recall (Win11 24H2/25H2 tous les Copilot+) - desactive la capture IA
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=[int]$os.CurrentBuild; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; Write-Output 'Recall: DisableAIDataAnalysis=1 (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - politique appliquee si Win11 24H2/25H2%COLOR_RESET%
+:: X.1 - Recall (Win11 24H2/25H2 tous les Copilot+) - desactive snapshots + disponibilite Recall
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=[int]$os.CurrentBuild; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'TurnOffSavingSnapshots' -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'AllowRecallEnablement' -PropertyType DWord -Value 0 -Force | Out-Null; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; Write-Output 'Recall: snapshots OFF + availability OFF (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall (WindowsAI) - snapshots OFF + disponibilite OFF si Win11 24H2/25H2%COLOR_RESET%
 
 :: X.2 - CloudExperienceHost mute via Scheduled Task + politique CloudContent (sans Remove-AppxPackage)
 schtasks /Change /Disable /TN "\Microsoft\Windows\CloudExperienceHost\CreateObjectTask" >nul 2>&1
@@ -1778,6 +1774,9 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%CloudExperienceHost mute (Creat
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%PhoneLink / YourPhone background activation bloquee^%COLOR_RESET%
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Tweaks 25H2 Recall / CEH / PhoneLink ignores en profil NORMAL%COLOR_RESET%
+)
 
 :: 6.5 - Accessibilite OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des raccourcis d'accessibilite...%COLOR_RESET%
@@ -1823,14 +1822,14 @@ goto :TOGGLE_ECONOMIES_ENERGIE
 
 :DO_RESTAURER_ECONOMIES
 call :RESTAURER_ECONOMIES_ENERGIE
-goto :TOGGLE_ECONOMIES_ENERGIE
+goto :MENU_PRINCIPAL
 
 :DO_DESACTIVER_ECONOMIES
 set "PROFIL_POWER=0"
 call :CHOISIR_PROFILS "CONFIGURATION PROFILS - ENERGIE" "USAGE"
-if !errorlevel! NEQ 0 goto :TOGGLE_ECONOMIES_ENERGIE
+if !errorlevel! NEQ 0 goto :MENU_PRINCIPAL
 call :DESACTIVER_ECONOMIES_ENERGIE
-goto :TOGGLE_ECONOMIES_ENERGIE
+goto :MENU_PRINCIPAL
 
 :DESACTIVER_ECONOMIES_ENERGIE
 set "PROFIL_POWER=0"
@@ -2011,12 +2010,15 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing desactive - La
 
 :: 7.12 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTimerResolution...%COLOR_RESET%
-set "STR_DIR=%ProgramFiles%\OptimizerAllInOne"
+set "STR_DIR=%ProgramFiles%\SetTimerResolution"
+set "STR_OLD_DIR=%ProgramFiles%\OptimizerAllInOne"
 set "STR_EXE=%STR_DIR%\SetTimerResolution.exe"
 set "STR_SRC=%~dp0Tools\Timer & Interrupt\SetTimerResolution.exe"
 set "STR_STARTUP_LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
 :: Le dossier de destination doit exister AVANT toute copie/telechargement (sinon echec)
 if not exist "%STR_DIR%" mkdir "%STR_DIR%" >nul 2>&1
+if not exist "%STR_EXE%" if exist "%STR_OLD_DIR%\SetTimerResolution.exe" move /Y "%STR_OLD_DIR%\SetTimerResolution.exe" "%STR_EXE%" >nul 2>&1
+if exist "%STR_OLD_DIR%" rmdir "%STR_OLD_DIR%" >nul 2>&1
 if exist "%STR_EXE%" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %STR_DIR%%COLOR_RESET%
 ) else (
@@ -2031,7 +2033,7 @@ if exist "%STR_EXE%" (
 )
 if exist "%STR_EXE%" (
     taskkill /F /IM SetTimerResolution.exe >nul 2>&1
-    powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%ProgramFiles%\OptimizerAllInOne'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
+    powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci SetTimerResolution configure ^(5070^)%COLOR_RESET%
     start "" "%STR_EXE%" --resolution 5070 --no-console
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution active immediatement%COLOR_RESET%
@@ -2098,6 +2100,7 @@ powercfg /S SCHEME_CURRENT >nul 2>&1
 
 set "TARGET_GUID="
 set "STR_EXE="
+set "STR_OLD_DIR="
 set "STR_STARTUP_LNK="
 call :FINISH_ACTION "Economies d'energie" "desactivees"
 exit /b
@@ -2177,7 +2180,10 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing reactive%COLOR
 :: 7.5 - SetTimerResolution du demarrage
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression de SetTimerResolution du demarrage...%COLOR_RESET%
 taskkill /f /im SetTimerResolution.exe >nul 2>&1
+if exist "%ProgramFiles%\SetTimerResolution\SetTimerResolution.exe" del /f /q "%ProgramFiles%\SetTimerResolution\SetTimerResolution.exe" >nul 2>&1
 if exist "%ProgramFiles%\OptimizerAllInOne\SetTimerResolution.exe" del /f /q "%ProgramFiles%\OptimizerAllInOne\SetTimerResolution.exe" >nul 2>&1
+if exist "%ProgramFiles%\SetTimerResolution" rmdir "%ProgramFiles%\SetTimerResolution" >nul 2>&1
+if exist "%ProgramFiles%\OptimizerAllInOne" rmdir "%ProgramFiles%\OptimizerAllInOne" >nul 2>&1
 set "STR_STARTUP_LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
 if exist "%STR_STARTUP_LNK%" (
     del "%STR_STARTUP_LNK%" /f /q >nul 2>&1
@@ -2335,13 +2341,14 @@ goto :TOGGLE_PROTECTIONS_SECURITE
 
 :DO_RESTAURER_PROTECTIONS
 call :RESTAURER_PROTECTIONS_SECURITE
-goto :TOGGLE_PROTECTIONS_SECURITE
+goto :MENU_PRINCIPAL
 
 :DO_DESACTIVER_PROTECTIONS
 call :CHOISIR_PROFILS "CONFIGURATION PROFILS - SECURITE" "USAGE"
-if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! NEQ 0 goto :MENU_PRINCIPAL
 call :DESACTIVER_PROTECTIONS_SECURITE
-goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_SECURITE
+goto :MENU_PRINCIPAL
 
 :DESACTIVER_PROTECTIONS_SECURITE
 call :INIT_PROFILS
@@ -2489,7 +2496,7 @@ call :AZCHOICE 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_DEFENDER_SECTION
-
+  if !errorlevel! NEQ 0 goto :TOGGLE_DEFENDER
   goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_DEFENDER_SECTION
@@ -2735,6 +2742,7 @@ call :AZCHOICE 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_UAC_SECTION
+  if !errorlevel! NEQ 0 goto :TOGGLE_UAC
   goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_UAC_SECTION
@@ -2824,6 +2832,7 @@ call :AZCHOICE 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_ANIMATIONS_SECTION
+  if !errorlevel! NEQ 0 goto :TOGGLE_ANIMATIONS
   goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_ANIMATIONS_SECTION
@@ -2969,30 +2978,34 @@ call :AZCHOICE 123456DM
 if !errorlevel! EQU 8 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 7 (
   call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
-  goto :MENU_IA_WIDGETS_RECALL
+  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
 )
 if !errorlevel! EQU 6 (
   call :DESACTIVER_RECALL_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
+  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
 )
 if !errorlevel! EQU 5 (
   call :ACTIVER_RECALL_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
 )
 if !errorlevel! EQU 4 (
   call :DESACTIVER_WIDGETS_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
+  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
 )
 if !errorlevel! EQU 3 (
   call :ACTIVER_WIDGETS_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
 )
 if !errorlevel! EQU 2 (
   call :DESACTIVER_COPILOT_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
+  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+  goto :MENU_GESTION_WINDOWS
 )
 call :ACTIVER_COPILOT_SECTION
-goto :MENU_IA_WIDGETS_RECALL
+goto :MENU_GESTION_WINDOWS
 
 :ACTIVER_COPILOT_SECTION
 cls
@@ -3255,20 +3268,7 @@ echo %COLOR_CYAN%===============================================================
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%%~1 %~2%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
-echo.
-if "!SKIP_PAUSE!"=="1" goto :FINISH_ACTION_EXIT
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-call :AZCHOICE ON
-if !errorlevel! EQU 2 goto :FINISH_ACTION_EXIT
-if !errorlevel! EQU 1 (
-    shutdown /r /t 5 /c "Redemarrage apres modification"
-    cls
-    echo.
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
-    timeout /t 5 /nobreak >nul
-    exit /b
-)
-goto :FINISH_ACTION_EXIT
+call :PROMPT_MANUAL_REBOOT
 :FINISH_ACTION_EXIT
 exit /b
 
@@ -3292,7 +3292,17 @@ echo.
 call :AZCHOICE ON
 if !errorlevel! EQU 2 goto :MENU_GESTION_WINDOWS
 
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% EXECUTION - DESINSTALLATION COMPLETE DE ONEDRIVE%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%Progression : arret, deconnexion, desinstallation, nettoyage registre,%COLOR_RESET%
+echo %COLOR_WHITE%taches planifiees, dossiers restants et raccourcis.%COLOR_RESET%
+echo.
+
 :: Arreter les processus OneDrive
+echo %COLOR_YELLOW%[1/7]%COLOR_RESET% %COLOR_WHITE%Arret des processus OneDrive et sync Office...%COLOR_RESET%
 taskkill /f /im OneDrive.exe >nul 2>&1
 taskkill /f /im OneDriveSetup.exe >nul 2>&1
 taskkill /f /im FileCoAuth.exe >nul 2>&1
@@ -3303,19 +3313,23 @@ taskkill /f /im explorer.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
 start explorer.exe
 timeout /t 3 /nobreak >nul
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Processus OneDrive arretes%COLOR_RESET%
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Deconnexion des comptes OneDrive...%COLOR_RESET%
+echo %COLOR_YELLOW%[2/7]%COLOR_RESET% %COLOR_WHITE%Deconnexion des comptes OneDrive...%COLOR_RESET%
 powershell -NoProfile -Command "try { Import-Module -Name Microsoft.PowerShell.Management -Force; Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\OneDrive\Accounts' -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.PSPath -Recurse -Force -ErrorAction SilentlyContinue } } catch {}" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Comptes OneDrive deconnectes%COLOR_RESET%
 
 :: Commande pour desinstaller OneDrive
+echo %COLOR_YELLOW%[3/7]%COLOR_RESET% %COLOR_WHITE%Execution du desinstalleur OneDrive Windows...%COLOR_RESET%
 if exist "%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe" (
     "%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe" /uninstall
 ) else (
     "%SYSTEMROOT%\System32\OneDriveSetup.exe" /uninstall
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstalleur OneDrive execute%COLOR_RESET%
 
 echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression des cles de registre OneDrive - operation irreversible.%COLOR_RESET%
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des cles de registre OneDrive...%COLOR_RESET%
+echo %COLOR_YELLOW%[4/7]%COLOR_RESET% %COLOR_WHITE%Nettoyage des cles de registre OneDrive...%COLOR_RESET%
 reg delete "HKEY_CLASSES_ROOT\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f >nul 2>&1
 reg delete "HKEY_CLASSES_ROOT\Wow6432Node\CLSID\{018D5C66-4533-4307-9B53-224DE2ED1FE6}" /f >nul 2>&1
 reg delete "HKCU\SOFTWARE\Microsoft\OneDrive" /f >nul 2>&1
@@ -3330,17 +3344,19 @@ reg delete "HKLM\SOFTWARE\Microsoft\OneDrive" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Wow6432Node\Microsoft\OneDrive" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run" /v "OneDrive" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run" /v "OneDrive" /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Cles OneDrive nettoyees%COLOR_RESET%
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression des taches planifiees OneDrive...%COLOR_RESET%
+echo %COLOR_YELLOW%[5/7]%COLOR_RESET% %COLOR_WHITE%Suppression des taches planifiees OneDrive...%COLOR_RESET%
 for /f "tokens=1 delims=," %%x in ('schtasks /query /fo csv 2^>nul ^| find "OneDrive"') do (
     set "TASKNAME=%%~x"
     set "TASKNAME=!TASKNAME:"=!"
     schtasks /delete /TN "!TASKNAME!" /f >nul 2>&1
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Taches planifiees OneDrive supprimees%COLOR_RESET%
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstallation de OneDrive terminee (si installe).%COLOR_RESET%
 echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression definitive des dossiers OneDrive restants (takeown + rd).%COLOR_RESET%
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des dossiers OneDrive restants...%COLOR_RESET%
+echo %COLOR_YELLOW%[6/7]%COLOR_RESET% %COLOR_WHITE%Nettoyage des dossiers OneDrive restants...%COLOR_RESET%
 if exist "%AppData%\Microsoft\OneDrive" rd "%AppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%SystemDrive%\OneDriveTemp" rd "%SystemDrive%\OneDriveTemp" /q /s >nul 2>&1
 :: Wildcards : rd ne supporte pas les wildcards, il faut une enumeration for /d
@@ -3361,13 +3377,16 @@ if exist "%SystemDrive%\OneDriveTemp" (
     takeown /f "%SystemDrive%\OneDriveTemp" /r /d y >nul 2>&1
     rd "%SystemDrive%\OneDriveTemp" /s /q >nul 2>&1
 )
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Dossiers OneDrive restants nettoyes%COLOR_RESET%
 
 :: Supprimer les raccourcis OneDrive du menu Demarrer
+echo %COLOR_YELLOW%[7/7]%COLOR_RESET% %COLOR_WHITE%Suppression des raccourcis OneDrive...%COLOR_RESET%
 del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Microsoft OneDrive.lnk" /f /q >nul 2>&1
 del "%APPDATA%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /f /q >nul 2>&1
 del "%UserProfile%\Links\OneDrive.lnk" /f /q >nul 2>&1
 del "%UserProfile%\Desktop\OneDrive.lnk" /f /q >nul 2>&1
 del "%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /f /q >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourcis OneDrive supprimes%COLOR_RESET%
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nettoyage complet de OneDrive termine.%COLOR_RESET%
 call :FINISH_ACTION "OneDrive" "desinstalle"
@@ -3879,17 +3898,7 @@ echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%SPACE_AFTER_GB% Go
 echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%SPACE_FREED_GB% Go%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser.%COLOR_RESET%
-echo.
-<nul set /p ="%COLOR_YELLOW%Redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-call :AZCHOICE ON
-if !errorlevel! EQU 1 (
-    shutdown /r /t 10 /c "Redemarrage pour finaliser le nettoyage"
-    cls
-    echo.
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage en cours...%COLOR_RESET%
-    timeout /t 10 /nobreak >nul
-    exit
-)
+call :PROMPT_MANUAL_REBOOT
 set "SAGEID="
 set "SPACE_BEFORE_MB="
 set "SPACE_BEFORE_GB="
