@@ -351,7 +351,7 @@ if !errorlevel! EQU 1 (
     echo.
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage programme dans 10 secondes...%COLOR_RESET%
     timeout /t 5 /nobreak >nul
-    exit
+    exit /b
 )
 echo.
 exit /b 0
@@ -389,7 +389,7 @@ exit /b 0
 set "AZ_KEYS=%~1"
 set "AZ_ERRORLEVEL="
 for /f "usebackq delims=" %%E in (`powershell -NoProfile -Command "$valid='%AZ_KEYS%'.ToUpperInvariant(); while($true){ $k=[Console]::ReadKey($true); $ch=[char]::ToUpperInvariant($k.KeyChar); if($k.Key -match '^D([0-9])$'){ $ch=$Matches[1][0] } elseif($k.Key -match '^NumPad([0-9])$'){ $ch=$Matches[1][0] }; $idx=$valid.IndexOf([string]$ch); if($idx -ge 0){ [Console]::Write($idx+1); exit } }"`) do set "AZ_ERRORLEVEL=%%E"
-if not defined AZ_ERRORLEVEL set "AZ_ERRORLEVEL=1"
+if not defined AZ_ERRORLEVEL set "AZ_ERRORLEVEL=0"
 exit /b !AZ_ERRORLEVEL!
 
 :MENU_PRINCIPAL
@@ -836,7 +836,7 @@ reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\CloudContent" /v "DisableTailo
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v "TailoredExperiencesWithDiagnosticDataEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Privacy" /v "ActivityHistoryEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Siuf\Rules" /v "NumberOfSIUFInPeriod" /t REG_DWORD /d 0 /f >nul 2>&1
-REM PeriodInNanoSeconds laisse intact : aucune suppression hors section restauration.
+:: PeriodInNanoSeconds laisse intact : aucune suppression hors section restauration.
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Error Reporting" /v "Disabled" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Feedback" /v "AllowTelemetry" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Input\TIPC" /v "Enabled" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1198,7 +1198,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Prefetch actif, SuperFetch opti
 :: 2.3 - FTH OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du tas tolerant aux pannes (FTH)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-REM Etat FTH laisse intact : aucune suppression hors section restauration.
+:: Etat FTH laisse intact : aucune suppression hors section restauration.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%FTH desactive - Performances memoire ameliorees%COLOR_RESET%
 
 :: 2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
@@ -1487,7 +1487,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MMCSS reseau configure%COLOR_RE
 :: 5.2 - Pile TCP/IP Win11
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Pile TCP/IP Win11 ^(BBR2, fix loopback localhost^)...%COLOR_RESET%
 netsh int tcp set global autotuninglevel=normal >nul 2>&1
-REM Conserve : "set heuristics" pilote encore forcews sur certaines builds/drivers.
+:: Conserve : "set heuristics" pilote encore forcews sur certaines builds/drivers.
 netsh int tcp set heuristics disabled >nul 2>&1
 netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
 netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
@@ -1512,13 +1512,14 @@ if "!PROFIL_POWER!"=="0" (
     netsh int tcp set global rsc=enabled >nul 2>&1
 )
 
-:: BBR2 applique sur les templates valides listes par "netsh int tcp set supplemental ?".
+:: BBR2 applique sur tous les templates valides
 netsh int tcp set supplemental template=automatic congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
-netsh int tcp set supplemental template=custom congestionprovider=bbr2 >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif ^(templates valides : Automatic, Internet, Datacenter, Compat, Custom^)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif ^(templates : Automatic, Internet, InternetCustom, Datacenter, DatacenterCustom, Compat^)%COLOR_RESET%
 
 :: TCP Pacing + ECN : essentiels pour BBR2 (pacing = parametre principal de BBR, ECN = signaux precoces congestion)
 netsh int tcp set global pacingprofile=always >nul 2>&1
@@ -1554,8 +1555,9 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyFor
 :: Pas de suppression ici : les cles invalides/anciennes sont laissees a une section restauration/nettoyage.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(aucune suppression hors restauration^)%COLOR_RESET%
 
-:: 5.7 - DNS Provider Priorities
-echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Cles DNS Provider ignorees ^(aucune suppression hors restauration^)%COLOR_RESET%
+:: 5.7 - Vidage du cache DNS (tous profils)
+ipconfig /flushdns >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Cache DNS vide%COLOR_RESET%
 
 :: 5.8 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->skip)
 if "!PROFIL_POWER!"=="1" (
@@ -1569,10 +1571,7 @@ if "!PROFIL_POWER!"=="1" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
 
-:: 5.9 - QoS Psched
-echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Reserve bandwidth QoS ignoree ^(aucune suppression hors restauration^)%COLOR_RESET%
-
-:: 5.10 - Optimisation cartes reseau
+:: 5.9 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
     if "!PROFIL_USAGE!"=="0" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO OFF, ITR 200 + registre force, EEE OFF^)...%COLOR_RESET%
@@ -1592,7 +1591,7 @@ if "!PROFIL_POWER!"=="0" (
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
 )
-:: 5.11 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
+:: 5.10 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preservation gestion energie USB ^(selective suspend conserve^)...%COLOR_RESET%
 ) else (
@@ -1604,7 +1603,7 @@ if "!PROFIL_POWER!"=="1" (
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee - Latence minimale%COLOR_RESET%
 )
-:: 5.12 - QoS Fortnite DSCP 46 (Gaming uniquement)
+:: 5.11 - QoS Fortnite DSCP 46 (Gaming uniquement)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1629,19 +1628,19 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite ignoree ^(Normal^) - aucune suppression hors restauration%COLOR_RESET%
 )
 
-:: 5.13 - Nettoyage des protocoles reseau
+:: 5.12 - Nettoyage des protocoles reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protocoles reseau inutiles (Bindings)...%COLOR_RESET%
 powershell -NoProfile -Command "Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.Virtual -eq $false } | ForEach-Object { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lldp','ms_implat' -ErrorAction SilentlyContinue }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Bindings reseau nettoyes (LLDP, MS_IMPLAT)%COLOR_RESET%
 
-:: 5.14 - Desactivation NetBIOS over TCP/IP
+:: 5.13 - Desactivation NetBIOS over TCP/IP
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de NetBIOS over TCP/IP...%COLOR_RESET%
 for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" /s ^| findstr /i /r "\\Tcpip_.*$" 2^>nul') do (
   reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NetBIOS desactive%COLOR_RESET%
 
-:: 5.15 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
+:: 5.14 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu=1 ^(Gaming : interrupts NIC sur CPU 1+^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Ndis\Parameters" /v RssBaseCpu /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1745,20 +1744,19 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Win8 Scaling ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
 
-:: 6.4 - MSI Mode Universel (Latence Peripheriques)
+:: 6.4 - MSI Mode GPU (Latence Peripheriques)
 if "!PROFIL_USAGE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du MSI Mode USB compatible ^(Gaming^)...%COLOR_RESET%
-    powershell -NoProfile -Command "Get-PnpDevice -Class USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ New-ItemProperty -Path $p -Name 'MSISupported' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } }" >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI USB activees ^(Gaming^)%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du MSI Mode GPU et USB ^(Gaming^)...%COLOR_RESET%
+    powershell -NoProfile -Command "Get-PnpDevice -Class Display,USB -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ New-ItemProperty -Path $p -Name 'MSISupported' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } }" >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Interruptions MSI GPU+USB activees ^(Gaming^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%MSI Mode USB ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%MSI Mode GPU+USB ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
 
 
 
 :: X - Fronts 25H2 (Recall / CloudExperienceHost / PhoneLink - YourPhone - Win11 24H2/25H2)
-if "!PROFIL_USAGE!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 ^(Recall / CEH / PhoneLink^) - Profil GAMING...%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des tweaks 25H2 ^(Recall / CEH / PhoneLink^)...%COLOR_RESET%
 
 :: X.1 - Recall (Win11 24H2/25H2 tous les Copilot+) - desactive snapshots + disponibilite Recall
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $os=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'; $build=[int]$os.CurrentBuild; if($build -ge 26100){ if(!(Test-Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'TurnOffSavingSnapshots' -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'AllowRecallEnablement' -PropertyType DWord -Value 0 -Force | Out-Null; if(!(Test-Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI')){New-Item -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Force|Out-Null}; New-ItemProperty -Path 'HKCU:\SOFTWARE\Policies\Microsoft\Windows\WindowsAI' -Name 'DisableAIDataAnalysis' -PropertyType DWord -Value 1 -Force | Out-Null; Write-Output 'Recall: snapshots OFF + availability OFF (Win11 24H2/25H2)' } else { Write-Output 'Recall: ignore (pre-24H2)' }" >nul 2>&1
@@ -1774,9 +1772,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%CloudExperienceHost mute (Creat
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%PhoneLink / YourPhone background activation bloquee^%COLOR_RESET%
-) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Tweaks 25H2 Recall / CEH / PhoneLink ignores en profil NORMAL%COLOR_RESET%
-)
 
 :: 6.5 - Accessibilite OFF
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des raccourcis d'accessibilite...%COLOR_RESET%
@@ -2010,6 +2005,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing desactive - La
 
 :: 7.12 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTimerResolution...%COLOR_RESET%
+taskkill /F /IM SetTimerResolution.exe >nul 2>&1
 set "STR_DIR=%ProgramFiles%\SetTimerResolution"
 set "STR_OLD_DIR=%ProgramFiles%\OptimizerAllInOne"
 set "STR_EXE=%STR_DIR%\SetTimerResolution.exe"
@@ -2032,7 +2028,6 @@ if exist "%STR_EXE%" (
     )
 )
 if exist "%STR_EXE%" (
-    taskkill /F /IM SetTimerResolution.exe >nul 2>&1
     powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci SetTimerResolution configure ^(5070^)%COLOR_RESET%
     start "" "%STR_EXE%" --resolution 5070 --no-console
