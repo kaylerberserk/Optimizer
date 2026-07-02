@@ -396,7 +396,7 @@ exit /b 0
 :AZCHOICE
 set "AZ_KEYS=%~1"
 set "AZ_ERRORLEVEL="
-for /f "usebackq delims=" %%E in (`powershell -NoProfile -Command "$valid='%AZ_KEYS%'.ToUpperInvariant(); while($true){ $k=[Console]::ReadKey($true); $ch=[char]::ToUpperInvariant($k.KeyChar); if($k.Key -match '^D([0-9])$'){ $ch=$Matches[1][0] } elseif($k.Key -match '^NumPad([0-9])$'){ $ch=$Matches[1][0] }; $idx=$valid.IndexOf([string]$ch); if($idx -ge 0){ [Console]::Write($idx+1); exit } }"`) do set "AZ_ERRORLEVEL=%%E"
+for /f "usebackq delims=" %%E in (`powershell -NoProfile -Command "$valid='%AZ_KEYS%'.ToUpperInvariant(); while([Console]::KeyAvailable){ [void][Console]::ReadKey($true) }; while($true){ $k=[Console]::ReadKey($true); $ch=[char]::ToUpperInvariant($k.KeyChar); if($k.Key -match '^D([0-9])$'){ $ch=$Matches[1][0] } elseif($k.Key -match '^NumPad([0-9])$'){ $ch=$Matches[1][0] } elseif($k.Key -match '^[A-Z]$'){ $ch=$k.Key.ToString()[0] }; $idx=$valid.IndexOf([string]$ch); if($idx -ge 0){ [Console]::Write($idx+1); exit } }"`) do set "AZ_ERRORLEVEL=%%E"
 if not defined AZ_ERRORLEVEL set "AZ_ERRORLEVEL=1"
 exit /b !AZ_ERRORLEVEL!
 
