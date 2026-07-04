@@ -257,7 +257,7 @@ set "IS_GAMING_ECO=0"
 if "!PROFIL_USAGE!"=="0" (
     if "!PROFIL_POWER!"=="1" set "IS_GAMING_ECO=1"
 )
-exit /b
+exit /b 0
 
 :CHOISIR_PROFILS
 call :INIT_PROFILS
@@ -383,7 +383,7 @@ exit /b 0
 
 :: %~1 = label (ignore, conserve pour compatibilite appelants)  %~2 = message
 :ASK_IF_INTERACTIVE
-if not "%SKIP_PAUSE%"=="0" exit /b 0
+if not "!SKIP_PAUSE!"=="0" exit /b 0
 call :ASK_CONFIRM "%~2"
 :: Retourne 0 pour Oui, 1 pour Non. Les appelants gerent le routage.
 if !errorlevel! EQU 1 exit /b 1
@@ -407,7 +407,7 @@ exit /b 0
 set "AZ_KEYS=%~1"
 set "AZ_EMPTY_COUNT=0"
 REM ReadKey vide le buffer clavier apres une touche (evite Entree/N avale par le menu suivant).
-set "AZ_READKEY_PS=JABrAGUAeQBzACAAPQAgACQAZQBuAHYAOgBBAFoAXwBLAEUAWQBTAAoAdAByAHkAIAB7AAoAIAAgACQAawBlAHkAIAA9ACAAWwBDAG8AbgBzAG8AbABlAF0AOgA6AFIAZQBhAGQASwBlAHkAKAAkAHQAcgB1AGUAKQAKACAAIABpAGYAIAAoACQAawBlAHkALgBLAGUAeQAgAC0AZQBxACAAWwBDAG8AbgBzAG8AbABlAEsAZQB5AF0AOgA6AEUAcwBjAGEAcABlACkAIAB7AAoAIAAgACAAIAB3AGgAaQBsAGUAIAAoAFsAQwBvAG4AcwBvAGwAZQBdADoAOgBLAGUAeQBBAHYAYQBpAGwAYQBiAGwAZQApACAAewAgAFsAdgBvAGkAZABdAFsAQwBvAG4AcwBvAGwAZQBdADoAOgBSAGUAYQBkAEsAZQB5ACgAJAB0AHIAdQBlACkAIAB9AAoAIAAgACAAIAAnAFMAQQBGAEUAJwAKACAAIAAgACAAZQB4AGkAdAAKACAAIAB9AAoAIAAgACQAYwBvAGQAZQAgAD0AIABbAGkAbgB0AF0AWwBjAGgAYQByAF0AJABrAGUAeQAuAEsAZQB5AEMAaABhAHIACgAgACAAJABtAGEAcAAgAD0AIABAAHsACgAgACAAIAAgADMAOAAgAD0AIAAnADEAJwAKACAAIAAgACAAMgAzADMAIAA9ACAAJwAyACcACgAgACAAIAAgADMANAAgAD0AIAAnADMAJwAKACAAIAAgACAAMwA5ACAAPQAgACcANAAnAAoAIAAgACAAIAA0ADAAIAA9ACAAJwA1ACcACgAgACAAIAAgADQANQAgAD0AIAAnADYAJwAKACAAIAAgACAAMgAzADIAIAA9ACAAJwA3ACcACgAgACAAIAAgADkANQAgAD0AIAAnADgAJwAKACAAIAAgACAAMgAzADEAIAA9ACAAJwA5ACcACgAgACAAIAAgADIAMgA0ACAAPQAgACcAMAAnAAoAIAAgAH0ACgAgACAAaQBmACAAKAAkAG0AYQBwAC4AQwBvAG4AdABhAGkAbgBzAEsAZQB5ACgAJABjAG8AZABlACkAKQAgAHsACgAgACAAIAAgACQAYwBoAGEAcgAgAD0AIAAkAG0AYQBwAFsAJABjAG8AZABlAF0ACgAgACAAfQAgAGUAbABzAGUAIAB7AAoAIAAgACAAIAAkAGMAaABhAHIAIAA9ACAAWwBzAHQAcgBpAG4AZwBdACQAawBlAHkALgBLAGUAeQBDAGgAYQByAAoAIAAgAH0ACgAgACAAaQBmACAAKABbAHMAdAByAGkAbgBnAF0AOgA6AEkAcwBOAHUAbABsAE8AcgBXAGgAaQB0AGUAUwBwAGEAYwBlACgAJABjAGgAYQByACkAKQAgAHsACgAgACAAIAAgAHcAaABpAGwAZQAgACgAWwBDAG8AbgBzAG8AbABlAF0AOgA6AEsAZQB5AEEAdgBhAGkAbABhAGIAbABlACkAIAB7ACAAWwB2AG8AaQBkAF0AWwBDAG8AbgBzAG8AbABlAF0AOgA6AFIAZQBhAGQASwBlAHkAKAAkAHQAcgB1AGUAKQAgAH0ACgAgACAAIAAgACcARQBNAFAAVABZACcACgAgACAAIAAgAGUAeABpAHQACgAgACAAfQAKACAAIAAkAGkAZAB4ACAAPQAgACQAawBlAHkAcwAuAEkAbgBkAGUAeABPAGYAKAAkAGMAaABhAHIALAAgAFsAUwB0AHIAaQBuAGcAQwBvAG0AcABhAHIAaQBzAG8AbgBdADoAOgBPAHIAZABpAG4AYQBsAEkAZwBuAG8AcgBlAEMAYQBzAGUAKQAKACAAIAB3AGgAaQBsAGUAIAAoAFsAQwBvAG4AcwBvAGwAZQBdADoAOgBLAGUAeQBBAHYAYQBpAGwAYQBiAGwAZQApACAAewAgAFsAdgBvAGkAZABdAFsAQwBvAG4AcwBvAGwAZQBdADoAOgBSAGUAYQBkAEsAZQB5ACgAJAB0AHIAdQBlACkAIAB9AAoAIAAgAGkAZgAgACgAJABpAGQAeAAgAC0AZwBlACAAMAApACAAewAKACAAIAAgACAAWwBzAHQAcgBpAG4AZwBdACgAJABpAGQAeAAgACsAIAAxACkACgAgACAAfQAgAGUAbABzAGUAIAB7AAoAIAAgACAAIAAnAC0AMQAnAAoAIAAgAH0ACgB9ACAAYwBhAHQAYwBoACAAewAKACAAIAAnAEwASQBOAEUAJwAKAH0A"
+set "AZ_READKEY_PS=JABrAGUAeQBzACAAPQAgACQAZQBuAHYAOgBBAFoAXwBLAEUAWQBTAAoAdAByAHkAIAB7AAoAIAAgAHcAaABpAGwAZQAgACgAWwBDAG8AbgBzAG8AbABlAF0AOgA6AEsAZQB5AEEAdgBhAGkAbABhAGIAbABlACkAIAB7ACAAWwB2AG8AaQBkAF0AWwBDAG8AbgBzAG8AbABlAF0AOgA6AFIAZQBhAGQASwBlAHkAKAAkAHQAcgB1AGUAKQAgAH0ACgAgACAAJABrAGUAeQAgAD0AIABbAEMAbwBuAHMAbwBsAGUAXQA6ADoAUgBlAGEAZABLAGUAeQAoACQAdAByAHUAZQApAAoAIAAgAGkAZgAgACgAJABrAGUAeQAuAEsAZQB5ACAALQBlAHEAIABbAEMAbwBuAHMAbwBsAGUASwBlAHkAXQA6ADoARQBzAGMAYQBwAGUAKQAgAHsACgAgACAAIAAgAHcAaABpAGwAZQAgACgAWwBDAG8AbgBzAG8AbABlAF0AOgA6AEsAZQB5AEEAdgBhAGkAbABhAGIAbABlACkAIAB7ACAAWwB2AG8AaQBkAF0AWwBDAG8AbgBzAG8AbABlAF0AOgA6AFIAZQBhAGQASwBlAHkAKAAkAHQAcgB1AGUAKQAgAH0ACgAgACAAIAAgACcAUwBBAEYARQAnAAoAIAAgACAAIABlAHgAaQB0AAoAIAAgAH0ACgAgACAAJABjAG8AZABlACAAPQAgAFsAaQBuAHQAXQBbAGMAaABhAHIAXQAkAGsAZQB5AC4ASwBlAHkAQwBoAGEAcgAKACAAIAAkAG0AYQBwACAAPQAgAEAAewAKACAAIAAgACAAMwA4ACAAPQAgACcAMQAnAAoAIAAgACAAIAAyADMAMwAgAD0AIAAnADIAJwAKACAAIAAgACAAMwA0ACAAPQAgACcAMwAnAAoAIAAgACAAIAAzADkAIAA9ACAAJwA0ACcACgAgACAAIAAgADQAMAAgAD0AIAAnADUAJwAKACAAIAAgACAANAA1ACAAPQAgACcANgAnAAoAIAAgACAAIAAyADMAMgAgAD0AIAAnADcAJwAKACAAIAAgACAAOQA1ACAAPQAgACcAOAAnAAoAIAAgACAAIAAyADMAMQAgAD0AIAAnADkAJwAKACAAIAAgACAAMgAyADQAIAA9ACAAJwAwACcACgAgACAAfQAKACAAIABpAGYAIAAoACQAbQBhAHAALgBDAG8AbgB0AGEAaQBuAHMASwBlAHkAKAAkAGMAbwBkAGUAKQApACAAewAKACAAIAAgACAAJABjAGgAYQByACAAPQAgACQAbQBhAHAAWwAkAGMAbwBkAGUAXQAKACAAIAB9ACAAZQBsAHMAZQAgAHsACgAgACAAIAAgACQAYwBoAGEAcgAgAD0AIABbAHMAdAByAGkAbgBnAF0AJABrAGUAeQAuAEsAZQB5AEMAaABhAHIACgAgACAAfQAKACAAIABpAGYAIAAoAFsAcwB0AHIAaQBuAGcAXQA6ADoASQBzAE4AdQBsAGwATwByAFcAaABpAHQAZQBTAHAAYQBjAGUAKAAkAGMAaABhAHIAKQApACAAewAKACAAIAAgACAAdwBoAGkAbABlACAAKABbAEMAbwBuAHMAbwBsAGUAXQA6ADoASwBlAHkAQQB2AGEAaQBsAGEAYgBsAGUAKQAgAHsAIABbAHYAbwBpAGQAXQBbAEMAbwBuAHMAbwBsAGUAXQA6ADoAUgBlAGEAZABLAGUAeQAoACQAdAByAHUAZQApACAAfQAKACAAIAAgACAAJwBFAE0AUABUAFkAJwAKACAAIAAgACAAZQB4AGkAdAAKACAAIAB9AAoAIAAgACQAaQBkAHgAIAA9ACAAJABrAGUAeQBzAC4ASQBuAGQAZQB4AE8AZgAoACQAYwBoAGEAcgAsACAAWwBTAHQAcgBpAG4AZwBDAG8AbQBwAGEAcgBpAHMAbwBuAF0AOgA6AE8AcgBkAGkAbgBhAGwASQBnAG4AbwByAGUAQwBhAHMAZQApAAoAIAAgAHcAaABpAGwAZQAgACgAWwBDAG8AbgBzAG8AbABlAF0AOgA6AEsAZQB5AEEAdgBhAGkAbABhAGIAbABlACkAIAB7ACAAWwB2AG8AaQBkAF0AWwBDAG8AbgBzAG8AbABlAF0AOgA6AFIAZQBhAGQASwBlAHkAKAAkAHQAcgB1AGUAKQAgAH0ACgAgACAAaQBmACAAKAAkAGkAZAB4ACAALQBnAGUAIAAwACkAIAB7AAoAIAAgACAAIABbAHMAdAByAGkAbgBnAF0AKAAkAGkAZAB4ACAAKwAgADEAKQAKACAAIAB9ACAAZQBsAHMAZQAgAHsACgAgACAAIAAgACcALQAxACcACgAgACAAfQAKAH0AIABjAGEAdABjAGgAIAB7AAoAIAAgAHcAaABpAGwAZQAgACgAWwBDAG8AbgBzAG8AbABlAF0AOgA6AEsAZQB5AEEAdgBhAGkAbABhAGIAbABlACkAIAB7ACAAWwB2AG8AaQBkAF0AWwBDAG8AbgBzAG8AbABlAF0AOgA6AFIAZQBhAGQASwBlAHkAKAAkAHQAcgB1AGUAKQAgAH0ACgAgACAAJwBMAEkATgBFACcACgB9AA=="
 
 :AZCHOICE_READ
 set "AZ_READKEY_RESULT="
@@ -994,7 +994,7 @@ attrib -r "%HOSTS%" >nul 2>&1
 :: Backup du fichier hosts avant modification
 copy "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
 :: Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
-powershell -NoProfile -Command "$h='%HOSTS%';$tmp=$h+'.tmp';$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII);$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;(Get-Item $h).Attributes='Normal';[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);Move-Item -Path $tmp -Destination $h -Force};exit 0}catch{Remove-Item -Path $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h='%HOSTS%';$tmp=[System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($h),([System.IO.Path]::GetFileName($h)+'.'+[guid]::NewGuid().ToString('N')+'.tmp'));$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path -LiteralPath $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII)}else{$cur=''};$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;if(Test-Path -LiteralPath $h){(Get-Item -LiteralPath $h).Attributes='Normal'};[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);[System.IO.File]::Copy($tmp,$h,$true);Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 0}catch{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
 
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Domaines telemetrie bloques ^(bloc unique, adaptatif^)%COLOR_RESET%
@@ -1528,7 +1528,7 @@ echo %COLOR_WHITE%  Profil GAMING = ping/reactivite max ; profil NORMAL = stabil
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
-if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
+if "!SKIP_PAUSE!"=="0" if "!DETECTE_PORTABLE!"=="1" (
     echo [*] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations reseau peuvent impacter :%COLOR_RESET%
@@ -1605,9 +1605,7 @@ echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%loopbacklargemtu reste desac
 
 :: 5.3 - Parametres TCP registre
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v MaxUserPort /t REG_DWORD /d 65534 /f >nul 2>&1
 if "!PROFIL_USAGE!"=="0" (
-    reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpTimedWaitDelay /t REG_DWORD /d 30 /f >nul 2>&1
     REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, pas de suppression hors section restauration.
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /t REG_DWORD /d 1500 /f >nul 2>&1
 )
@@ -1616,10 +1614,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /t
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v EnablePMTUDiscovery /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpMaxDataRetransmissions /t REG_DWORD /d 5 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Registre TCP configure%COLOR_RESET%
-:: 5.4 - DefaultTTL
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v DefaultTTL /t REG_DWORD /d 64 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DefaultTTL defini a 64%COLOR_RESET%
-:: 5.5 - MSI Mode cartes reseau
+:: 5.4 - MSI Mode cartes reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI Mode cartes reseau...%COLOR_RESET%
 powershell -NoProfile -Command "Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | ForEach-Object { $p = 'HKLM:\SYSTEM\CurrentControlSet\Enum\' + $_.InstanceId + '\Device Parameters\Interrupt Management\MessageSignaledInterruptProperties'; if(Test-Path $p){ New-ItemProperty -Path $p -Name 'MSISupported' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MSI Mode active sur cartes reseau%COLOR_RESET%
@@ -1744,7 +1739,7 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
 :: Avertissement mode manuel sur PC portable : profil NORMAL conserve une acceleration trackpad legere.
-if "%SKIP_PAUSE%"=="0" if "!DETECTE_PORTABLE!"=="1" (
+if "!SKIP_PAUSE!"=="0" if "!DETECTE_PORTABLE!"=="1" (
     echo [*] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations peripheriques peuvent impacter :%COLOR_RESET%
@@ -1839,7 +1834,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Services\hidparse\Parameters" /v "EnableB
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%HID Parse et Input Delay optimises%COLOR_RESET%
 
 call :FINISH_ACTION "Optimisations peripheriques" "appliquees"
-exit /b
+exit /b 0
 
 :TOGGLE_ECONOMIES_ENERGIE
 cls
@@ -2397,7 +2392,7 @@ goto :MENU_PRINCIPAL
 
 :DESACTIVER_PROTECTIONS_SECURITE
 call :INIT_PROFILS
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_PROTECTIONS_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_PROTECTIONS_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : DESACTIVATION DES PROTECTIONS DE SECURITE%COLOR_RESET%
@@ -2604,7 +2599,7 @@ call :FINISH_ACTION "Windows Defender" "reactive"
 exit /b
 
 :DESACTIVER_DEFENDER_SECTION
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_DEFENDER_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_DEFENDER_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous vraiment desactiver Windows Defender ?%COLOR_RESET%
@@ -2817,7 +2812,7 @@ call :FINISH_ACTION "UAC" "active"
 exit /b
 
 :DESACTIVER_UAC_SECTION
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_UAC_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_UAC_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : DESACTIVER L'UAC%COLOR_RESET%
@@ -2931,7 +2926,7 @@ call :FINISH_ACTION "Animations" "activees"
 exit /b
 
 :DESACTIVER_ANIMATIONS_SECTION
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_ANIMATIONS_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_ANIMATIONS_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% CONFIRMATION : DESACTIVER LES ANIMATIONS WINDOWS%COLOR_RESET%
@@ -3076,7 +3071,7 @@ call :FINISH_ACTION "Copilot" "active"
 exit /b
 
 :DESACTIVER_COPILOT_SECTION
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_COPILOT_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_COPILOT_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous vraiment desactiver Copilot ?%COLOR_RESET%
@@ -3168,7 +3163,7 @@ call :FINISH_ACTION "Widgets" "active"
 exit /b
 
 :DESACTIVER_WIDGETS_SECTION
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_WIDGETS_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_WIDGETS_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous vraiment desactiver les Widgets ?%COLOR_RESET%
@@ -3222,7 +3217,7 @@ call :FINISH_ACTION "Recall" "active"
 exit /b
 
 :DESACTIVER_RECALL_SECTION
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_RECALL_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_RECALL_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous vraiment desactiver Recall ?%COLOR_RESET%
@@ -3309,7 +3304,7 @@ call :FINISH_ACTION "Phone Link / YourPhone" "bloque"
 exit /b
 
 :DESACTIVER_TOUT_IA_WIDGETS_RECALL
-if not "%SKIP_PAUSE%"=="0" goto :DESACTIVER_TOUT_IA_RUN
+if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_TOUT_IA_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + PhoneLink^) ?%COLOR_RESET%
@@ -4120,7 +4115,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 call :INSTALLER_DIRECTX
 
-if "%SKIP_PAUSE%"=="0" (
+if "!SKIP_PAUSE!"=="0" (
     echo.
     pause
 )

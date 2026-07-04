@@ -63,8 +63,8 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, initialRTO=1000, maxsynretransmissions=2, BBR2 (tous templates), TCP Pacing + ECN, Tcp1323Opts=3, DefaultTTL=64, TcpTimedWaitDelay=30, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, ITR=200, Rx/Tx buffers max. En Eco : Nagle neutre, RSC/LSO ON. |
-| **[2]** | **NORMAL** | BBR2 (tous templates), TCP Pacing + ECN, Tcp1323Opts=3, VRR ON, veille GPU préservée, Nagle/DelACK défaut Windows (ou neutre en Eco), SystemResponsiveness=20, accélération trackpad légère sur portable. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, initialRTO=1000, maxsynretransmissions=2, Tcp1323Opts=3, TCP Pacing + ECN, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, ITR=200, Rx/Tx buffers max. En Eco : Nagle neutre, RSC/LSO ON. |
+| **[2]** | **NORMAL** | Tcp1323Opts=3, TCP Pacing + ECN, VRR ON, veille GPU préservée, Nagle/DelACK défaut Windows (ou neutre en Eco), SystemResponsiveness=20, accélération trackpad légère sur portable. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
 > *Pilote **l'énergie, le niveau de tuning NIC et le plan d'alimentation**.*
@@ -94,7 +94,7 @@ Exceptions réseau :
 - **[2] Mémoire** : Ajustement de la gestion RAM pour éliminer les micro-saccades (stuttering).
 - **[3] Disques** : Optimisation des accès I/O pour accélérer le chargement des jeux et logiciels.
 - **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
-- **[5] Réseau** : Optimisation de la pile TCP/IP (BBR2 tous templates, TCP Pacing + ECN, Tcp1323Opts=3, DefaultTTL=64, TcpMaxDataRetransmissions=5, MSI cartes réseau + USB) et tuning fin de la carte réseau selon le profil (Eco : RSC/LSO/checksum ON, énergie préservée, InterruptModeration adaptatif ; MaxPerf : EEE/GreenGbe/PacketCoalescing OFF, RSC/LSO OFF en Gaming, ITR=200 en Gaming+MaxPerf, Rx/Tx buffers max).
+- **[5] Réseau** : Optimisation de la pile TCP/IP (TCP Pacing + ECN, TcpMaxDataRetransmissions=5, MSI cartes réseau + USB) et tuning fin de la carte réseau selon le profil (Eco : RSC/LSO/checksum ON, énergie préservée, InterruptModeration adaptatif ; MaxPerf : EEE/GreenGbe/PacketCoalescing OFF, RSC/LSO OFF en Gaming, ITR=200 en Gaming+MaxPerf, Rx/Tx buffers max).
 - **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance, avec choix d'usage pour appliquer le bon tuning NIC.
 - **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU, avec choix d'usage pour le mode Gaming/Normal.
