@@ -131,8 +131,6 @@ if !errorlevel! NEQ 0 (
 :: Etape 2 : PowerShell (deja verifie au lancement)
 set /a "LOAD_STEP+=1"
 call :PROGRESS_BAR %LOAD_STEP% %LOAD_TOTAL% "Verification de PowerShell"
-:: Prechauffage PowerShell pour accelerer les appels ulterieurs (menus)
-powershell -NoProfile -Command "1" >nul 2>&1
 
 :: Etape 3 : Internet
 set /a "LOAD_STEP+=1"
@@ -150,6 +148,31 @@ call :PROGRESS_BAR %LOAD_STEP% %LOAD_TOTAL% "Preparation de l'interface"
 timeout /t 1 /nobreak >nul
 set "LOAD_STEP="
 set "LOAD_TOTAL="
+
+:: Ecran d'information (1 fois par session)
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE%                     INFORMATIONS A SAVOIR%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %STYLE_BOLD%%COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%Ce script modifie le registre, les services et les parametres%COLOR_RESET%
+echo %COLOR_WHITE%systeme pour optimiser les performances Windows.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Un point de restauration est recommande avant toute modification.%COLOR_RESET%
+echo %COLOR_WHITE%   Utilisez l'option [R] dans le menu principal.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Les optimisations sont organisees en 2 axes :%COLOR_RESET%
+echo %COLOR_WHITE%   - USAGE : Gaming (latence reduite) ou Normal (bureautique)%COLOR_RESET%
+echo %COLOR_WHITE%   - ALIMENTATION : MaxPerf ou Eco%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Clavier AZERTY : les chiffres (1-9,0) necessitent MAJ.%COLOR_RESET%
+echo %COLOR_WHITE%   %COLOR_YELLOW%Bip = touche non valide%COLOR_RESET%%COLOR_WHITE% : utilisez uniquement les touches affichees a l'ecran.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Utilisez les lettres comme indiquees dans le menu %COLOR_CYAN%[O, N, R, G, W, T, Q]%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_GREEN%Appuyez sur une touche pour acceder au menu...%COLOR_RESET%
+pause >nul
 
 goto :MENU_PRINCIPAL
 
@@ -393,18 +416,9 @@ if !errorlevel! EQU 3 (
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
 
-:: Entree clavier via PowerShell ReadKey (compatible AZERTY/QWERTY/pave numerique).
-:: VirtualKey pour les chiffres (layout-independent), ToUpper pour les lettres.
-:: Message d'info uniquement sur touche invalide (bip).
+:: Lecture d'une entree menu via choice.exe (silencieux : pas d'ecran de la liste).
 :AZCHOICE
-powershell -NoProfile -Command "$v='%~1';"^
- "do{$k=[Console]::ReadKey($true);$n=[int]$k.Key;"^
- "if($n-eq 3-or($k.Modifiers-eq 8-and$n-eq 67)){exit 0}"^
- "if($n-ge 96){$n-=48}"^
- "if($n-ge 48-and$n-le 57){$i=$v.IndexOf([char]$n);if($i-ge 0){exit($i+1)}}"^
- "$i=$v.IndexOf([char]::ToUpper($k.KeyChar));if($i-ge 0){exit($i+1)}"^
- "Write-Host '';Write-Host '[INFO] Touche non valide'}"^
- "while($true)"
+choice /c %~1 /n
 exit /b !errorlevel!
 
 :MENU_PRINCIPAL
