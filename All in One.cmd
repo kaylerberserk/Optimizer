@@ -155,23 +155,22 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE%                     INFORMATIONS A SAVOIR%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_WHITE%Ce script modifie le registre, les services et les parametres%COLOR_RESET%
-echo %COLOR_WHITE%systeme pour optimiser les performances Windows.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Un point de restauration est recommande avant toute modification.%COLOR_RESET%
-echo %COLOR_WHITE%   Utilisez l'option [R] dans le menu principal.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Les optimisations sont organisees en 2 axes :%COLOR_RESET%
-echo %COLOR_WHITE%   - USAGE : Gaming (latence reduite) ou Normal (bureautique)%COLOR_RESET%
-echo %COLOR_WHITE%   - ALIMENTATION : MaxPerf ou Eco%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Clavier AZERTY : les chiffres (1-9,0) necessitent MAJ.%COLOR_RESET%
-echo %COLOR_WHITE%   %COLOR_YELLOW%Bip = touche non valide%COLOR_RESET%%COLOR_WHITE% : utilisez uniquement les touches affichees a l'ecran.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Utilisez les lettres comme indiquees dans le menu %COLOR_CYAN%[O, N, R, G, W, T, Q]%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les %STYLE_BOLD%%COLOR_YELLOW%chiffres haut%COLOR_RESET%%COLOR_WHITE% (%STYLE_BOLD%1 2 3... 9 0%COLOR_RESET%%COLOR_WHITE%) du clavier necessitent %STYLE_BOLD%MAJ%COLOR_RESET%%COLOR_WHITE% pour les menus.%COLOR_RESET%
+echo %COLOR_WHITE%       %STYLE_BOLD%%COLOR_YELLOW%Appuyez sur MAJ + chiffre%COLOR_RESET%%COLOR_WHITE% pour les menus numerotes.%COLOR_RESET%
+echo %COLOR_WHITE%       %COLOR_YELLOW%Bip%COLOR_RESET%%COLOR_WHITE% = touche non valide.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_GREEN%Appuyez sur une touche pour acceder au menu...%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Utilisez le menu %STYLE_BOLD%%COLOR_CYAN%"Tout optimiser"%COLOR_RESET%%COLOR_WHITE% [%STYLE_BOLD%O%COLOR_RESET%%COLOR_WHITE%] et les options%COLOR_RESET%
+echo %COLOR_WHITE%       %STYLE_BOLD%%COLOR_GREEN%recommandees%COLOR_RESET%%COLOR_WHITE% par defaut si vous n'etes pas expert.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Un %STYLE_BOLD%%COLOR_YELLOW%point de restauration%COLOR_RESET%%COLOR_WHITE% est recommande avant toute modification.%COLOR_RESET%
+echo %COLOR_WHITE%    Utilisez l'option %STYLE_BOLD%%COLOR_CYAN%[R]%COLOR_RESET%%COLOR_WHITE% dans le menu principal.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_YELLOW%Appuyez sur une touche pour acceder au menu...%COLOR_RESET%
 pause >nul
 
 goto :MENU_PRINCIPAL
@@ -215,7 +214,7 @@ if not "%~1"=="1" (
 :: Detection materiel en une seule commande pour eviter les scripts temporaires fragiles en CMD.
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $res+='GPU:'+($gn -join ' / ')}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}elseif($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines((Join-Path $env:TEMP 'hw_info.tmp'), $res)" >nul 2>&1
 if !errorlevel! NEQ 0 (
-    echo [*] %COLOR_YELLOW%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
 )
 if exist "%TEMP%\hw_info.tmp" (
     for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
@@ -1457,7 +1456,7 @@ if "!HAS_NVIDIA!"=="1" (
         echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA global ignore en profil NORMAL pour preserver autonomie, chauffe et silence%COLOR_RESET%
     )
 ) else (
-    echo [*] GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore%COLOR_RESET%
 )
 
 call :FINISH_ACTION "Optimisations GPU" "terminees"
@@ -1476,7 +1475,7 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
 if "!SKIP_PAUSE!"=="0" if "!DETECTE_PORTABLE!"=="1" (
-    echo [*] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations reseau peuvent impacter :%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Wi-Fi%COLOR_RESET% : Nagle/DelACK OFF peut destabiliser le Wi-Fi%COLOR_RESET%
@@ -1687,7 +1686,7 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 
 REM  Avertissement mode manuel sur PC portable : profil NORMAL conserve une acceleration trackpad legere.
 if "!SKIP_PAUSE!"=="0" if "!DETECTE_PORTABLE!"=="1" (
-    echo [*] %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%PC PORTABLE DETECTE - MODE MANUEL%COLOR_RESET%
     echo.
     echo %COLOR_WHITE%Vous etes sur un %COLOR_CYAN%PC Portable%COLOR_RESET%. Les optimisations peripheriques peuvent impacter :%COLOR_RESET%
     echo %COLOR_WHITE%  - %COLOR_YELLOW%Trackpad%COLOR_RESET% : Acceleration OFF rend le trackpad moins naturel%COLOR_RESET%
@@ -2345,7 +2344,7 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : DESACTIVATION DES PROTECTIONS DE SECURITE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo [*] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
 echo %COLOR_WHITE%  Cette section desactive les protections contre les vulnerabilites%COLOR_RESET%
 echo %COLOR_WHITE%  materielles (Spectre, Meltdown) et certaines mitigations noyau.%COLOR_RESET%
 echo.
@@ -2632,7 +2631,7 @@ echo.
 echo %COLOR_WHITE%  VBS (= Virtualization Based Security) et HVCI (= Memory Integrity) sont des protections%COLOR_RESET%
 echo %COLOR_WHITE%  du noyau Windows. Elles renforcent la securite mais coutent jusqu'a -25%% de FPS en jeu.%COLOR_RESET%
 echo.
-echo [*] %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains jeux avec anti-triche (Valorant, CS2, Call of Duty)%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains jeux avec anti-triche (Valorant, CS2, Call of Duty)%COLOR_RESET%
 echo %COLOR_YELLOW%exigent que VBS/HVCI soit ACTIVE pour pouvoir lancer le jeu.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer VBS/HVCI (Securite maximale)%COLOR_RESET%
@@ -2775,7 +2774,7 @@ echo %COLOR_WHITE%- Ce script desactive aussi des avertissements SmartScreen / m
 echo %COLOR_WHITE%- Reserve aux bancs de test ou utilisateurs conscients du risque.%COLOR_RESET%
 echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Desactiver l'UAC supprime la protection d'elevation de privileges - les programmes malveillants peuvent executer en admin sans confirmation.%COLOR_RESET%
 echo.
-echo [*] %COLOR_YELLOW%LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%LAB UNIQUEMENT : plus aucun avertissement au lancement de fichiers.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_UAC_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC et les avertissements lies ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
@@ -3652,7 +3651,7 @@ REM  Analyse espace initial
 for /f %%a in ('powershell -NoProfile -NoLogo -Command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
 if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
 
-echo [*] %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
 echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, rapports d'erreurs,%COLOR_RESET%
 echo %COLOR_WHITE%  corbeille, caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
 echo %COLOR_WHITE%  notifications et journaux systeme.%COLOR_RESET%
@@ -3999,7 +3998,7 @@ if %VC2015X86%==0 (
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
         if !errorlevel! NEQ 0 (
-            echo [*] %COLOR_YELLOW%VC++ 2015-2022 x86 : l'installateur a retourne une erreur.%COLOR_RESET%
+            echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%VC++ 2015-2022 x86 : l'installateur a retourne une erreur.%COLOR_RESET%
         )
     )
 )
@@ -4014,7 +4013,7 @@ if %VC2015X64%==0 (
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
         if !errorlevel! NEQ 0 (
-            echo [*] %COLOR_YELLOW%VC++ 2015-2022 x64 : l'installateur a retourne une erreur.%COLOR_RESET%
+            echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%VC++ 2015-2022 x64 : l'installateur a retourne une erreur.%COLOR_RESET%
         )
     )
 )
@@ -4157,7 +4156,7 @@ echo %STYLE_BOLD%%COLOR_WHITE% AU REVOIR! %COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Merci d'avoir utilise le script d'optimisation! %COLOR_RESET%
-echo %COLOR_YELLOW%[!]%COLOR_RESET% %COLOR_YELLOW%N'oubliez pas de redemarrer votre PC pour finaliser l'optimisation.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_YELLOW%N'oubliez pas de redemarrer votre PC pour finaliser l'optimisation.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 timeout /t 3 /nobreak >nul
