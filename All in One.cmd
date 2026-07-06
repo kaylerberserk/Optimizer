@@ -131,6 +131,8 @@ if !errorlevel! NEQ 0 (
 :: Etape 2 : PowerShell (deja verifie au lancement)
 set /a "LOAD_STEP+=1"
 call :PROGRESS_BAR %LOAD_STEP% %LOAD_TOTAL% "Verification de PowerShell"
+:: Prechauffage PowerShell pour accelerer les appels ulterieurs (menus)
+powershell -NoProfile -Command "1" >nul 2>&1
 
 :: Etape 3 : Internet
 set /a "LOAD_STEP+=1"
@@ -391,13 +393,18 @@ if !errorlevel! EQU 3 (
 if !errorlevel! EQU 1 set "%~2=1"
 exit /b 0
 
-:: Lecture d'une entree menu via choice.exe (silencieux : pas d'ecran de la liste).
+:: Entree clavier via PowerShell ReadKey (compatible AZERTY/QWERTY/pave numerique).
+:: VirtualKey pour les chiffres (layout-independent), ToUpper pour les lettres.
+:: Message d'info uniquement sur touche invalide (bip).
 :AZCHOICE
-if not defined AZ_BEEP_INFO (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Bip normal si la touche n'est pas acceptee - utilisez les MAJUSCULES. Ce message n'apparait qu'une fois.%COLOR_RESET%
-    set "AZ_BEEP_INFO=1"
-)
-choice /c %~1 /n
+powershell -NoProfile -Command "$v='%~1';"^
+ "do{$k=[Console]::ReadKey($true);$n=[int]$k.Key;"^
+ "if($n-eq 3-or($k.Modifiers-eq 8-and$n-eq 67)){exit 0}"^
+ "if($n-ge 96){$n-=48}"^
+ "if($n-ge 48-and$n-le 57){$i=$v.IndexOf([char]$n);if($i-ge 0){exit($i+1)}}"^
+ "$i=$v.IndexOf([char]::ToUpper($k.KeyChar));if($i-ge 0){exit($i+1)}"^
+ "Write-Host '';Write-Host '[INFO] Touche non valide'}"^
+ "while($true)"
 exit /b !errorlevel!
 
 :MENU_PRINCIPAL
