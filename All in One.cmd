@@ -383,10 +383,8 @@ if !errorlevel! EQU 1 (
     echo.
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage programme dans 10 secondes...%COLOR_RESET%
     timeout /t 5 /nobreak >nul
-    exit
+    exit /b 0
 )
-echo.
-exit /b 0
 
 :: Confirmation O/N - %~1 = message, retourne 0 pour Oui, 1 pour Non
 :ASK_CONFIRM
@@ -1295,10 +1293,10 @@ set "TRIM_STATUS="
 
 REM  3.4 - Native NVMe FeatureManagement (nvmedisk.sys)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du pilote NVMe natif (nvmedisk.sys)...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1176759950 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1853569164 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 156965516 /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 735209102 /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Policies\Microsoft\FeatureManagement\Overrides" /v 1176759950 /t REG_DWORD /d 1 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Native NVMe actif - IOPS potentiels plus eleves%COLOR_RESET%
 
 REM  3.5 - IoRing + Storport Queue
@@ -1862,7 +1860,7 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
   reg add "%%K" /v PowerMizerEnable /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "%%K" /v PowerMizerLevel /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "%%K" /v PowerMizerLevelAC /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "%%K" /v PerfLevelSrc /t REG_DWORD /d 2222 /f >nul 2>&1
+  reg add "%%K" /v PerfLevelSrc /t REG_DWORD /d 0x2222 /f >nul 2>&1
   reg add "%%K" /v DisableDynamicPstate /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "%%K" /v RmDisableRegistryCaching /t REG_DWORD /d 1 /f >nul 2>&1
 )
@@ -1938,7 +1936,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking desactive (AMD Ryz
 
 REM  7.6 - Desactivation economies d'energie Device Manager (ACPI/HID/PCI/USB)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de l'alimentation des peripheriques (Device Manager)...%COLOR_RESET%
-powershell -NoProfile -Command "$p=@('ACPI','HID','PCI','USB','USBSTOR'); foreach($s in $p){ Get-ChildItem -Path ""HKLM:\SYSTEM\CurrentControlSet\Enum\$s"" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' -or $_.PSChildName -eq 'WDF' } | ForEach-Object { $rp = $_.Name; if($_.PSChildName -eq 'Device Parameters'){ reg add ""$rp"" /v ""EnhancedPowerManagementEnabled"" /t REG_DWORD /d 0 /f >$null; reg add ""$rp"" /v ""SelectiveSuspendEnabled"" /t REG_BINARY /d ""00"" /f >$null; reg add ""$rp"" /v ""SelectiveSuspendOn"" /t REG_DWORD /d 0 /f >$null; reg add ""$rp"" /v ""WaitWakeEnabled"" /t REG_DWORD /d 0 /f >$null } else { reg add ""$rp"" /v ""IdleInWorkingState"" /t REG_DWORD /d 0 /f >$null } } }" >nul 2>&1
+powershell -NoProfile -Command "$p=@('ACPI','HID','PCI','USB','USBSTOR'); foreach($s in $p){ Get-ChildItem -Path ""HKLM:\SYSTEM\CurrentControlSet\Enum\$s"" -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' -or $_.PSChildName -eq 'WDF' } | ForEach-Object { $rp = $_.Name; if($_.PSChildName -eq 'Device Parameters'){ reg add ""$rp"" /v ""EnhancedPowerManagementEnabled"" /t REG_DWORD /d 0 /f >$null; reg add ""$rp"" /v ""SelectiveSuspendEnabled"" /t REG_DWORD /d 0 /f >$null; reg add ""$rp"" /v ""SelectiveSuspendOn"" /t REG_DWORD /d 0 /f >$null; reg add ""$rp"" /v ""WaitWakeEnabled"" /t REG_DWORD /d 0 /f >$null } else { reg add ""$rp"" /v ""IdleInWorkingState"" /t REG_DWORD /d 0 /f >$null } } }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie Device Manager desactivees (HID/PCI/USB)%COLOR_RESET%
 
 REM  7.7 - Desactivation du demarrage rapide Fast Startup
@@ -3805,8 +3803,8 @@ REM  ETAPE 15 - Nettoyage Windows Cleanmgr (ameliore - plus de categories 2026)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
-for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" /s /f "StateFlags" /d 2^>nul ^| findstr /i "StateFlags"') do (
-    reg delete "%%R" /f >nul 2>&1
+for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul') do (
+    reg delete "%%R" /va /f >nul 2>&1
 ) 2>nul
 for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Previous Installations" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "User file versions" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows ESD installation files" "Windows Upgrade Log Files") do (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
@@ -3818,7 +3816,6 @@ REM  ETAPE 16 - Nettoyage composants systeme (via DISM)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Composants systeme (nettoyage)"
 powershell -NoProfile -Command "dism /online /Cleanup-Image /StartComponentCleanup /Quiet 2>&1 | Out-Null" >nul 2>&1
-REM  /SPSuperseded obsolete sur W11 (MS docs), StartComponentCleanup suffit
 
 REM  ETAPE 17 - Fichiers temporaires profil systeme (ameliore)
 set /a "CLEAN_STEP+=1"
@@ -4055,8 +4052,6 @@ set "VCINSTALLED_COUNT="
 set "REG_DUMP="
 
 :INSTALLER_DIRECTX_SECTION
-REM  Ancien label :SKIP_DIRECTX renomme : c'est l'entree de la section DirectX,
-REM  atteinte soit depuis le menu, soit depuis :INSTALLER_VISUAL_REDIST si VC++ deja installe
 cls
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
