@@ -3654,7 +3654,7 @@ if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
 echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, rapports d'erreurs,%COLOR_RESET%
 echo %COLOR_WHITE%  corbeille, caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
-echo %COLOR_WHITE%  notifications et journaux systeme.%COLOR_RESET%
+echo %COLOR_WHITE%  cache npm, notifications et journaux systeme.%COLOR_RESET%
 echo %COLOR_WHITE%  %STYLE_BOLD%Aucune donnee personnelle (favoris, mots de passe, documents) n'est touchee.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Continuer ? [O/N]: %COLOR_RESET%"
@@ -3667,8 +3667,8 @@ echo %STYLE_BOLD%%COLOR_WHITE% NETTOYAGE AVANCE WINDOWS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-REM  Initialiser la barre de progression (25 etapes - caches de perf conserves)
-set /a "CLEAN_TOTAL=25"
+REM  Initialiser la barre de progression (26 etapes - caches de perf conserves)
+set /a "CLEAN_TOTAL=26"
 set /a "CLEAN_STEP=0"
 
 REM  ETAPE 1 - Fichiers temporaires utilisateur (ameliore)
@@ -3893,6 +3893,11 @@ set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Temporaires Office"
 if exist "%LOCALAPPDATA%\Microsoft\Office\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Office\*.tmp" >nul 2>&1
 if exist "%TEMP%\Microsoft\Office\*.tmp" del /s /q /f "%TEMP%\Microsoft\Office\*.tmp" >nul 2>&1
+
+REM  ETAPE 26 - Cache npm (node package manager)
+set /a "CLEAN_STEP+=1"
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache npm"
+powershell -NoProfile -Command "$cache=npm config get cache 2>$null; if($cache -and (Test-Path $cache)){ Remove-Item -LiteralPath $cache -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'OK' }" >nul 2>&1
 
 REM  Calcul final (PowerShell pour la precision des decimales)
 for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive C).Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ""$beforeGB $afterGB $freedGB"""') do (
