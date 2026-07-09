@@ -806,7 +806,6 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil gaming (MMCSS) configure
 REM  1.3 - Interface Windows
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation de l'interface Windows...%COLOR_RESET%
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowTaskViewButton" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowCortanaButton" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "TaskbarMn" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "HideFileExt" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowSyncProviderNotifications" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -875,9 +874,14 @@ for %%V in (ContentDeliveryAllowed FeatureManagementEnabled OemPreInstalledAppsE
   reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" /v %%V /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-REM  Recherche Windows - Bing OFF
+REM  Recherche Windows - Bing OFF, Cortana OFF (politique + package legacy)
+REM  AllowCortana=0 : politique Microsoft officielle (Windows Search local conserve)
+REM  ShowCortanaButton/CortanaConsent : cles legacy encore utiles sur anciens builds W10/W11
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "AllowCortana" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "ShowCortanaButton" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v "BingSearchEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Search" /v "CortanaConsent" /t REG_DWORD /d 0 /f >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; Get-AppxPackage -AllUsers Microsoft.549981C3F5F10 -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue; Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -eq 'Microsoft.549981C3F5F10' } | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue" >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "ConnectedSearchUseWeb" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "AllowCloudSearch" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "AllowSearchToUseLocation" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1353,10 +1357,16 @@ reg add "HKCU\System\GameConfigStore" /v GameDVR_HonorUserFSEBehaviorMode /t REG
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\GameDVR" /v "AllowGameDVR" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GameDVR desactive - Game Mode conserve pour les performances%COLOR_RESET%
 
-REM  4.2 - Preferences DirectX (Auto HDR, VRR ON, Flip Model actif)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des preferences DirectX ^(Auto HDR, VRR ON, Flip Model^)...%COLOR_RESET%
-reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX : Auto HDR actif, VRR ON, Flip Model actif%COLOR_RESET%
+REM  4.2 - Preferences DirectX (profil-aware : Gaming=latence, Normal=confort visuel)
+if "!PROFIL_USAGE!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preferences DirectX Gaming ^(VRR OFF, Auto HDR OFF, Flip Model ON^)...%COLOR_RESET%
+    reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=0;VRROptimizeEnable=0;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX Gaming : VRR OFF, latence prioritaire, Flip Model actif%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preferences DirectX Normal ^(Auto HDR, VRR ON, Flip Model^)...%COLOR_RESET%
+    reg add "HKCU\Software\Microsoft\DirectX\UserGpuPreferences" /v "DirectXUserGlobalSettings" /t REG_SZ /d "AutoHDREnable=1;VRROptimizeEnable=1;SwapEffectUpgradeEnable=1;" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX Normal : Auto HDR actif, VRR ON, Flip Model actif%COLOR_RESET%
+)
 
 REM  4.3 - Mode MSI (GPU) et telemetrie NVIDIA
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation MSI (GPU) et desactivation telemetrie NVIDIA...%COLOR_RESET%
@@ -2451,12 +2461,79 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Blocklist pilotes vulnerables r
 REM  8.4 - Restauration VBS/HVCI/CFG aux valeurs par defaut
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
+bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
 REM  CFG doit etre ACTIVE par defaut (requis pour Vanguard / anti-cheat)
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 
 call :FINISH_ACTION "Protections securite" "restaurees"
+exit /b
+
+:APPLY_DEFENDER_DISABLE_EXTRA
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee Defender ^(preferences, cloud, ASR, CFA, PUA^)...%COLOR_RESET%
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Set-MpPreference -DisableRealtimeMonitoring $true -DisableBehaviorMonitoring $true -DisableBlockAtFirstSeen $true -DisableIOAVProtection $true -DisableScriptScanning $true -DisableArchiveScanning $true -DisableEmailScanning $true -DisableRemovableDriveScanning $true -PUAProtection Disabled -MAPSReporting Disabled -SubmitSamplesConsent 2 -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Set-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions" >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preferences Defender desactivees ^(effectif selon Tamper Protection^)%COLOR_RESET%
+exit /b
+
+:APPLY_SMARTSCREEN_DISABLE_EXTRA
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee SmartScreen ^(Shell, AppHost, Edge^)...%COLOR_RESET%
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScreen" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "ShellSmartScreenLevel" /t REG_SZ /d "Off" /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /t REG_SZ /d "Off" /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "SmartScreenEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "SmartScreenPuaEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "TyposquattingCheckerEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v "SmartScreenEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v "SmartScreenPuaEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SmartScreen desactive sur les surfaces principales%COLOR_RESET%
+exit /b
+
+:APPLY_VBS_HVCI_DISABLE_EXTRA
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee VBS/HVCI/Credential Guard/LSA...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /t REG_DWORD /d 0 /f >nul 2>&1
+bcdedit /set hypervisorlaunchtype off >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI/Credential Guard/LSA desactives ^(redemarrage requis^)%COLOR_RESET%
+exit /b
+
+:RESTORE_DEFENDER_DEFAULT_EXTRA
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration preferences Defender par defaut...%COLOR_RESET%
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Set-MpPreference -DisableRealtimeMonitoring $false -DisableBehaviorMonitoring $false -DisableBlockAtFirstSeen $false -DisableIOAVProtection $false -DisableScriptScanning $false -DisableArchiveScanning $false -DisableEmailScanning $false -DisableRemovableDriveScanning $false -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesConsent SendSafeSamples -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Remove-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions" >nul 2>&1
+exit /b
+
+:RESTORE_SMARTSCREEN_DEFAULT_EXTRA
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration SmartScreen par defaut...%COLOR_RESET%
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScreen" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "ShellSmartScreenLevel" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "SmartScreenEnabled" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "SmartScreenPuaEnabled" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "TyposquattingCheckerEnabled" /f >nul 2>&1
+reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "SmartScreenEnabled" /f >nul 2>&1
+reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "SmartScreenPuaEnabled" /f >nul 2>&1
 exit /b
 
 :TOGGLE_DEFENDER
@@ -2529,7 +2606,8 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScre
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "ShellSmartScreenLevel" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d 1 /f >nul 2>&1
+call :RESTORE_SMARTSCREEN_DEFAULT_EXTRA
+call :RESTORE_DEFENDER_DEFAULT_EXTRA
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des taches planifiees...%COLOR_RESET%
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Enable >nul 2>&1
@@ -2616,6 +2694,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de SmartScreen...
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScreen" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /t REG_SZ /d "Off" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d 0 /f >nul 2>&1
+call :APPLY_SMARTSCREEN_DISABLE_EXTRA
+call :APPLY_DEFENDER_DISABLE_EXTRA
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reglages Defender appliques ^(effectif selon Tamper Protection / version Windows^)%COLOR_RESET%
 call :FINISH_ACTION "Windows Defender" "desactive"
 exit /b
@@ -2685,6 +2765,7 @@ if !errorlevel! EQU 2 (
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+  call :APPLY_VBS_HVCI_DISABLE_EXTRA
   echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard desactives.%COLOR_RESET%
   call :FINISH_ACTION "VBS/HVCI" "desactive"
   goto :TOGGLE_VBS_HVCI
@@ -2699,6 +2780,16 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de VBS, HVCI et Credential Guard...%COLOR_RESET%
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
+bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2751,9 +2842,9 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Enab
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f >nul 2>&1
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation de SmartScreen et suivi de zone Internet...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Warn" /f >nul 2>&1
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration SmartScreen par defaut et suivi de zone Internet...%COLOR_RESET%
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 2 /f >nul 2>&1
+call :RESTORE_SMARTSCREEN_DEFAULT_EXTRA
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%UAC active.%COLOR_RESET%
 call :FINISH_ACTION "UAC" "active"
 exit /b
@@ -2794,6 +2885,7 @@ reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v Prom
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de SmartScreen et suivi de zone Internet...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v SmartScreenEnabled /t REG_SZ /d "Off" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Policies\Attachments" /v SaveZoneInformation /t REG_DWORD /d 1 /f >nul 2>&1
+call :APPLY_SMARTSCREEN_DISABLE_EXTRA
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%UAC desactive.%COLOR_RESET%
 call :FINISH_ACTION "UAC" "desactive"
 exit /b
@@ -3053,9 +3145,17 @@ reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo
 reg delete "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableClickToDo /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableImageCreator /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableCocreator /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableGenerativeFill /f >nul 2>&1
 REM  Reactivation de Copilot dans Edge
 reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /f >nul 2>&1
 reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "CopilotPageContext" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "CopilotPageContext" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "EdgeEntraCopilotPageContext" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "Microsoft365CopilotChatIconEnabled" /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace ('(?s)\r?\n?'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), ''; Set-Content -Path $h -Value $c -Encoding ASCII -Force } }" >nul 2>&1
@@ -3078,9 +3178,17 @@ reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableAgentWorkspaces /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableRemoteAgentConnectors /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableClickToDo /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableImageCreator /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableCocreator /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v DisableGenerativeFill /t REG_DWORD /d 1 /f >nul 2>&1
 REM  Desactivation de Copilot dans Edge
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v "CopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "CopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "EdgeEntraCopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "Microsoft365CopilotChatIconEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=""# Copilot Block Start`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 windows.ai.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n# Copilot Block End""; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+""`r`n`r`n""+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }; if($?) { exit 0 } else { exit 1 }" >nul 2>&1
@@ -3195,12 +3303,19 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowClickTo
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentWorkspaces" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableRemoteAgentConnectors" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageInsights" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableClickToDo" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageCreator" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableCocreator" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableGenerativeFill" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageSpaceForRecallSnapshots" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageDurationForRecallSnapshots" /f >nul 2>&1
 reg delete "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v "Value" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v "Value" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v "AgentActivationEnabled" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v "DisableClickToDo" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\input\Settings" /v "InsightsEnabled" /f >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Enable-WindowsOptionalFeature -Online -FeatureName 'Recall' -NoRestart | Out-Null }" >nul 2>&1
 exit /b
 
 :CORE_DESACTIVER_RECALL
@@ -3213,6 +3328,12 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowClickToDo"
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentWorkspaces" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableRemoteAgentConnectors" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageInsights" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableClickToDo" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageCreator" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableCocreator" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableGenerativeFill" /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageSpaceForRecallSnapshots" /t REG_DWORD /d 10 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageDurationForRecallSnapshots" /t REG_DWORD /d 30 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1
@@ -3221,6 +3342,7 @@ reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Disable-WindowsOptionalFeature -Online -FeatureName 'Recall' -Remove -NoRestart | Out-Null }" >nul 2>&1
 exit /b
 
 :CORE_DESACTIVER_PHONELINK

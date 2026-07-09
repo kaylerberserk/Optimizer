@@ -63,7 +63,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), Nagle/DelACK OFF per-interface, initialRTO=1000, maxsynretransmissions=2, Tcp1323Opts=3, TCP Pacing + ECN, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, ITR=200, Rx/Tx buffers max. En Eco : Nagle neutre, RSC/LSO ON. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=1000, maxsynretransmissions=2, Tcp1323Opts=3, TCP Pacing + ECN, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, ITR=200, Rx/Tx buffers max. En Eco : Nagle neutre, RSC/LSO ON. |
 | **[2]** | **NORMAL** | Tcp1323Opts=3, TCP Pacing + ECN, VRR ON, veille GPU préservée, Nagle/DelACK défaut Windows (ou neutre en Eco), SystemResponsiveness=20, accélération trackpad légère sur portable. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
