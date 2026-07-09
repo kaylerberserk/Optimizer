@@ -702,9 +702,8 @@ if "!DESACTIVER_IA!"=="1" (
   call :CORE_DESACTIVER_COPILOT
   call :CORE_DESACTIVER_WIDGETS
   call :CORE_DESACTIVER_RECALL
-  call :CORE_DESACTIVER_PHONELINK
-  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et Phone Link desactives.%COLOR_RESET%
-  call :FINISH_ACTION "Toutes les fonctions IA/Widgets/Phone Link" "desactivees"
+  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets et Recall desactives.%COLOR_RESET%
+  call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
 )
 if "!DESACTIVER_UAC!"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
@@ -1590,10 +1589,10 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(aucune suppress
 REM  5.6 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->skip)
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : valeurs neutres pour autonomie Wi-Fi ^(TcpNoDelay=0, TcpAckFrequency=2^)%COLOR_RESET%
-    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 2 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 0 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 1 -Force | Out-Null } }" >nul 2>&1
+    call :SET_NAGLE_PROFILE 2 0 1
 ) else if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif ^(Gaming+MaxPerf^)...%COLOR_RESET%
-    powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 1 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 0 -Force | Out-Null } }" >nul 2>&1
+    call :SET_NAGLE_PROFILE 1 1 0
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
 ) else (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
@@ -2034,7 +2033,7 @@ if exist "%STR_EXE%" (
 )
 if exist "%STR_EXE%" (
     taskkill /F /IM SetTimerResolution.exe >nul 2>&1
-    powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
+    call :CREATE_STR_STARTUP_SHORTCUT
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci SetTimerResolution configure ^(5070^)%COLOR_RESET%
     start "" "%STR_EXE%" --resolution 5070 --no-console
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution active immediatement%COLOR_RESET%
@@ -2714,7 +2713,7 @@ if !errorlevel! EQU 3 (
   echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
   echo.
   echo %COLOR_WHITE%  VBS=1, HVCI=1, LSA=0, CFG=1 - Compatible FaceIT/Vanguard%COLOR_RESET%
-  echo %COLOR_WHITE%  Mitigations CPU desactivees (KVAShadow=0)%COLOR_RESET%
+  echo %COLOR_WHITE%  Mitigations CPU desactivees ^(KVAShadow=0^)%COLOR_RESET%
   echo.
   echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
   echo.
@@ -3028,20 +3027,16 @@ echo %STYLE_BOLD%%COLOR_BLUE%--- RECALL (Windows 11 24H2) ---%COLOR_RESET%
 echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Activer Recall%COLOR_RESET%
 echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desactiver Recall%COLOR_RESET%
 echo.
-echo %STYLE_BOLD%%COLOR_BLUE%--- PHONE LINK ---%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Bloquer l'activation en arriere-plan%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall + Phone Link)%COLOR_RESET%
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall)%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-7, D, M]: %COLOR_RESET%"
-call :AZCHOICE 1234567DM
-if !errorlevel! EQU 9 goto :MENU_GESTION_WINDOWS
-if !errorlevel! EQU 8 goto :MENU_IA_OPTION_8_GATE
-if !errorlevel! EQU 7 goto :MENU_IA_OPTION_7
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-6, D, M]: %COLOR_RESET%"
+call :AZCHOICE 123456DM
+if !errorlevel! EQU 8 goto :MENU_GESTION_WINDOWS
+if !errorlevel! EQU 7 goto :MENU_IA_OPTION_8_GATE
 if !errorlevel! EQU 6 goto :MENU_IA_OPTION_6_GATE
 if !errorlevel! EQU 5 goto :MENU_IA_OPTION_5
 if !errorlevel! EQU 4 goto :MENU_IA_OPTION_4_GATE
@@ -3053,44 +3048,28 @@ goto :MENU_IA_OPTION_1
 if not "!SKIP_PAUSE!"=="0" goto :MENU_IA_OPTION_8
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + Phone Link^) ?%COLOR_RESET%
+echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall^) ?%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%Effet : desactivation/blocage de Copilot, Widgets, Recall et Phone Link.%COLOR_RESET%
+echo %COLOR_WHITE%Effet : desactivation/blocage de Copilot, Widgets et Recall.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :MENU_IA_OPTION_8 "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
 :MENU_IA_OPTION_8
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS / PHONE LINK%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Desactive Copilot, les Widgets, Recall et Phone Link en une seule operation.%COLOR_RESET%
+echo %COLOR_WHITE%  Desactive Copilot, les Widgets et Recall en une seule operation.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 call :CORE_DESACTIVER_COPILOT
 call :CORE_DESACTIVER_WIDGETS
 call :CORE_DESACTIVER_RECALL
-call :CORE_DESACTIVER_PHONELINK
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et Phone Link desactives.%COLOR_RESET%
-call :FINISH_ACTION "Toutes les fonctions IA/Widgets/Phone Link" "desactivees"
-goto :MENU_IA_WIDGETS_RECALL
-
-:MENU_IA_OPTION_7
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% BLOCAGE DE PHONE LINK / YOURPHONE%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Bloque l'activation en arriere-plan de Phone Link et YourPhone.%COLOR_RESET%
-echo %COLOR_WHITE%  L'application reste installee ; seuls les lancements en arriere-plan sont bloques.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_DESACTIVER_PHONELINK
-call :FINISH_ACTION "Phone Link / YourPhone" "bloque"
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets et Recall desactives.%COLOR_RESET%
+call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
 goto :MENU_IA_WIDGETS_RECALL
 
 :MENU_IA_OPTION_6_GATE
@@ -3352,15 +3331,6 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Rec
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Disable-WindowsOptionalFeature -Online -FeatureName 'Recall' -Remove -NoRestart | Out-Null }" >nul 2>&1
 exit /b
 
-:CORE_DESACTIVER_PHONELINK
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Blocage de l'activation en arriere-plan de Phone Link...%COLOR_RESET%
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
-powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Phone Link / YourPhone bloque en arriere-plan%COLOR_RESET%
-exit /b
-
-
-
 :FINISH_ACTION
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3553,21 +3523,21 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Processus Edge arretes%COLOR_RE
 
 echo %COLOR_YELLOW%[2/12]%COLOR_RESET% %COLOR_WHITE%Suppression de l'icone Edge de la barre des taches...%COLOR_RESET%
 del "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\Microsoft Edge.lnk" /f /q >nul 2>&1
-if exist "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar" (
-    powershell -NoProfile -Command "Get-ChildItem -Path ""$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk"" -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
-)
+if not exist "%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar" goto :EDGE_SKIP_TASKBAR_LINKS
+call :REMOVE_EDGE_TASKBAR_LINKS
+:EDGE_SKIP_TASKBAR_LINKS
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci barre des taches supprime%COLOR_RESET%
 
 echo %COLOR_YELLOW%[3/12]%COLOR_RESET% %COLOR_WHITE%Tentative de desinstallation de Microsoft Edge via l'installateur officiel...%COLOR_RESET%
-if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" (
-    pushd "%ProgramFiles(x86)%\Microsoft\Edge\Application" >nul 2>&1
-    for /d %%i in (*) do (
-        if exist "%%i\Installer\setup.exe" (
-            "%%i\Installer\setup.exe" --uninstall --system-level --force-uninstall >nul 2>&1
-        )
+if not exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" goto :EDGE_SKIP_OFFICIAL_UNINSTALLER
+pushd "%ProgramFiles(x86)%\Microsoft\Edge\Application" >nul 2>&1
+for /d %%i in (*) do (
+    if exist "%%i\Installer\setup.exe" (
+        "%%i\Installer\setup.exe" --uninstall --system-level --force-uninstall >nul 2>&1
     )
-    popd >nul 2>&1
 )
+popd >nul 2>&1
+:EDGE_SKIP_OFFICIAL_UNINSTALLER
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstalleur Edge execute%COLOR_RESET%
 
 echo %COLOR_YELLOW%[4/12]%COLOR_RESET% %COLOR_WHITE%Nettoyage force des dossiers programme...%COLOR_RESET%
@@ -4221,7 +4191,7 @@ echo %STYLE_BOLD%%COLOR_WHITE% EXECUTION - SUPPRESSION DES BLOATWARES (APPS UWP)
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Recherche et suppression des UWP Bloatwares...%COLOR_RESET%
-powershell -NoProfile -Command "$apps = @('Microsoft.BingNews', 'Microsoft.MicrosoftOfficeHub', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.SkypeApp', 'Microsoft.FeedbackHub', 'Microsoft.GetHelp', 'Microsoft.Getstarted', 'Microsoft.OneConnect', 'Microsoft.WindowsMaps', 'Microsoft.MixedReality.Portal', 'Microsoft.People', 'Microsoft.Family', 'Microsoft.YourPhone', 'King.CandyCrushSaga', 'King.CandyCrushSodaSaga', 'Microsoft.QuickAssist'); $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue; foreach ($app in $apps) { if (Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue) { Write-Host \"   [-] Suppression de : $app ...\" -ForegroundColor Cyan; Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue } else { Write-Host \"   [SKIP] Non installe : $app\" -ForegroundColor DarkGray }; if ($prov) { $prov | Where-Object {$_.PackageName -match $app} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue } }"
+powershell -NoProfile -Command "$apps = @('Microsoft.BingNews', 'Microsoft.MicrosoftOfficeHub', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.SkypeApp', 'Microsoft.FeedbackHub', 'Microsoft.GetHelp', 'Microsoft.Getstarted', 'Microsoft.OneConnect', 'Microsoft.WindowsMaps', 'Microsoft.MixedReality.Portal', 'Microsoft.People', 'Microsoft.Family', 'King.CandyCrushSaga', 'King.CandyCrushSodaSaga', 'Microsoft.QuickAssist'); $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue; foreach ($app in $apps) { if (Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue) { Write-Host \"   [-] Suppression de : $app ...\" -ForegroundColor Cyan; Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue } else { Write-Host \"   [SKIP] Non installe : $app\" -ForegroundColor DarkGray }; if ($prov) { $prov | Where-Object {$_.PackageName -match $app} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue } }"
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Suppression des bloatwares terminee.%COLOR_RESET%
 pause
@@ -4254,6 +4224,18 @@ exit /b 0
 REM  =================================================================================
 REM  HELPERS MATERIEL (NIC / USB) - factorisation des blocs reseaux/energie
 REM  =================================================================================
+:SET_NAGLE_PROFILE
+powershell -NoLogo -NoProfile -Command "$ack=[int]'%~1'; $noDelay=[int]'%~2'; $delAck=[int]'%~3'; Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress }; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value $ack -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value $noDelay -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value $delAck -Force | Out-Null } }" >nul 2>&1
+exit /b
+
+:CREATE_STR_STARTUP_SHORTCUT
+powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
+exit /b
+
+:REMOVE_EDGE_TASKBAR_LINKS
+powershell -NoProfile -Command "Get-ChildItem -Path ""$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk"" -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
+exit /b
+
 REM  Parametres : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
 REM               %~2 = PROFIL_USAGE (0=Gaming, 1=Normal).
 REM  Gaming+MaxPerf (0,0) : RSC/LSO OFF, ITR 200, EEE/Wake OFF, buffers max.
