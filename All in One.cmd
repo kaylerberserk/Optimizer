@@ -3310,7 +3310,7 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManag
 reg delete "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v "AgentActivationEnabled" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v "DisableClickToDo" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\input\Settings" /v "InsightsEnabled" /f >nul 2>&1
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Enable-WindowsOptionalFeature -Online -FeatureName 'Recall' -NoRestart | Out-Null }" >nul 2>&1
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Enable-WindowsOptionalFeature -Online -FeatureName 'Recall' -NoRestart *>$null }" >nul 2>&1
 exit /b
 
 :CORE_DESACTIVER_RECALL
@@ -3337,7 +3337,7 @@ reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t
 reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Recall" /f >nul 2>&1
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Disable-WindowsOptionalFeature -Online -FeatureName 'Recall' -Remove -NoRestart | Out-Null }" >nul 2>&1
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f -and $f.State -ne 'DisabledWithPayloadRemoved'){ Disable-WindowsOptionalFeature -Online -FeatureName 'Recall' -Remove -NoRestart *>$null }" >nul 2>&1
 exit /b
 
 :FINISH_ACTION
@@ -4187,7 +4187,7 @@ echo.
 echo %COLOR_WHITE%  Cette section supprime les applications preinstallees inutiles%COLOR_RESET%
 echo %COLOR_WHITE%  tout en preservant les outils essentiels (Calculatrice, Store, Photos, Notes).%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sont supprimes : News, Solitaire, Skype, People, Family, Candy Crush, Your Phone, Assistance, Maps, Office, Feedback...%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sont supprimes : News, Solitaire, Skype, People, Family, Candy Crush, Assistance, Maps, Office, Feedback...%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sont gardes   : Courrier, Meteo, Musique, Video, Calculatrice, Store, Photos, Notes, etc.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Voulez-vous supprimer les bloatwares ? [O/N]: %COLOR_RESET%"
