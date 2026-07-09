@@ -684,8 +684,8 @@ cls
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Mode automatique : vos reponses ci-dessus s'appliquent sans nouvelle confirmation.%COLOR_RESET%
 echo.
 set "SKIP_PAUSE=1"
-echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%TOUT_OPTIMISER execute : %COLOR_RED%Defender, SmartScreen/UAC, securite noyau (VBS/HVCI), animations, IA%COLOR_RESET% et optimisations systeme.%COLOR_RESET%
-echo %COLOR_WHITE%  Utilisez TOUT RESTAURER (menu Gestion Windows) pour annuler.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%TOUT_OPTIMISER applique les optimisations systeme et uniquement les options confirmees.%COLOR_RESET%
+echo %COLOR_WHITE%  Les choix repondus NON sont ignores.%COLOR_RESET%
 echo.
 call :INSTALLER_VISUAL_REDIST
 call :OPTIMISATIONS_SYSTEME
@@ -715,9 +715,9 @@ if "!DESACTIVER_IA!"=="1" (
   call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
 )
 if "!DESACTIVER_UAC!"=="1" call :DESACTIVER_UAC_SECTION
-set "SKIP_PAUSE=0"
 call :DETECT_HARDWARE 1
 call :AFFICHER_RESUME_OPTIMISATION
+set "SKIP_PAUSE=0"
 set "DESACTIVER_SECURITE="
 set "DESACTIVER_DEFENDER="
 set "DESACTIVER_ANIMATIONS="
@@ -4093,7 +4093,7 @@ set /a "VCINSTALL=%VC2015X86_NEW%+%VC2015X64_NEW%" 2>nul
 
 echo.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Verification terminee - %COLOR_GREEN%%VCINSTALL%/2%COLOR_RESET% %COLOR_WHITE%versions presentes%COLOR_RESET%
-timeout /t 3 /nobreak >nul
+if "!SKIP_PAUSE!"=="0" timeout /t 3 /nobreak >nul
 
 REM  Nettoyage des fichiers temporaires
 if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
