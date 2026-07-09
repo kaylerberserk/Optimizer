@@ -646,8 +646,8 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %COLOR_WHITE%Voulez-vous desactiver les fonctionnalites IA de Windows ?%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%Pourquoi cette question : Copilot, widgets, Recall consomment CPU/reseau et%COLOR_RESET%
-echo %COLOR_WHITE%envoient des donnees vers Microsoft ; couper tout ameliore confidentialite et perf.%COLOR_RESET%
+echo %COLOR_WHITE%Pourquoi cette question : Copilot, widgets, Recall peuvent consommer CPU/reseau%COLOR_RESET%
+echo %COLOR_WHITE%et traiter des donnees via des services Microsoft ; couper tout ameliore confidentialite et perf.%COLOR_RESET%
 echo.
 echo %COLOR_GREEN%[O] OUI%COLOR_RESET% - Desactive Copilot, Recall, widgets et autres fonctionnalites IA
 echo       %COLOR_YELLOW%Ameliore les performances et la confidentialite%COLOR_RESET%
@@ -2929,9 +2929,8 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des animations et effets visuels...%COLOR_RESET%
 
-REM  VisualFXSetting=3 (Personnalise) pour que Windows utilise uniquement les cles
-REM  individuelles ci-dessous sans recalculer tous les effets (ce qui reset le menu Demarrer)
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1
+REM  VisualFXSetting=0 : Let Windows choose what's best (comportement Windows standard)
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "1" /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -3044,7 +3043,7 @@ echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- PHONE LINK ---%COLOR_RESET%
 echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Bloquer l'activation en arriere-plan%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall + PhoneLink)%COLOR_RESET%
+echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver TOUT (Copilot + Widgets + Recall + Phone Link)%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
 echo.
@@ -3346,10 +3345,10 @@ powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $f=Ge
 exit /b
 
 :CORE_DESACTIVER_PHONELINK
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Blocage de l'activation en arriere-plan de PhoneLink...%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Blocage de l'activation en arriere-plan de Phone Link...%COLOR_RESET%
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\BackgroundAccessApplications" /v Microsoft.YourPhone_8wekyb3d8bbwe /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -Name 'Microsoft.YourPhone_8wekyb3d8bbwe' -Value 0 -ErrorAction SilentlyContinue" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%PhoneLink / YourPhone background activation bloquee%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Phone Link / YourPhone bloque en arriere-plan%COLOR_RESET%
 exit /b
 
 :DESACTIVER_PHONELINK_SECTION
@@ -3359,7 +3358,7 @@ echo %STYLE_BOLD%%COLOR_WHITE% BLOCAGE DE PHONE LINK / YOURPHONE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%  Bloque l'activation en arriere-plan de Phone Link et YourPhone.%COLOR_RESET%
-echo %COLOR_WHITE%  L'application reste installee ^(Outlook mobile / Files preserves^).%COLOR_RESET%
+echo %COLOR_WHITE%  L'application reste installee ; seuls les lancements en arriere-plan sont bloques.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
@@ -3371,20 +3370,20 @@ exit /b
 if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_TOUT_IA_RUN
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + PhoneLink^) ?%COLOR_RESET%
+echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + Phone Link^) ?%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%Effet : suppression de toutes les fonctionnalites IA, widgets cloud et PhoneLink.%COLOR_RESET%
+echo %COLOR_WHITE%Effet : desactivation/blocage de Copilot, Widgets, Recall et Phone Link.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE :DESACTIVER_TOUT_IA_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_TOUT_IA_RUN
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS / PHONELINK%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS / PHONE LINK%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Desactive Copilot, les Widgets, Recall et PhoneLink en une seule operation.%COLOR_RESET%
+echo %COLOR_WHITE%  Desactive Copilot, les Widgets, Recall et Phone Link en une seule operation.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
@@ -3392,8 +3391,8 @@ call :CORE_DESACTIVER_COPILOT
 call :CORE_DESACTIVER_WIDGETS
 call :CORE_DESACTIVER_RECALL
 call :CORE_DESACTIVER_PHONELINK
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et PhoneLink desactives.%COLOR_RESET%
-call :FINISH_ACTION "Toutes les fonctions IA/Widgets/PhoneLink" "desactivees"
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et Phone Link desactives.%COLOR_RESET%
+call :FINISH_ACTION "Toutes les fonctions IA/Widgets/Phone Link" "desactivees"
 exit /b
 
 
