@@ -698,7 +698,12 @@ if "!PROFIL_POWER!"=="0" call :DESACTIVER_ECONOMIES_ENERGIE
 if "!DESACTIVER_SECURITE!"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
 if "!DESACTIVER_DEFENDER!"=="1" call :DESACTIVER_DEFENDER_SECTION
 if "!DESACTIVER_ANIMATIONS!"=="1" call :DESACTIVER_ANIMATIONS_SECTION
-if "!DESACTIVER_IA!"=="1" call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
+if "!DESACTIVER_IA!"=="1" (
+  call :CORE_DESACTIVER_COPILOT
+  call :CORE_DESACTIVER_WIDGETS
+  call :CORE_DESACTIVER_RECALL
+  call :CORE_DESACTIVER_PHONELINK
+)
 if "!DESACTIVER_UAC!"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
 call :DETECT_HARDWARE 1
@@ -2478,12 +2483,6 @@ powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 
 call :FINISH_ACTION "Protections securite" "restaurees"
 exit /b
 
-:APPLY_DEFENDER_DISABLE_EXTRA
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee Defender ^(preferences, cloud, ASR, CFA, PUA^)...%COLOR_RESET%
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Set-MpPreference -DisableRealtimeMonitoring $true -DisableBehaviorMonitoring $true -DisableBlockAtFirstSeen $true -DisableIOAVProtection $true -DisableScriptScanning $true -DisableArchiveScanning $true -DisableEmailScanning $true -DisableRemovableDriveScanning $true -PUAProtection Disabled -MAPSReporting Disabled -SubmitSamplesConsent 2 -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Set-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preferences Defender desactivees ^(effectif selon Tamper Protection^)%COLOR_RESET%
-exit /b
-
 :APPLY_SMARTSCREEN_DISABLE_EXTRA
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee SmartScreen ^(Shell, AppHost, Edge^)...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScreen" /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2497,29 +2496,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "TyposquattingCheckerEnabled"
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v "SmartScreenEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v "SmartScreenPuaEnabled" /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SmartScreen desactive sur les surfaces principales%COLOR_RESET%
-exit /b
-
-:APPLY_VBS_HVCI_DISABLE_EXTRA
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee VBS/HVCI/Credential Guard/LSA...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /t REG_DWORD /d 0 /f >nul 2>&1
-bcdedit /set hypervisorlaunchtype off >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI/Credential Guard/LSA desactives ^(redemarrage requis^)%COLOR_RESET%
-exit /b
-
-:RESTORE_DEFENDER_DEFAULT_EXTRA
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration preferences Defender par defaut...%COLOR_RESET%
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Set-MpPreference -DisableRealtimeMonitoring $false -DisableBehaviorMonitoring $false -DisableBlockAtFirstSeen $false -DisableIOAVProtection $false -DisableScriptScanning $false -DisableArchiveScanning $false -DisableEmailScanning $false -DisableRemovableDriveScanning $false -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesConsent SendSafeSamples -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Remove-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions" >nul 2>&1
 exit /b
 
 :RESTORE_SMARTSCREEN_DEFAULT_EXTRA
@@ -2606,8 +2582,9 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScre
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "ShellSmartScreenLevel" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /f >nul 2>&1
-call :RESTORE_SMARTSCREEN_DEFAULT_EXTRA
-call :RESTORE_DEFENDER_DEFAULT_EXTRA
+  call :RESTORE_SMARTSCREEN_DEFAULT_EXTRA
+  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration preferences Defender par defaut...%COLOR_RESET%
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Set-MpPreference -DisableRealtimeMonitoring $false -DisableBehaviorMonitoring $false -DisableBlockAtFirstSeen $false -DisableIOAVProtection $false -DisableScriptScanning $false -DisableArchiveScanning $false -DisableEmailScanning $false -DisableRemovableDriveScanning $false -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesConsent SendSafeSamples -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Remove-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions" >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des taches planifiees...%COLOR_RESET%
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Enable >nul 2>&1
@@ -2691,11 +2668,13 @@ schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Verifi
 schtasks /Change /TN "Microsoft\Windows\ExploitGuard\ExploitGuard MDM policy Refresh" /Disable >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de SmartScreen...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScreen" /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /t REG_SZ /d "Off" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d 0 /f >nul 2>&1
-call :APPLY_SMARTSCREEN_DISABLE_EXTRA
-call :APPLY_DEFENDER_DISABLE_EXTRA
+  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v "EnableSmartScreen" /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer" /v "SmartScreenEnabled" /t REG_SZ /d "Off" /f >nul 2>&1
+  reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\AppHost" /v "EnableWebContentEvaluation" /t REG_DWORD /d 0 /f >nul 2>&1
+  call :APPLY_SMARTSCREEN_DISABLE_EXTRA
+  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee Defender ^(preferences, cloud, ASR, CFA, PUA^)...%COLOR_RESET%
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='SilentlyContinue'; Set-MpPreference -DisableRealtimeMonitoring $true -DisableBehaviorMonitoring $true -DisableBlockAtFirstSeen $true -DisableIOAVProtection $true -DisableScriptScanning $true -DisableArchiveScanning $true -DisableEmailScanning $true -DisableRemovableDriveScanning $true -PUAProtection Disabled -MAPSReporting Disabled -SubmitSamplesConsent 2 -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Set-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions" >nul 2>&1
+  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preferences Defender desactivees ^(effectif selon Tamper Protection^)%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reglages Defender appliques ^(effectif selon Tamper Protection / version Windows^)%COLOR_RESET%
 call :FINISH_ACTION "Windows Defender" "desactive"
 exit /b
@@ -2732,22 +2711,21 @@ if !errorlevel! EQU 3 (
   echo %STYLE_BOLD%%COLOR_WHITE% MODE GAMING - VBS/HVCI%COLOR_RESET%
   echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
   echo.
-  echo %COLOR_WHITE%  HVCI=1, VBS=1, CFG=1, LSA=0 - Compatible FaceIT/Vanguard%COLOR_RESET%
-  echo %COLOR_WHITE%  Mitigations CPU desactivees pour gain FPS%COLOR_RESET%
+  echo %COLOR_WHITE%  VBS=1, HVCI=1, LSA=0, CFG=1 - Compatible FaceIT/Vanguard%COLOR_RESET%
+  echo %COLOR_WHITE%  Mitigations CPU desactivees (KVAShadow=0)%COLOR_RESET%
   echo.
   echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
   echo.
-  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du Mode Gaming ^(Performance + Compatibilite^)...%COLOR_RESET%
-  REM Desactiver Mitigations CPU - Gain FPS
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKVAShadow /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
-  REM HVCI = 1, VBS = 1, CFG = 1, LSA = 0 - Mode optimal pour anti-cheat + perfs
+  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application...%COLOR_RESET%
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKVAShadow /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
   powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Gaming active ^(Optimisation CPU + Compatibilite Anti-cheat^).%COLOR_RESET%
-  call :FINISH_ACTION "VBS/HVCI" "configure (Mode Gaming)"
+  bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
+  echo %COLOR_GREEN%[OK]%COLOR_RESET%
+  call :FINISH_ACTION "VBS/HVCI" "Mode Gaming"
   goto :TOGGLE_VBS_HVCI
 )
 if !errorlevel! EQU 2 (
@@ -2756,17 +2734,25 @@ if !errorlevel! EQU 2 (
   echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION VBS / HVCI%COLOR_RESET%
   echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
   echo.
-  echo %COLOR_WHITE%  Desactive VBS, HVCI et Credential Guard pour performances Gaming%COLOR_RESET%
+  echo %COLOR_WHITE%  VBS=0, HVCI=0, LSA=0, CFG=0 - Performances max%COLOR_RESET%
   echo.
   echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
   echo.
-  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation complete de VBS, HVCI et Credential Guard...%COLOR_RESET%
+  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application...%COLOR_RESET%
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 0 /f >nul 2>&1
   reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-  call :APPLY_VBS_HVCI_DISABLE_EXTRA
-  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard desactives.%COLOR_RESET%
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /t REG_DWORD /d 0 /f >nul 2>&1
+  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+  bcdedit /set hypervisorlaunchtype off >nul 2>&1
+  echo %COLOR_GREEN%[OK]%COLOR_RESET%
   call :FINISH_ACTION "VBS/HVCI" "desactive"
   goto :TOGGLE_VBS_HVCI
 )
@@ -3052,59 +3038,145 @@ echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-7, D, M]: %COLOR_RESET%"
 call :AZCHOICE 1234567DM
 if !errorlevel! EQU 9 goto :MENU_GESTION_WINDOWS
-if !errorlevel! EQU 8 (
-  call :DESACTIVER_TOUT_IA_WIDGETS_RECALL
-  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
-  goto :MENU_IA_WIDGETS_RECALL
-)
-if !errorlevel! EQU 7 (
-  call :DESACTIVER_PHONELINK_SECTION
-  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
-  goto :MENU_IA_WIDGETS_RECALL
-)
-if !errorlevel! EQU 6 (
-  call :DESACTIVER_RECALL_SECTION
-  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
-  goto :MENU_IA_WIDGETS_RECALL
-)
-if !errorlevel! EQU 5 (
-  call :ACTIVER_RECALL_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
-)
-if !errorlevel! EQU 4 (
-  call :DESACTIVER_WIDGETS_SECTION
-  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
-  goto :MENU_IA_WIDGETS_RECALL
-)
-if !errorlevel! EQU 3 (
-  call :ACTIVER_WIDGETS_SECTION
-  goto :MENU_IA_WIDGETS_RECALL
-)
-if !errorlevel! EQU 2 (
-  call :DESACTIVER_COPILOT_SECTION
-  if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
-  goto :MENU_IA_WIDGETS_RECALL
-)
-call :ACTIVER_COPILOT_SECTION
-goto :MENU_IA_WIDGETS_RECALL
+if !errorlevel! EQU 8 goto :MENU_IA_OPTION_8_GATE
+if !errorlevel! EQU 7 goto :MENU_IA_OPTION_7
+if !errorlevel! EQU 6 goto :MENU_IA_OPTION_6_GATE
+if !errorlevel! EQU 5 goto :MENU_IA_OPTION_5
+if !errorlevel! EQU 4 goto :MENU_IA_OPTION_4_GATE
+if !errorlevel! EQU 3 goto :MENU_IA_OPTION_3
+if !errorlevel! EQU 2 goto :MENU_IA_OPTION_2_GATE
+goto :MENU_IA_OPTION_1
 
-:ACTIVER_COPILOT_SECTION
+:MENU_IA_OPTION_8_GATE
+if not "!SKIP_PAUSE!"=="0" goto :MENU_IA_OPTION_8
+cls
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + Phone Link^) ?%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%Effet : desactivation/blocage de Copilot, Widgets, Recall et Phone Link.%COLOR_RESET%
+echo.
+call :ASK_IF_INTERACTIVE :MENU_IA_OPTION_8 "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%"
+if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+:MENU_IA_OPTION_8
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DE COPILOT%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS / PHONE LINK%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Reactive Copilot, le bouton dans la barre des taches et les suggestions IA.%COLOR_RESET%
+echo %COLOR_WHITE%  Desactive Copilot, les Widgets, Recall et Phone Link en une seule operation.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-call :CORE_ACTIVER_COPILOT
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot active.%COLOR_RESET%
-call :FINISH_ACTION "Copilot" "active"
-exit /b
+call :CORE_DESACTIVER_COPILOT
+call :CORE_DESACTIVER_WIDGETS
+call :CORE_DESACTIVER_RECALL
+call :CORE_DESACTIVER_PHONELINK
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et Phone Link desactives.%COLOR_RESET%
+call :FINISH_ACTION "Toutes les fonctions IA/Widgets/Phone Link" "desactivees"
+goto :MENU_IA_WIDGETS_RECALL
 
-:DESACTIVER_COPILOT_SECTION
-if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_COPILOT_RUN
+:MENU_IA_OPTION_7
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% BLOCAGE DE PHONE LINK / YOURPHONE%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Bloque l'activation en arriere-plan de Phone Link et YourPhone.%COLOR_RESET%
+echo %COLOR_WHITE%  L'application reste installee ; seuls les lancements en arriere-plan sont bloques.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_DESACTIVER_PHONELINK
+call :FINISH_ACTION "Phone Link / YourPhone" "bloque"
+goto :MENU_IA_WIDGETS_RECALL
+
+:MENU_IA_OPTION_6_GATE
+if not "!SKIP_PAUSE!"=="0" goto :MENU_IA_OPTION_6
+cls
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous vraiment desactiver Recall ?%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%Pourquoi cette question : Recall enregistre votre activite ecran pour%COLOR_RESET%
+echo %COLOR_WHITE%permettre des recherches IA ^(fort impact sur la confidentialite^).%COLOR_RESET%
+echo.
+call :ASK_IF_INTERACTIVE :MENU_IA_OPTION_6 "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Recall ? [O/N]: %COLOR_RESET%"
+if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+:MENU_IA_OPTION_6
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DE RECALL%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Desactive Recall, les snapshots d'ecran et les fonctionnalites IA associees.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_DESACTIVER_RECALL
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall desactive.%COLOR_RESET%
+call :FINISH_ACTION "Recall" "desactive"
+goto :MENU_IA_WIDGETS_RECALL
+
+:MENU_IA_OPTION_5
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DE RECALL%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Reactive Recall et les fonctionnalites IA associees (snapshots, analyse d'ecran).%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_ACTIVER_RECALL
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall active.%COLOR_RESET%
+call :FINISH_ACTION "Recall" "active"
+goto :MENU_IA_WIDGETS_RECALL
+
+:MENU_IA_OPTION_4_GATE
+if not "!SKIP_PAUSE!"=="0" goto :MENU_IA_OPTION_4
+cls
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous vraiment desactiver les Widgets ?%COLOR_RESET%
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%Pourquoi cette question : les widgets utilisent des ressources et du reseau%COLOR_RESET%
+echo %COLOR_WHITE%pour afficher des actualites et la meteo en continu.%COLOR_RESET%
+echo.
+call :ASK_IF_INTERACTIVE :MENU_IA_OPTION_4 "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation des Widgets ? [O/N]: %COLOR_RESET%"
+if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+:MENU_IA_OPTION_4
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DES WIDGETS%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Desactive les Widgets dans la barre des taches pour liberer des ressources.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_DESACTIVER_WIDGETS
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets desactives.%COLOR_RESET%
+call :FINISH_ACTION "Widgets" "desactive"
+goto :MENU_IA_WIDGETS_RECALL
+
+:MENU_IA_OPTION_3
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DES WIDGETS%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Reactive les Widgets dans la barre des taches (actualites, meteo, etc.).%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_ACTIVER_WIDGETS
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets actives.%COLOR_RESET%
+call :FINISH_ACTION "Widgets" "active"
+goto :MENU_IA_WIDGETS_RECALL
+
+:MENU_IA_OPTION_2_GATE
+if not "!SKIP_PAUSE!"=="0" goto :MENU_IA_OPTION_2
 cls
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_WHITE%Voulez-vous vraiment desactiver Copilot ?%COLOR_RESET%
@@ -3113,9 +3185,9 @@ echo.
 echo %COLOR_WHITE%Pourquoi cette question : Copilot s'appuie sur des services cloud et peut%COLOR_RESET%
 echo %COLOR_WHITE%consommer des ressources en arriere-plan pour les suggestions IA.%COLOR_RESET%
 echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_COPILOT_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Copilot ? [O/N]: %COLOR_RESET%"
-if !errorlevel! NEQ 0 exit /b
-:DESACTIVER_COPILOT_RUN
+call :ASK_IF_INTERACTIVE :MENU_IA_OPTION_2 "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Copilot ? [O/N]: %COLOR_RESET%"
+if !errorlevel! NEQ 0 goto :MENU_IA_WIDGETS_RECALL
+:MENU_IA_OPTION_2
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DE COPILOT%COLOR_RESET%
@@ -3128,7 +3200,23 @@ echo.
 call :CORE_DESACTIVER_COPILOT
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot desactive.%COLOR_RESET%
 call :FINISH_ACTION "Copilot" "desactive"
-exit /b
+goto :MENU_IA_WIDGETS_RECALL
+
+:MENU_IA_OPTION_1
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DE COPILOT%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Reactive Copilot, le bouton dans la barre des taches et les suggestions IA.%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+echo.
+call :CORE_ACTIVER_COPILOT
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot active.%COLOR_RESET%
+call :FINISH_ACTION "Copilot" "active"
+goto :MENU_IA_WIDGETS_RECALL
+
 
 :CORE_ACTIVER_COPILOT
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour Copilot...%COLOR_RESET%
@@ -3196,47 +3284,6 @@ set "HOSTS="
 ipconfig /flushdns >nul 2>&1
 exit /b
 
-:ACTIVER_WIDGETS_SECTION
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DES WIDGETS%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Reactive les Widgets dans la barre des taches (actualites, meteo, etc.).%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_ACTIVER_WIDGETS
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets actives.%COLOR_RESET%
-call :FINISH_ACTION "Widgets" "active"
-exit /b
-
-:DESACTIVER_WIDGETS_SECTION
-if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_WIDGETS_RUN
-cls
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Voulez-vous vraiment desactiver les Widgets ?%COLOR_RESET%
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%Pourquoi cette question : les widgets utilisent des ressources et du reseau%COLOR_RESET%
-echo %COLOR_WHITE%pour afficher des actualites et la meteo en continu.%COLOR_RESET%
-echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_WIDGETS_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation des Widgets ? [O/N]: %COLOR_RESET%"
-if !errorlevel! NEQ 0 exit /b
-:DESACTIVER_WIDGETS_RUN
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DES WIDGETS%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Desactive les Widgets dans la barre des taches pour liberer des ressources.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_DESACTIVER_WIDGETS
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets desactives.%COLOR_RESET%
-call :FINISH_ACTION "Widgets" "desactive"
-exit /b
 
 :CORE_ACTIVER_WIDGETS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour les Widgets...%COLOR_RESET%
@@ -3250,47 +3297,6 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_D
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
 exit /b
 
-:ACTIVER_RECALL_SECTION
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DE RECALL%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Reactive Recall et les fonctionnalites IA associees (snapshots, analyse d'ecran).%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_ACTIVER_RECALL
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall active.%COLOR_RESET%
-call :FINISH_ACTION "Recall" "active"
-exit /b
-
-:DESACTIVER_RECALL_SECTION
-if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_RECALL_RUN
-cls
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Voulez-vous vraiment desactiver Recall ?%COLOR_RESET%
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%Pourquoi cette question : Recall enregistre votre activite ecran pour%COLOR_RESET%
-echo %COLOR_WHITE%permettre des recherches IA ^(fort impact sur la confidentialite^).%COLOR_RESET%
-echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_RECALL_RUN "%STYLE_BOLD%%COLOR_YELLOW%Confirmer la desactivation de Recall ? [O/N]: %COLOR_RESET%"
-if !errorlevel! NEQ 0 exit /b
-:DESACTIVER_RECALL_RUN
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DE RECALL%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Desactive Recall, les snapshots d'ecran et les fonctionnalites IA associees.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_DESACTIVER_RECALL
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall desactive.%COLOR_RESET%
-call :FINISH_ACTION "Recall" "desactive"
-exit /b
 
 :CORE_ACTIVER_RECALL
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour Recall...%COLOR_RESET%
@@ -3351,49 +3357,6 @@ powershell -NoProfile -Command "Set-ItemProperty -Path 'HKCU:\Software\Microsoft
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Phone Link / YourPhone bloque en arriere-plan%COLOR_RESET%
 exit /b
 
-:DESACTIVER_PHONELINK_SECTION
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% BLOCAGE DE PHONE LINK / YOURPHONE%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Bloque l'activation en arriere-plan de Phone Link et YourPhone.%COLOR_RESET%
-echo %COLOR_WHITE%  L'application reste installee ; seuls les lancements en arriere-plan sont bloques.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_DESACTIVER_PHONELINK
-call :FINISH_ACTION "Phone Link / YourPhone" "bloque"
-exit /b
-
-:DESACTIVER_TOUT_IA_WIDGETS_RECALL
-if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_TOUT_IA_RUN
-cls
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Confirmer la desactivation TOTALE ^(Copilot + Widgets + Recall + Phone Link^) ?%COLOR_RESET%
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%Effet : desactivation/blocage de Copilot, Widgets, Recall et Phone Link.%COLOR_RESET%
-echo.
-call :ASK_IF_INTERACTIVE :DESACTIVER_TOUT_IA_RUN "%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous vraiment tout desactiver ? [O/N]: %COLOR_RESET%"
-if !errorlevel! NEQ 0 exit /b
-:DESACTIVER_TOUT_IA_RUN
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION TOTALE IA / WIDGETS / PHONE LINK%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Desactive Copilot, les Widgets, Recall et Phone Link en une seule operation.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-call :CORE_DESACTIVER_COPILOT
-call :CORE_DESACTIVER_WIDGETS
-call :CORE_DESACTIVER_RECALL
-call :CORE_DESACTIVER_PHONELINK
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et Phone Link desactives.%COLOR_RESET%
-call :FINISH_ACTION "Toutes les fonctions IA/Widgets/Phone Link" "desactivees"
-exit /b
 
 
 :FINISH_ACTION
