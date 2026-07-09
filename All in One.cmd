@@ -89,7 +89,7 @@ set "HW_RAM=Detection..."
 :: [TERMINE]   VERT  = Section completee
 :: [INFO]      JAUNE = Information / Conseil
 :: [SKIP]      CYAN  = Action ignoree volontairement / non applicable
-:: [*]        JAUNE = Avertissement (attention requise)
+:: Note : [*] est aussi reutilise pour les avertissements (meme couleur jaune)
 :: [-]         ROUGE = Suppression / Action negative
 :: [ERREUR]    ROUGE = Erreur critique / Echec
 :: [ATTENTION] ROUGE = Risque de securite
@@ -737,26 +737,26 @@ if "!PROFIL_POWER!"=="0" (
 echo.
 
 set "HAS_OPT=0"
-if "%DESACTIVER_SECURITE%"=="1" set "HAS_OPT=1"
-if "%DESACTIVER_DEFENDER%"=="1" set "HAS_OPT=1"
-if "%DESACTIVER_ANIMATIONS%"=="1" set "HAS_OPT=1"
-if "%DESACTIVER_IA%"=="1" set "HAS_OPT=1"
-if "%DESACTIVER_UAC%"=="1" set "HAS_OPT=1"
-if "%HAS_OPT%"=="1" (
+if "!DESACTIVER_SECURITE!"=="1" set "HAS_OPT=1"
+if "!DESACTIVER_DEFENDER!"=="1" set "HAS_OPT=1"
+if "!DESACTIVER_ANIMATIONS!"=="1" set "HAS_OPT=1"
+if "!DESACTIVER_IA!"=="1" set "HAS_OPT=1"
+if "!DESACTIVER_UAC!"=="1" set "HAS_OPT=1"
+if "!HAS_OPT!"=="1" (
     echo %STYLE_BOLD%%COLOR_BLUE%-- OPTIONS COMPLEMENTAIRES ------------------------------------------------------%COLOR_RESET%
-    if "%DESACTIVER_SECURITE%"=="1" (
+    if "!DESACTIVER_SECURITE!"=="1" (
         echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Protections de securite desactivees.%COLOR_RESET%
     )
-    if "%DESACTIVER_DEFENDER%"=="1" (
+    if "!DESACTIVER_DEFENDER!"=="1" (
         echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Windows Defender desactive ^(effet selon Tamper Protection^).%COLOR_RESET%
     )
-    if "%DESACTIVER_UAC%"=="1" (
+    if "!DESACTIVER_UAC!"=="1" (
         echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%UAC ^(Controle de Compte Utilisateur^) desactive.%COLOR_RESET%
     )
-    if "%DESACTIVER_ANIMATIONS%"=="1" (
+    if "!DESACTIVER_ANIMATIONS!"=="1" (
         echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Animations Windows desactivees.%COLOR_RESET%
     )
-    if "%DESACTIVER_IA%"=="1" (
+    if "!DESACTIVER_IA!"=="1" (
         echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Fonctionnalites IA / Widgets / Recall desactivees.%COLOR_RESET%
     )
     echo.
@@ -1169,7 +1169,7 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director NORMAL : Auto AC/DC%COLOR_RESET%
 )
 
-REM  1.17 - DisablePagefileEncryption (Gaming uniquement : reduit latence I/O, incompatible BitLocker)
+REM  1.18 - DisablePagefileEncryption (Gaming uniquement : reduit latence I/O, incompatible BitLocker)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du chiffrement du fichier d'echange ^(Gaming^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1564,13 +1564,13 @@ powershell -NoProfile -Command "Get-PnpDevice -Class Net -ErrorAction SilentlyCo
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%MSI Mode active sur cartes reseau%COLOR_RESET%
 
 
-REM  5.6 - Optimisation BITS
+REM  5.5 - Optimisation BITS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation du service BITS...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyForLocal" /t REG_DWORD /d 1 /f >nul 2>&1
 REM  Pas de suppression ici : les cles invalides/anciennes sont laissees a une section restauration/nettoyage.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(aucune suppression hors restauration^)%COLOR_RESET%
 
-REM  5.8 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->skip)
+REM  5.6 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->skip)
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : valeurs neutres pour autonomie Wi-Fi ^(TcpNoDelay=0, TcpAckFrequency=2^)%COLOR_RESET%
     powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress } ; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value 2 -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value 0 -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value 1 -Force | Out-Null } }" >nul 2>&1
@@ -1582,7 +1582,7 @@ if "!PROFIL_POWER!"=="1" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK ignore en profil NORMAL ^(aucune restauration/suppression^)%COLOR_RESET%
 )
 
-REM  5.10 - Optimisation cartes reseau
+REM  5.7 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
     if "!PROFIL_USAGE!"=="0" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO OFF, ITR 200 + registre force, EEE OFF^)...%COLOR_RESET%
@@ -1602,7 +1602,7 @@ if "!PROFIL_POWER!"=="0" (
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
 )
-REM  5.11 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
+REM  5.8 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preservation gestion energie USB ^(selective suspend conserve^)...%COLOR_RESET%
 ) else (
@@ -1614,7 +1614,7 @@ if "!PROFIL_POWER!"=="1" (
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee - Latence minimale%COLOR_RESET%
 )
-REM  5.12 - QoS Fortnite DSCP 46 (Gaming uniquement)
+REM  5.9 - QoS Fortnite DSCP 46 (Gaming uniquement)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1639,19 +1639,19 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite ignoree ^(Normal^) - aucune suppression hors restauration%COLOR_RESET%
 )
 
-REM  5.13 - Nettoyage des protocoles reseau
+REM  5.10 - Nettoyage des protocoles reseau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protocoles reseau inutiles (Bindings)...%COLOR_RESET%
 powershell -NoProfile -Command "Get-NetAdapter -ErrorAction SilentlyContinue | Where-Object { $_.Status -eq 'Up' -and $_.Virtual -eq $false } | ForEach-Object { Disable-NetAdapterBinding -Name $_.Name -ComponentID 'ms_lldp','ms_implat' -ErrorAction SilentlyContinue }" >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Bindings reseau nettoyes (LLDP, MS_IMPLAT)%COLOR_RESET%
 
-REM  5.14 - Desactivation NetBIOS over TCP/IP
+REM  5.11 - Desactivation NetBIOS over TCP/IP
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de NetBIOS over TCP/IP...%COLOR_RESET%
 for /f "tokens=*" %%i in ('reg query "HKLM\SYSTEM\CurrentControlSet\Services\NetBT\Parameters\Interfaces" /s ^| findstr /i /r "\\Tcpip_.*$" 2^>nul') do (
   reg add "%%i" /v NetbiosOptions /t REG_DWORD /d 2 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NetBIOS desactive%COLOR_RESET%
 
-REM  5.15 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
+REM  5.12 - RssBaseCpu (Gaming : interrupts NIC decales du core 0)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu=1 ^(Gaming : interrupts NIC sur CPU 1+^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\Ndis\Parameters" /v RssBaseCpu /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2865,9 +2865,6 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Li
 reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "1" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /f >nul 2>&1
 
-REM  Supprimer la politique DisableStartupAnimation
-reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /f >nul 2>&1
-
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Animations Windows activees.%COLOR_RESET%
 call :FINISH_ACTION "Animations" "activees"
 exit /b
@@ -2881,7 +2878,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 echo %COLOR_WHITE%Pourquoi une derniere confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%- Les animations consomment un peu de GPU/CPU ; les couper peut fluidifier un PC faible.%COLOR_RESET%
-echo %COLOR_WHITE%- Cela modifie le registre utilisateur et bcdedit ^(animation du logo au demarrage^).%COLOR_RESET%
+echo %COLOR_WHITE%- Cela modifie le registre utilisateur ^(effets visuels, transparence, animations au survol^).%COLOR_RESET%
 echo %COLOR_WHITE%- L'interface parait plus "seche" ^(transparence, barres des taches, menus^).%COLOR_RESET%
 echo %COLOR_WHITE%- Un redemarrage est necessaire pour tout voir ; reversible via le menu Activer.%COLOR_RESET%
 echo.
@@ -2925,9 +2922,7 @@ reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2
 reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "0" /f >nul 2>&1
-
-REM  Animation demarrage OFF
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v DisableStartupAnimation /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /t REG_DWORD /d 0 /f >nul 2>&1
 
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Animations Windows desactivees.%COLOR_RESET%
 call :FINISH_ACTION "Animations" "desactivees"
@@ -3984,7 +3979,6 @@ echo.
 REM  Initialiser la barre de progression (2 packages au total)
 set /a "VC_TOTAL=2"
 set /a "VC_STEP=0"
-set /a "VCINSTALL=0"
 
 REM  Creer un dossier temporaire pour les installations
 set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
