@@ -699,6 +699,15 @@ if "!DESACTIVER_SECURITE!"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
 if "!DESACTIVER_DEFENDER!"=="1" call :DESACTIVER_DEFENDER_SECTION
 if "!DESACTIVER_ANIMATIONS!"=="1" call :DESACTIVER_ANIMATIONS_SECTION
 if "!DESACTIVER_IA!"=="1" (
+  cls
+  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+  echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DES FONCTIONS IA / WIDGETS / RECALL%COLOR_RESET%
+  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+  echo.
+  echo %COLOR_WHITE%  Desactive Copilot, les Widgets et Recall en une seule operation.%COLOR_RESET%
+  echo.
+  echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
+  echo.
   call :CORE_DESACTIVER_COPILOT
   call :CORE_DESACTIVER_WIDGETS
   call :CORE_DESACTIVER_RECALL
