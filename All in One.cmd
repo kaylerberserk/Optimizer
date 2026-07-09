@@ -703,6 +703,8 @@ if "!DESACTIVER_IA!"=="1" (
   call :CORE_DESACTIVER_WIDGETS
   call :CORE_DESACTIVER_RECALL
   call :CORE_DESACTIVER_PHONELINK
+  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets, Recall et Phone Link desactives.%COLOR_RESET%
+  call :FINISH_ACTION "Toutes les fonctions IA/Widgets/Phone Link" "desactivees"
 )
 if "!DESACTIVER_UAC!"=="1" call :DESACTIVER_UAC_SECTION
 set "SKIP_PAUSE=0"
