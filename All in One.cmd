@@ -109,16 +109,7 @@ set /a "LOAD_STEP=0"
 :: Etape 1 : Privileges
 set /a "LOAD_STEP+=1"
 call :PROGRESS_BAR %LOAD_STEP% %LOAD_TOTAL% "Verification des privileges administrateur"
-:: Verification robuste des privileges admin (net session + verification UAC)
-net session >nul 2>&1
-if !errorlevel! NEQ 0 (
-    echo.
-    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Ce script necessite des privileges administrateur.%COLOR_RESET%
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Clic droit sur le script -^> Executer en tant qu'administrateur%COLOR_RESET%
-    pause
-    exit /B 1
-)
-:: Verification supplementaire : verifier que le processus est vraiment eleve (UAC)
+:: Verification des privileges via le jeton UAC (independante du service Serveur utilise par net session)
 powershell -NoProfile -Command "if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { exit 1 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
     echo.
@@ -212,12 +203,13 @@ if not "%~1"=="1" (
     set "DETECTE_PORTABLE=0"
 )
 :: Detection materiel en une seule commande pour eviter les scripts temporaires fragiles en CMD.
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $res+='GPU:'+($gn -join ' / ')}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}elseif($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines((Join-Path $env:TEMP 'hw_info.tmp'), $res)" >nul 2>&1
+set "WINOPT_HW_FILE=%TEMP%\hw_info_%RANDOM%_%RANDOM%.tmp"
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor; $v=Get-CimInstance Win32_VideoController; $m=Get-CimInstance Win32_PhysicalMemory; if(-not $m){$m=Get-CimInstance Win32_ComputerSystem}; $b=0; $lc=8,9,10,11,14,30,31,32; $enc=Get-CimInstance Win32_SystemEnclosure -EA SilentlyContinue; if($enc -and $enc.ChassisTypes){foreach($t in $enc.ChassisTypes){if($lc -contains $t){$b=1;break}}}; if(-not $b -and (Get-CimInstance Win32_Battery -EA SilentlyContinue)){$b=1}; $res=@(); $cap=$o.Caption; if(-not $cap){$pn=(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion').ProductName; if($pn){$cap=$pn}else{$cap='Windows'}}; $res+='OS:'+$cap+' ('+$o.Version+')'; if($c){$res+='CPU:'+$c.Name.Trim()}; if($v){$gn=@($v|Where-Object{$_.Name -and $_.Name -notmatch 'Parsec|Virtual Display|Microsoft Basic|Remote|Indirect|Mirror'}|ForEach-Object{$_.Name.Trim()}|Select-Object -Unique); if(-not $gn.Count){$gn=@($v|ForEach-Object{$_.Name.Trim()})}; $res+='GPU:'+($gn -join ' / ')}; if($m.Capacity){$t=($m|Measure-Object Capacity -Sum).Sum; $res+='RAM:'+[math]::Round($t/1GB,0)}elseif($m.TotalPhysicalMemory){$res+='RAM:'+[math]::Round($m.TotalPhysicalMemory/1GB,0)}; $res+='LAPTOP:'+$b; [System.IO.File]::WriteAllLines($env:WINOPT_HW_FILE, $res)" >nul 2>&1
 if !errorlevel! NEQ 0 (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Erreur lors de la detection du materiel. Valeurs par defaut utilisees.%COLOR_RESET%
 )
-if exist "%TEMP%\hw_info.tmp" (
-    for /f "usebackq tokens=1* delims=:" %%a in ("%TEMP%\hw_info.tmp") do (
+if exist "%WINOPT_HW_FILE%" (
+    for /f "usebackq tokens=1* delims=:" %%a in ("%WINOPT_HW_FILE%") do (
         if /i "%%a"=="OS" set "HW_OS=%%b"
         if /i "%%a"=="CPU" set "HW_CPU=%%b"
         if /i "%%a"=="GPU" set "HW_GPU=%%b"
@@ -229,8 +221,9 @@ if exist "%TEMP%\hw_info.tmp" (
             set "DETECTE_PORTABLE=%%b"
         )
     )
-    del "%TEMP%\hw_info.tmp" >nul 2>&1
+    del "%WINOPT_HW_FILE%" >nul 2>&1
 )
+set "WINOPT_HW_FILE="
 :: Detection intelligente NVIDIA : verifie que le GPU est physique (pas un GPU virtuel de VM)
 set "HAS_NVIDIA=0"
 echo !HW_GPU! | findstr /i "NVIDIA" >nul && (
@@ -335,6 +328,7 @@ if !errorlevel! EQU 3 (
 )
 if !errorlevel! EQU 1 set "PROFIL_POWER=1"
 if !errorlevel! EQU 2 set "PROFIL_POWER=0"
+goto :CHOISIR_PROFILS_DONE
 
 :CHOISIR_PROFILS_DONE
 call :INIT_PROFILS
@@ -780,7 +774,16 @@ set "HAS_OPT="
 
 echo %STYLE_BOLD%%COLOR_BLUE%-- PROCHAINE ETAPE --------------------------------------------------------------%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
-call :PROMPT_MANUAL_REBOOT
+echo.
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer maintenant ? [O/N]: %COLOR_RESET%"
+call :AZCHOICE ON
+if !errorlevel! EQU 1 (
+    shutdown /r /t 10 /c "Redemarrage demande par WindowsOptimizer"
+    cls
+    echo.
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage programme dans 10 secondes...%COLOR_RESET%
+    timeout /t 5 /nobreak >nul
+)
 exit /b
 
 :OPTIMISATIONS_SYSTEME
@@ -979,10 +982,10 @@ for %%S in (
     SysMain
     defragsvc
 ) do (
-  reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
+  reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 )
 REM  Configuration du service par utilisateur WpnUserService
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\WpnUserService" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\WpnUserService" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\WpnUserService" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services vitaux et synchronisation en Automatique%COLOR_RESET%
 
 REM  2 - Services occasionnels et utiles -> MANUEL (demand)
@@ -1023,10 +1026,10 @@ for %%S in (
     SystemSuggestions
     uhssvc
 ) do (
-  reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+  reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 )
 REM  CDPUserSvc est un service par utilisateur
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\CDPUserSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\CDPUserSvc" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\CDPUserSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services utiles et occasionnels en mode Manuel%COLOR_RESET%
 
 REM  3 - Services inutiles et telemetrie -> DESACTIVES
@@ -1049,7 +1052,7 @@ for %%S in (
     WalletService
     WMPNetworkSvc
 ) do (
-  reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
+  reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services telemetrie et legacy desactives%COLOR_RESET%
 
@@ -1255,8 +1258,12 @@ if "!PROFIL_POWER!"=="1" (
 ) else (
     if !RAM_GB! GTR 8 (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM superieure a 8 Go - MAX PERF : desactivation de la compression memoire [charge CPU reduite]...%COLOR_RESET%
-        powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop } catch { exit 0 }" >nul 2>&1
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee%COLOR_RESET%
+        powershell -NoProfile -Command "try { Disable-MMAgent -MemoryCompression -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
+        if !errorlevel! EQU 0 (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire desactivee%COLOR_RESET%
+        ) else (
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de desactiver la compression memoire.%COLOR_RESET%
+        )
     ) else (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM de 8 Go ou moins : compression memoire conservee%COLOR_RESET%
     )
@@ -1435,7 +1442,7 @@ if "!HAS_NVIDIA!"=="1" (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA detecte - Configuration NVIDIA Profile Inspector...%COLOR_RESET%
         
         REM Utilisation de Windows\Temp car le %%TEMP%% utilisateur peut etre sur un RamDisk ou lecteur non mappe en Admin
-        set "NPI_DIR=%SystemDrive%\Windows\Temp\NPI_Temp"
+        set "NPI_DIR=%SystemRoot%\Temp\NPI_%RANDOM%_%RANDOM%"
         set "NPI_EXE_SRC=%~dp0Tools\NVIDIA Inspector\nvidiaProfileInspector.exe"
         set "NPI_PROFILE_SRC=%~dp0Tools\NVIDIA Inspector\Kaylers_profile.nip"
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
@@ -1462,10 +1469,12 @@ if "!HAS_NVIDIA!"=="1" (
 
         if "!NPI_VALID!"=="1" (
             echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du profil NVIDIA optimise...%COLOR_RESET%
-            start "" "!NPI_DIR!\nvidiaProfileInspector.exe" "!NPI_DIR!\Kaylers_profile.nip"
-            ping -n 3 127.0.0.1 >nul 2>&1
-            taskkill /f /im nvidiaProfileInspector.exe >nul 2>&1
-            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique avec succes%COLOR_RESET%
+            start /wait "" "!NPI_DIR!\nvidiaProfileInspector.exe" -silentImport "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+            if !errorlevel! EQU 0 (
+                echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique avec succes%COLOR_RESET%
+            ) else (
+                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%NVIDIA Profile Inspector n'a pas pu importer le profil.%COLOR_RESET%
+            )
         ) else (
             echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement ou fichiers corrompus.%COLOR_RESET%
         )
@@ -2127,18 +2136,12 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 
 REM  7.0 - Restaurer tous les plans d'alimentation aux valeurs d'usine Microsoft
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de tous les plans d'alimentation aux valeurs d'usine...%COLOR_RESET%
-echo Add-Type -TypeDefinition @' > "%TEMP%\reset_power.ps1"
-echo using System; >> "%TEMP%\reset_power.ps1"
-echo using System.Runtime.InteropServices; >> "%TEMP%\reset_power.ps1"
-echo public class Power { >> "%TEMP%\reset_power.ps1"
-echo     [DllImport("powrprof.dll", SetLastError=true)] >> "%TEMP%\reset_power.ps1"
-echo     public static extern uint PowerRestoreDefaultPowerSchemes(); >> "%TEMP%\reset_power.ps1"
-echo } >> "%TEMP%\reset_power.ps1"
-echo '@ >> "%TEMP%\reset_power.ps1"
-echo [Power]::PowerRestoreDefaultPowerSchemes() >> "%TEMP%\reset_power.ps1"
-powershell -NoProfile -File "%TEMP%\reset_power.ps1" <nul
-del "%TEMP%\reset_power.ps1" 2>nul
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaures (tous les schemas et valeurs par defaut)%COLOR_RESET%
+powershell -NoProfile -Command "$src='using System; using System.Runtime.InteropServices; public static class WinOptPower { [DllImport(""powrprof.dll"")] public static extern uint PowerRestoreDefaultPowerSchemes(); }'; Add-Type -TypeDefinition $src -ErrorAction Stop; $r=[WinOptPower]::PowerRestoreDefaultPowerSchemes(); if($r-ne 0){exit [int]$r}" >nul 2>&1
+if !errorlevel! EQU 0 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaures (tous les schemas et valeurs par defaut)%COLOR_RESET%
+) else (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec de la restauration des plans d'alimentation.%COLOR_RESET%
+)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du plan Equilibre Windows...%COLOR_RESET%
 powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre Windows actif%COLOR_RESET%
@@ -2568,7 +2571,7 @@ sc config WinDefend start= auto >nul 2>&1
 for %%S in (WdNisSvc Sense SecurityHealthService) do sc config %%S start= demand >nul 2>&1
 for %%S in (WdBoot WdFilter WdNisDrv) do sc config %%S start= boot >nul 2>&1
 for %%S in (WinDefend WdNisSvc Sense SecurityHealthService) do sc start %%S >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" /v "Start" /t REG_DWORD /d 3 /f >nul 2>&1
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" /v "Start" /t REG_DWORD /d 3 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation de la protection en temps reel...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableRealtimeMonitoring /f >nul 2>&1
@@ -2651,7 +2654,7 @@ if !errorlevel! NEQ 0 (
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des services Windows Defender...%COLOR_RESET%
 for %%S in (WinDefend WdNisSvc Sense SecurityHealthService) do sc stop %%S >nul 2>&1
 for %%S in (WinDefend WdNisSvc Sense WdBoot WdFilter WdNisDrv SecurityHealthService) do sc config %%S start= disabled >nul 2>&1
-for %%S in (Sense WdBoot WdFilter WdNisDrv WdNisSvc WinDefend SecurityHealthService) do reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v "Start" /t REG_DWORD /d 4 /f >nul 2>&1
+for %%S in (Sense WdBoot WdFilter WdNisDrv WdNisSvc WinDefend SecurityHealthService) do reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v "Start" /t REG_DWORD /d 4 /f >nul 2>&1
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de la protection en temps reel...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v "DisableRealtimeMonitoring" /t REG_DWORD /d 1 /f >nul 2>&1
@@ -3465,8 +3468,20 @@ del "%UserProfile%\Desktop\OneDrive.lnk" /f /q >nul 2>&1
 del "%ALLUSERSPROFILE%\Microsoft\Windows\Start Menu\Programs\OneDrive.lnk" /f /q >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourcis OneDrive supprimes%COLOR_RESET%
 
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nettoyage complet de OneDrive termine.%COLOR_RESET%
-call :FINISH_ACTION "OneDrive" "desinstalle"
+set "ONEDRIVE_REMOVE_OK=1"
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
+if exist "%ProgramFiles%\Microsoft OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
+if exist "%ProgramFiles(x86)%\Microsoft OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
+if exist "%USERPROFILE%\OneDrive" set "ONEDRIVE_REMOVE_OK=0"
+if "!ONEDRIVE_REMOVE_OK!"=="1" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nettoyage complet de OneDrive termine.%COLOR_RESET%
+    call :FINISH_ACTION "OneDrive" "desinstalle"
+) else (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Desinstallation OneDrive incomplete : executable ou dossier utilisateur encore present.%COLOR_RESET%
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage peut liberer les fichiers encore verrouilles.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+)
+set "ONEDRIVE_REMOVE_OK="
 goto :MENU_GESTION_WINDOWS
 
 :DESINSTALLER_EDGE
@@ -3613,10 +3628,13 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" /v "PreventFirstRu
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mises a jour automatiques et reinstallation bloquees%COLOR_RESET%
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification finale de la desinstallation...%COLOR_RESET%
+set "EDGE_REMOVE_OK=1"
 if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
+    set "EDGE_REMOVE_OK=0"
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Edge n'a pas pu etre completement desinstalle.%COLOR_RESET%
 ) else (
     if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+        set "EDGE_REMOVE_OK=0"
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Edge n'a pas pu etre completement desinstalle.%COLOR_RESET%
     ) else (
         echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Microsoft Edge desinstalle avec succes !%COLOR_RESET%
@@ -3625,13 +3643,23 @@ if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
 
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo  %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Microsoft Edge a ete desinstalle completement.%COLOR_RESET%
+if "!EDGE_REMOVE_OK!"=="1" (
+    echo  %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Microsoft Edge a ete desinstalle completement.%COLOR_RESET%
+) else (
+    echo  %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Desinstallation Edge incomplete. Consultez les messages ci-dessus.%COLOR_RESET%
+)
 if "%SUPPR_DATA%"=="0" (
     echo  %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Vos favoris, mots de passe et historique ont ete preserves.%COLOR_RESET%
 )
 echo  %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'icone Edge a ete supprimee de la barre des taches.%COLOR_RESET%
 set "SUPPR_DATA="
-call :FINISH_ACTION "Microsoft Edge" "desinstalle"
+if "!EDGE_REMOVE_OK!"=="1" (
+    call :FINISH_ACTION "Microsoft Edge" "desinstalle"
+) else (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage peut liberer les fichiers encore verrouilles.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+)
+set "EDGE_REMOVE_OK="
 goto :MENU_GESTION_WINDOWS
 
 :OUTIL_ACTIVATION
@@ -3643,8 +3671,12 @@ echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Lancement de l'outil d'activation...%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Veuillez suivre les instructions a l'ecran.%COLOR_RESET%
-powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; irm https://get.activated.win | iex"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Outil d'activation termine.%COLOR_RESET%
+call :RUN_REMOTE_PS "https://get.activated.win"
+if !errorlevel! EQU 0 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Outil d'activation termine.%COLOR_RESET%
+) else (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de telecharger ou d'executer l'outil d'activation.%COLOR_RESET%
+)
 pause
 goto :MENU_PRINCIPAL
 
@@ -3657,8 +3689,12 @@ echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Lancement de l'outil Chris Titus Tech...%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Veuillez suivre les instructions a l'ecran.%COLOR_RESET%
-powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; irm https://github.com/ChrisTitusTech/winutil/releases/latest/download/winutil.ps1 | iex"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Outil Chris Titus Tech termine.%COLOR_RESET%
+call :RUN_REMOTE_PS "https://github.com/ChrisTitusTech/winutil/releases/latest/download/winutil.ps1"
+if !errorlevel! EQU 0 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Outil Chris Titus Tech termine.%COLOR_RESET%
+) else (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de telecharger ou d'executer WinUtil.%COLOR_RESET%
+)
 pause
 goto :MENU_PRINCIPAL
 
@@ -3676,7 +3712,7 @@ powershell -NoProfile -Command "$p = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\
 if !errorlevel! NEQ 0 (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la restauration systeme...%COLOR_RESET%
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" /t REG_DWORD /d 1 /f >nul 2>&1
-    powershell -NoProfile -Command "try { Enable-ComputerRestore -Drive 'C:' -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
+    powershell -NoProfile -Command "try { Enable-ComputerRestore -Drive '%SystemDrive%\' -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
     timeout /t 2 /nobreak >nul
 )
 echo.
@@ -3706,7 +3742,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 REM  Analyse espace initial
-for /f %%a in ('powershell -NoProfile -NoLogo -Command "[int]((Get-PSDrive -Name C).Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
+for /f %%a in ('powershell -NoProfile -NoLogo -Command "[int]((Get-PSDrive -Name '%SystemDrive:~0,1%').Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
 if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
@@ -3773,10 +3809,12 @@ if exist "%LOCALAPPDATA%\Microsoft\Windows\WER" rd /s /q "%LOCALAPPDATA%\Microso
 REM  ETAPE 6 - Cache Windows Update, SoftwareDistribution, Delivery Optimization (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Update et Delivery Optimization"
-net stop wuauserv >nul 2>&1
-net stop bits >nul 2>&1
-net stop cryptsvc >nul 2>&1
-net stop dosvc >nul 2>&1
+for %%S in (wuauserv bits cryptsvc dosvc) do (
+    set "CLEAN_WAS_RUNNING_%%S=0"
+    powershell -NoProfile -Command "try { if((Get-Service -Name '%%S' -ErrorAction Stop).Status -eq 'Running'){exit 0}else{exit 1} } catch { exit 2 }" >nul 2>&1
+    if !errorlevel! EQU 0 set "CLEAN_WAS_RUNNING_%%S=1"
+    net stop %%S >nul 2>&1
+)
 timeout /t 2 /nobreak >nul
 rd /s /q "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
 rd /s /q "%SystemRoot%\SoftwareDistribution\DataStore" >nul 2>&1
@@ -3788,10 +3826,10 @@ if exist "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" (
     rd /s /q "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" >nul 2>&1
     md "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" >nul 2>&1
 )
-net start wuauserv >nul 2>&1
-net start bits >nul 2>&1
-net start cryptsvc >nul 2>&1
-net start dosvc >nul 2>&1
+for %%S in (wuauserv bits cryptsvc dosvc) do (
+    if "!CLEAN_WAS_RUNNING_%%S!"=="1" net start %%S >nul 2>&1
+    set "CLEAN_WAS_RUNNING_%%S="
+)
 
 REM  ETAPE 7 - Corbeille
 set /a "CLEAN_STEP+=1"
@@ -3826,11 +3864,10 @@ set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache DNS"
 ipconfig /flushdns >nul 2>&1
 
-REM  ETAPE 12 - Journaux Event Viewer (async - lancement parallele, gain ~1-3min)
+REM  ETAPE 12 - Journaux Event Viewer (parallele borne a 4 processus et attente finale)
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer (async)"
-powershell -NoProfile -Command "$logs=wevtutil el 2>$null; foreach($l in $logs){ if($l -notmatch '54849625-5478-4994-a5ba-3e3b0328c30d' -and $l -notmatch 'bf022046-1f4a-4b91-8a96-bcdb4d6c39f1'){ Start-Process wevtutil -ArgumentList @('cl', $l) -NoNewWindow -ErrorAction SilentlyContinue } }" >nul 2>&1
-ping -n 3 127.0.0.1 >nul 2>&1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
+powershell -NoProfile -Command "$running=@(); $logs=wevtutil el 2>$null; foreach($l in $logs){ if($l -match '54849625-5478-4994-a5ba-3e3b0328c30d|bf022046-1f4a-4b91-8a96-bcdb4d6c39f1'){continue}; while(@($running | Where-Object {-not $_.HasExited}).Count -ge 4){$running=@($running | Where-Object {-not $_.HasExited}); Start-Sleep -Milliseconds 100}; try {$p=Start-Process wevtutil -ArgumentList @('cl',$l) -NoNewWindow -PassThru -ErrorAction Stop; $running+=@($p)} catch {}}; $running | Wait-Process -ErrorAction SilentlyContinue" >nul 2>&1
 
 REM  ETAPE 13 - Windows.old + $SysReset + ~BT (ameliore)
 set /a "CLEAN_STEP+=1"
@@ -3864,13 +3901,19 @@ set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
 set "SAGEID=100"
 for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul') do (
-    reg delete "%%R" /va /f >nul 2>&1
+    reg delete "%%R" /v StateFlags%SAGEID% /f >nul 2>&1
 ) 2>nul
 for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Previous Installations" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "User file versions" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows ESD installation files" "Windows Upgrade Log Files") do (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
 )
-powershell -NoProfile -Command "$p=Get-Process cleanmgr -ErrorAction SilentlyContinue; if(-not $p){ Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID% /d C:' -NoNewWindow -PassThru }" >nul 2>&1
-powershell -NoProfile -Command "$waitCount=0; while((Get-Process cleanmgr -ErrorAction SilentlyContinue) -and ($waitCount -lt 120)){ Start-Sleep -s 1; $waitCount++ }" >nul 2>&1
+powershell -NoProfile -Command "try {$p=Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID% /d %SystemDrive%' -NoNewWindow -PassThru -ErrorAction Stop; if(-not $p.WaitForExit(120000)){exit 2}; exit $p.ExitCode} catch {exit 1}" >nul 2>&1
+set "CLEANMGR_RC=!errorlevel!"
+if not "!CLEANMGR_RC!"=="0" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Cleanmgr continue en arriere-plan ou n'a pas termine normalement.%COLOR_RESET%
+) else (
+    powershell -NoProfile -Command "Get-ChildItem 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches' -ErrorAction SilentlyContinue | ForEach-Object { Remove-ItemProperty -LiteralPath $_.PSPath -Name 'StateFlags%SAGEID%' -ErrorAction SilentlyContinue }" >nul 2>&1
+)
+set "CLEANMGR_RC="
 
 REM  ETAPE 16 - Nettoyage composants systeme (via DISM)
 set /a "CLEAN_STEP+=1"
@@ -3957,7 +4000,7 @@ call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache npm"
 powershell -NoProfile -Command "$cache=npm config get cache 2>$null; if($cache -and (Test-Path $cache)){ Remove-Item -LiteralPath $cache -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'OK' }" >nul 2>&1
 
 REM  Calcul final (PowerShell pour la precision des decimales)
-for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive C).Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ""$beforeGB $afterGB $freedGB"""') do (
+for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ""$beforeGB $afterGB $freedGB"""') do (
     set "SPACE_BEFORE_GB=%%a"
     set "SPACE_AFTER_GB=%%b"
     set "SPACE_FREED_GB=%%c"
@@ -3997,6 +4040,7 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Detection des versions installe
 REM  Initialisation
 set VC2015X86=0
 set VC2015X64=0
+set "RUNTIME_ERROR=0"
 
 REM  Detection DLL : vcruntime140.dll (VC++ 2015 base) ET vcruntime140_1.dll (VS2019+)
 REM  vcruntime140_1.dll est ajoutee a partir de VS 2017 update 8 / VS 2019.
@@ -4005,7 +4049,7 @@ if exist "%SystemRoot%\System32\vcruntime140.dll" if exist "%SystemRoot%\System3
 if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" if exist "%SystemRoot%\SysWOW64\vcruntime140_1.dll" set VC2015X86=1
 
 REM  Fallback registry pour les versions manquantes
-set "REG_DUMP=%TEMP%\vc_uninstall_dump.txt"
+set "REG_DUMP=%TEMP%\vc_uninstall_dump_%RANDOM%_%RANDOM%.txt"
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s > "%REG_DUMP%" 2>nul
 reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s >> "%REG_DUMP%" 2>nul
 
@@ -4046,7 +4090,7 @@ set /a "VC_TOTAL=2"
 set /a "VC_STEP=0"
 
 REM  Creer un dossier temporaire pour les installations
-set "VCREDIST_DIR=%TEMP%\VCRedistInstall"
+set "VCREDIST_DIR=%TEMP%\VCRedistInstall_%RANDOM%_%RANDOM%"
 if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
 
 REM  VC++ 2015-2022 x86
@@ -4055,11 +4099,22 @@ call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x86"
 if %VC2015X86%==0 (
     powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile '%VCREDIST_DIR%\vc2015x86.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }" >nul 2>&1
     if !errorlevel! NEQ 0 (
+        set "RUNTIME_ERROR=1"
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x86.%COLOR_RESET%
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
-        if !errorlevel! NEQ 0 (
-            echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%VC++ 2015-2022 x86 : l'installateur a retourne une erreur.%COLOR_RESET%
+        set "VC_EXIT=!errorlevel!"
+        if "!VC_EXIT!"=="0" (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 installe.%COLOR_RESET%
+        ) else if "!VC_EXIT!"=="3010" (
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 installe - redemarrage requis.%COLOR_RESET%
+        ) else if "!VC_EXIT!"=="1641" (
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 installe - redemarrage initie/requis.%COLOR_RESET%
+        ) else if "!VC_EXIT!"=="1638" (
+            echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : une version compatible est deja presente.%COLOR_RESET%
+        ) else (
+            set "RUNTIME_ERROR=1"
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : code installateur !VC_EXIT!.%COLOR_RESET%
         )
     )
 )
@@ -4070,11 +4125,22 @@ call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x64"
 if %VC2015X64%==0 (
     powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile '%VCREDIST_DIR%\vc2015x64.exe' -UseBasicParsing -ErrorAction Stop } catch { exit 1 }" >nul 2>&1
     if !errorlevel! NEQ 0 (
+        set "RUNTIME_ERROR=1"
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x64.%COLOR_RESET%
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
-        if !errorlevel! NEQ 0 (
-            echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%VC++ 2015-2022 x64 : l'installateur a retourne une erreur.%COLOR_RESET%
+        set "VC_EXIT=!errorlevel!"
+        if "!VC_EXIT!"=="0" (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 installe.%COLOR_RESET%
+        ) else if "!VC_EXIT!"=="3010" (
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 installe - redemarrage requis.%COLOR_RESET%
+        ) else if "!VC_EXIT!"=="1641" (
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 installe - redemarrage initie/requis.%COLOR_RESET%
+        ) else if "!VC_EXIT!"=="1638" (
+            echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : une version compatible est deja presente.%COLOR_RESET%
+        ) else (
+            set "RUNTIME_ERROR=1"
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : code installateur !VC_EXIT!.%COLOR_RESET%
         )
     )
 )
@@ -4092,7 +4158,12 @@ REM  Calculer les vrais comptes
 set /a "VCINSTALL=%VC2015X86_NEW%+%VC2015X64_NEW%" 2>nul
 
 echo.
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Verification terminee - %COLOR_GREEN%%VCINSTALL%/2%COLOR_RESET% %COLOR_WHITE%versions presentes%COLOR_RESET%
+if "%VCINSTALL%"=="2" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Verification terminee - %COLOR_GREEN%%VCINSTALL%/2%COLOR_RESET% %COLOR_WHITE%versions presentes%COLOR_RESET%
+) else (
+    set "RUNTIME_ERROR=1"
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Verification terminee - %COLOR_RED%%VCINSTALL%/2%COLOR_RESET% %COLOR_WHITE%versions presentes%COLOR_RESET%
+)
 if "!SKIP_PAUSE!"=="0" timeout /t 3 /nobreak >nul
 
 REM  Nettoyage des fichiers temporaires
@@ -4109,6 +4180,8 @@ set "VC2015X64_NEW="
 set "VCINSTALL="
 set "VCINSTALLED_COUNT="
 set "REG_DUMP="
+set "VC_EXIT="
+goto :INSTALLER_DIRECTX_SECTION
 
 :INSTALLER_DIRECTX_SECTION
 cls
@@ -4117,13 +4190,20 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DE DIRECTX RUNTIME (JUNE 2010)%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
+if not defined RUNTIME_ERROR set "RUNTIME_ERROR=0"
 call :INSTALLER_DIRECTX
+if !errorlevel! NEQ 0 set "RUNTIME_ERROR=1"
 
 if "!SKIP_PAUSE!"=="0" (
     echo.
     pause
 )
-exit /b
+if "!RUNTIME_ERROR!"=="0" (
+    set "RUNTIME_ERROR="
+    exit /b 0
+)
+set "RUNTIME_ERROR="
+exit /b 1
 
 :INSTALLER_DIRECTX
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification de l'installation de DirectX...%COLOR_RESET%
@@ -4136,36 +4216,43 @@ if "%DX_INSTALLED%"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 est deja installe sur ce systeme.%COLOR_RESET%
     set "DX_INSTALLED="
     set "DX_TEMP="
-    exit /b
+    exit /b 0
 )
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preparation de l'installation...%COLOR_RESET%
-set "DX_TEMP=%TEMP%\DirectXInstall"
-if exist "%DX_TEMP%" rd /s /q "%DX_TEMP%" >nul 2>&1
+set "DX_TEMP=%TEMP%\DirectXInstall_%RANDOM%_%RANDOM%"
 mkdir "%DX_TEMP%"
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement de DirectX Redist June 2010 (95 Mo)...%COLOR_RESET%
-powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile '%DX_TEMP%\directx_redist.exe' -UseBasicParsing } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f='%DX_TEMP%\directx_redist.exe'; Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 80000000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de DirectX.%COLOR_RESET%
     rd /s /q "%DX_TEMP%" >nul 2>&1
     set "DX_INSTALLED="
     set "DX_TEMP="
-    exit /b
+    exit /b 1
 )
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Extraction des fichiers...%COLOR_RESET%
 REM  Utiliser l'extracteur integre de DirectX si possible, ou fallback
 "%DX_TEMP%\directx_redist.exe" /Q /T:"%DX_TEMP%" >nul 2>&1
+set "DX_RESULT=!errorlevel!"
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Installation silencieuse en cours...%COLOR_RESET%
-if exist "%DX_TEMP%\DXSETUP.exe" (
-    start /wait "" "%DX_TEMP%\DXSETUP.exe" /silent >nul 2>&1
-    if !errorlevel! EQU 0 (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 installe avec succes.%COLOR_RESET%
+if "!DX_RESULT!"=="0" (
+    if exist "%DX_TEMP%\DXSETUP.exe" (
+        start /wait "" "%DX_TEMP%\DXSETUP.exe" /silent >nul 2>&1
+        set "DX_RESULT=!errorlevel!"
+        if "!DX_RESULT!"=="0" (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 installe avec succes.%COLOR_RESET%
+        ) else (
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%DXSETUP a retourne le code !DX_RESULT! - installation peut etre incomplete.%COLOR_RESET%
+        )
     ) else (
-        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%DXSETUP a retourne le code !errorlevel! - installation peut etre incomplete.%COLOR_RESET%
+        set "DX_RESULT=1"
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%DXSETUP.exe est introuvable apres extraction.%COLOR_RESET%
     )
 ) else (
+    set "DX_RESULT=1"
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Une erreur est survenue lors de l'extraction.%COLOR_RESET%
 )
 
@@ -4175,7 +4262,12 @@ rd /s /q "%DX_TEMP%" >nul 2>&1
 
 set "DX_INSTALLED="
 set "DX_TEMP="
-exit /b
+if "!DX_RESULT!"=="0" (
+    set "DX_RESULT="
+    exit /b 0
+)
+set "DX_RESULT="
+exit /b 1
 
 
 :SUPPRIMER_BLOATWARES
@@ -4270,3 +4362,22 @@ powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
 powercfg /setactive SCHEME_CURRENT >nul 2>&1
 exit /b 0
+
+:RUN_REMOTE_PS
+set "REMOTE_PS_FILE=%TEMP%\WindowsOptimizer_remote_%RANDOM%_%RANDOM%.ps1"
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { Invoke-WebRequest -Uri '%~1' -OutFile $env:REMOTE_PS_FILE -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $env:REMOTE_PS_FILE).Length -lt 500){exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
+if !errorlevel! NEQ 0 (
+    if exist "%REMOTE_PS_FILE%" del /f /q "%REMOTE_PS_FILE%" >nul 2>&1
+    set "REMOTE_PS_FILE="
+    exit /b 1
+)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%REMOTE_PS_FILE%"
+set "REMOTE_PS_RC=!errorlevel!"
+del /f /q "%REMOTE_PS_FILE%" >nul 2>&1
+set "REMOTE_PS_FILE="
+if "!REMOTE_PS_RC!"=="0" (
+    set "REMOTE_PS_RC="
+    exit /b 0
+)
+set "REMOTE_PS_RC="
+exit /b 1
