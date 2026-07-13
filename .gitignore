@@ -41,6 +41,9 @@ build/
 ~$*
 .hermes/
 
+# Local scratch files (drafts, never pushed to remote)
+_commit_msg.txt
+
 # Agent lock files
 skills-lock.json
 
