@@ -2440,8 +2440,8 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v Coalescing
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\ControlSet001\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /f >nul 2>&1
-REM  Reactive DynamicTick (horloge dynamique)
-bcdedit /deletevalue disabledynamictick >nul 2>&1
+REM  Force DisableDynamicTick (horloge dynamique desactivee)
+bcdedit /set disabledynamictick yes >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing reactive%COLOR_RESET%
 
 REM  7.5 - SetTimerResolution du demarrage
