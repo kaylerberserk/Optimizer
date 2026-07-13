@@ -407,16 +407,20 @@ call :ASK_CONFIRM "%~2"
 if !errorlevel! EQU 1 exit /b 1
 exit /b 0
 
-:: %~1 = message  %~2 = variable flag (ex: DESACTIVER_SECURITE) - positionne a 1 si Oui, 0 si Non
+:: Question standard O/N/M.
+:: %~1 = message  %~2 = variable flag (ex: DESACTIVER_SECURITE)
+:: O : flag=1, retour 0 / N : flag=0, retour 0 / M : flag=0, retour 2
 :COMMON_YES_NO
 set "%~2=0"
 <nul set /p ="%~1"
-call :AZCHOICE ONM
-if !errorlevel! EQU 3 (
+choice /c ONM /n
+REM Tester immediatement ERRORLEVEL dans l'ordre decroissant : CHOICE retourne O=1, N=2, M=3.
+if errorlevel 3 (
     cls
     exit /b 2
 )
-if !errorlevel! EQU 1 set "%~2=1"
+if errorlevel 2 exit /b 0
+set "%~2=1"
 exit /b 0
 
 :: Lecture d'une entree menu via choice.exe (silencieux : pas d'ecran de la liste).
@@ -455,8 +459,9 @@ echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Optimisations Reseau%COLOR_RESE
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- REGLAGES AVANCES ---%COLOR_RESET%
 echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Gerer Economies d'Energie%COLOR_RESET%
-echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite - Desactiver ou Restaurer%COLOR_RESET%
+echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Gerer Protections Securite ^(VBS/HVCI + Mitigations CPU^)%COLOR_RESET%
 echo.
+
 echo %STYLE_BOLD%%COLOR_BLUE%--- OPTIMISATIONS ALL IN ONE ---%COLOR_RESET%
 echo %COLOR_YELLOW%[O]%COLOR_RESET% %COLOR_WHITE%Tout optimiser %COLOR_GREEN%- repondez aux questions, le script gere le reste%COLOR_RESET%
 echo.
@@ -482,7 +487,7 @@ if !errorlevel! EQU 12 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 11 goto :CREER_POINT_RESTAURATION
 if !errorlevel! EQU 10 goto :NETTOYAGE_AVANCE_WINDOWS
 if !errorlevel! EQU 9  goto :TOUT_OPTIMISER
-if !errorlevel! EQU 8  goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! EQU 8  goto :TOGGLE_PROTECTIONS_NOYAU
 if !errorlevel! EQU 7  goto :TOGGLE_ECONOMIES_ENERGIE
 if !errorlevel! EQU 6  goto :DO_PERIPHERIQUES
 if !errorlevel! EQU 5  goto :DO_RESEAU
@@ -538,37 +543,35 @@ echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- SECURITE ---%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Gerer Windows Defender%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Gerer UAC (Controle de Compte Utilisateur)%COLOR_RESET%
-echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Gerer VBS / HVCI (Isolation du noyau)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- INTERFACE ---%COLOR_RESET%
-echo %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Gerer les Animations Windows%COLOR_RESET%
-echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Gerer Copilot / Widgets / Recall (Windows 11)%COLOR_RESET%
+echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_GREEN%Gerer les Animations Windows%COLOR_RESET%
+echo %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_GREEN%Gerer Copilot / Widgets / Recall (Windows 11)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- APPLICATIONS MICROSOFT ---%COLOR_RESET%
-echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
-echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
+echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_RED%Desinstaller OneDrive Completement%COLOR_RESET%
+echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desinstaller Edge Completement%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- RUNTIMES ET DEPENDANCES ---%COLOR_RESET%
-echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_GREEN%Installer Runtimes (Visual C++ + DirectX June 2010)%COLOR_RESET%
+echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Installer Runtimes (Visual C++ + DirectX June 2010)%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- APPLICATIONS ET NETTOYAGE ---%COLOR_RESET%
-echo %COLOR_YELLOW%[9]%COLOR_RESET% %COLOR_RED%Supprimer les Bloatwares Windows (Apps inutiles)%COLOR_RESET%
+echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Supprimer les Bloatwares Windows (Apps inutiles)%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-9, M]: %COLOR_RESET%"
-call :AZCHOICE 123456789M
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-8, M]: %COLOR_RESET%"
+call :AZCHOICE 12345678M
 REM  Gestion des choix (EQU = egalite stricte, ordre sans importance)
-if !errorlevel! EQU 10 goto :MENU_PRINCIPAL
-if !errorlevel! EQU 9  goto :SUPPRIMER_BLOATWARES
-if !errorlevel! EQU 8  goto :DO_INSTALLER_VISUAL_REDIST
-if !errorlevel! EQU 7  goto :DESINSTALLER_EDGE
-if !errorlevel! EQU 6  goto :DESINSTALLER_ONEDRIVE
-if !errorlevel! EQU 5  goto :MENU_IA_WIDGETS_RECALL
-if !errorlevel! EQU 4  goto :TOGGLE_ANIMATIONS
-if !errorlevel! EQU 3  goto :TOGGLE_VBS_HVCI
+if !errorlevel! EQU 9 goto :MENU_PRINCIPAL
+if !errorlevel! EQU 8  goto :SUPPRIMER_BLOATWARES
+if !errorlevel! EQU 7  goto :DO_INSTALLER_VISUAL_REDIST
+if !errorlevel! EQU 6  goto :DESINSTALLER_EDGE
+if !errorlevel! EQU 5  goto :DESINSTALLER_ONEDRIVE
+if !errorlevel! EQU 4  goto :MENU_IA_WIDGETS_RECALL
+if !errorlevel! EQU 3  goto :TOGGLE_ANIMATIONS
 if !errorlevel! EQU 2  goto :TOGGLE_UAC
 if !errorlevel! EQU 1  goto :TOGGLE_DEFENDER
 goto :MENU_GESTION_WINDOWS
@@ -606,7 +609,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces protections ? [O/N/M]: %COLOR_RESET%" DESACTIVER_SECURITE
-if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -625,7 +628,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver Windows Defender ? [O/N/M]: %COLOR_RESET%" DESACTIVER_DEFENDER
-if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -644,7 +647,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver les animations Windows ? [O/N/M]: %COLOR_RESET%" DESACTIVER_ANIMATIONS
-if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -663,7 +666,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver ces fonctionnalites IA ? [O/N/M]: %COLOR_RESET%" DESACTIVER_IA
-if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_PRINCIPAL
 
 cls
 echo.
@@ -682,7 +685,7 @@ echo.
 echo %COLOR_YELLOW%[M] RETOUR%COLOR_RESET% - Retour au menu principal
 echo.
 call :COMMON_YES_NO "%STYLE_BOLD%%COLOR_YELLOW%Etes-vous sur de desactiver l'UAC ? [O/N/M]: %COLOR_RESET%" DESACTIVER_UAC
-if !errorlevel! EQU 2 goto :MENU_PRINCIPAL
+if errorlevel 2 goto :MENU_PRINCIPAL
 
 
 
@@ -692,41 +695,49 @@ echo.
 set "SKIP_PAUSE=1"
 set "AIO_RUNTIME_ERROR=0"
 set "AIO_CORE_ERROR=0"
+for %%X in (SYSTEME MEMOIRE DISQUES GPU RESEAU PERIPHERIQUES) do set "AIO_ERR_%%X=0"
 set "AIO_POWER_ERROR=0"
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%TOUT_OPTIMISER applique les optimisations systeme et uniquement les options confirmees.%COLOR_RESET%
 echo %COLOR_WHITE%  Les choix repondus NON sont ignores.%COLOR_RESET%
 echo.
+REM Preselection silencieuse uniquement : la SECTION 7 reste executee dans l'ordre apres 1 a 6.
+REM Les sections precedentes qui ecrivent dans SCHEME_CURRENT ciblent ainsi le bon plan.
+call :SELECT_TARGET_POWER_SCHEME !PROFIL_POWER!
+if !errorlevel! NEQ 0 set "AIO_POWER_ERROR=1"
 call :INSTALLER_VISUAL_REDIST
 if !errorlevel! NEQ 0 set "AIO_RUNTIME_ERROR=1"
 call :OPTIMISATIONS_SYSTEME
-if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+if !errorlevel! NEQ 0 set "AIO_ERR_SYSTEME=1" & set "AIO_CORE_ERROR=1"
 call :OPTIMISATIONS_MEMOIRE
-if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+if !errorlevel! NEQ 0 set "AIO_ERR_MEMOIRE=1" & set "AIO_CORE_ERROR=1"
 call :OPTIMISATIONS_DISQUES
-if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+if !errorlevel! NEQ 0 set "AIO_ERR_DISQUES=1" & set "AIO_CORE_ERROR=1"
 call :OPTIMISATIONS_GPU
-if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+if !errorlevel! NEQ 0 set "AIO_ERR_GPU=1" & set "AIO_CORE_ERROR=1"
 call :OPTIMISATIONS_RESEAU
-if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+if !errorlevel! NEQ 0 set "AIO_ERR_RESEAU=1" & set "AIO_CORE_ERROR=1"
 call :OPTIMISATIONS_PERIPHERIQUES
-if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+if !errorlevel! NEQ 0 set "AIO_ERR_PERIPHERIQUES=1" & set "AIO_CORE_ERROR=1"
 if "!PROFIL_POWER!"=="0" (
     call :DESACTIVER_ECONOMIES_ENERGIE
-    if !errorlevel! NEQ 0 set "AIO_POWER_ERROR=1"
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du plan Equilibre pour le profil ECO...%COLOR_RESET%
-    powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
-    if !errorlevel! EQU 0 (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre Windows actif ^(ECO^)%COLOR_RESET%
-    ) else (
-        set "AIO_POWER_ERROR=1"
-        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible d'activer le plan Equilibre.%COLOR_RESET%
-    )
+    call :RESTAURER_ECONOMIES_ENERGIE
 )
-if "!DESACTIVER_SECURITE!"=="1" call :DESACTIVER_PROTECTIONS_SECURITE
-if "!DESACTIVER_DEFENDER!"=="1" call :DESACTIVER_DEFENDER_SECTION
-if "!DESACTIVER_ANIMATIONS!"=="1" call :DESACTIVER_ANIMATIONS_SECTION
+if !errorlevel! NEQ 0 set "AIO_POWER_ERROR=1"
+if "!DESACTIVER_SECURITE!"=="1" (
+    call :DESACTIVER_PROTECTIONS_SECURITE
+    if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+)
+if "!DESACTIVER_DEFENDER!"=="1" (
+    call :DESACTIVER_DEFENDER_SECTION
+    if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+)
+if "!DESACTIVER_ANIMATIONS!"=="1" (
+    call :DESACTIVER_ANIMATIONS_SECTION
+    if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+)
 if "!DESACTIVER_IA!"=="1" (
+  set "AIO_AI_ERROR=0"
   cls
   echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
   echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DES FONCTIONS IA / WIDGETS / RECALL%COLOR_RESET%
@@ -737,17 +748,35 @@ if "!DESACTIVER_IA!"=="1" (
   echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
   echo.
   call :CORE_DESACTIVER_COPILOT
+  if !errorlevel! NEQ 0 set "AIO_AI_ERROR=1"
   call :CORE_DESACTIVER_WIDGETS
+  if !errorlevel! NEQ 0 set "AIO_AI_ERROR=1"
   call :CORE_DESACTIVER_RECALL
-  echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets et Recall desactives.%COLOR_RESET%
-  call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
+  if !errorlevel! NEQ 0 set "AIO_AI_ERROR=1"
+  if "!AIO_AI_ERROR!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot, Widgets et Recall desactives.%COLOR_RESET%
+    call :FINISH_ACTION "Toutes les fonctions IA/Widgets" "desactivees"
+  ) else (
+    set "AIO_CORE_ERROR=1"
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Desactivation IA / Widgets / Recall incomplete.%COLOR_RESET%
+  )
+  set "AIO_AI_ERROR="
 )
-if "!DESACTIVER_UAC!"=="1" call :DESACTIVER_UAC_SECTION
+if "!DESACTIVER_UAC!"=="1" (
+  call :DESACTIVER_UAC_SECTION
+  if !errorlevel! NEQ 0 set "AIO_CORE_ERROR=1"
+)
 call :DETECT_HARDWARE 1
-call :AFFICHER_RESUME_OPTIMISATION
 set "SKIP_PAUSE=0"
+call :AFFICHER_RESUME_OPTIMISATION
 set "AIO_RUNTIME_ERROR="
 set "AIO_CORE_ERROR="
+set "AIO_ERR_SYSTEME="
+set "AIO_ERR_MEMOIRE="
+set "AIO_ERR_DISQUES="
+set "AIO_ERR_GPU="
+set "AIO_ERR_RESEAU="
+set "AIO_ERR_PERIPHERIQUES="
 set "AIO_POWER_ERROR="
 set "DESACTIVER_SECURITE="
 set "DESACTIVER_DEFENDER="
@@ -774,11 +803,23 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 echo %STYLE_BOLD%%COLOR_BLUE%-- RESULTATS APPLIQUES ----------------------------------------------------------%COLOR_RESET%
-if "!AIO_CORE_ERROR!"=="0" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, disques, GPU, reseau, peripheriques.%COLOR_RESET%
-) else (
-    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Au moins une section d'optimisation a signale une erreur.%COLOR_RESET%
-)
+REM  Evite le bloc compose else ( ... ) multi-lignes : cmd.exe parse incorrectement
+REM  les !VAR! a expansion retardee situes a l'interieur, ce qui laisse ERR_L vide
+REM  et fait afficher litteralement !ERR_L:~0,-1! sous la forme degradee :~0,-1.
+if "!AIO_CORE_ERROR!"=="0" goto :RESUME_CORE_OK
+set "ERR_L="
+if "!AIO_ERR_SYSTEME!"=="1" set "ERR_L=!ERR_L! Systeme,"
+if "!AIO_ERR_MEMOIRE!"=="1" set "ERR_L=!ERR_L! Memoire,"
+if "!AIO_ERR_DISQUES!"=="1" set "ERR_L=!ERR_L! Disques,"
+if "!AIO_ERR_GPU!"=="1" set "ERR_L=!ERR_L! GPU,"
+if "!AIO_ERR_RESEAU!"=="1" set "ERR_L=!ERR_L! Reseau,"
+if "!AIO_ERR_PERIPHERIQUES!"=="1" set "ERR_L=!ERR_L! Peripheriques,"
+if not "!ERR_L!"=="" set "ERR_L=!ERR_L:~0,-1!"
+echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Sections en echec :!ERR_L!%COLOR_RESET%
+goto :RESUME_CORE_AFTER
+:RESUME_CORE_OK
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Optimisations systeme, memoire, disques, GPU, reseau, peripheriques.%COLOR_RESET%
+:RESUME_CORE_AFTER
 if "!AIO_RUNTIME_ERROR!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Runtimes Visual C++ et DirectX verifies.%COLOR_RESET%
 ) else (
@@ -823,26 +864,14 @@ if "!HAS_OPT!"=="1" (
 set "HAS_OPT="
 
 echo %STYLE_BOLD%%COLOR_BLUE%-- PROCHAINE ETAPE --------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Voulez-vous redemarrer maintenant ? [O/N]: %COLOR_RESET%"
-call :AZCHOICE ON
-if !errorlevel! EQU 1 (
-    shutdown /r /t 10 /c "Redemarrage demande par WindowsOptimizer"
-    if !errorlevel! EQU 0 (
-        cls
-        echo.
-        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Redemarrage programme dans 10 secondes...%COLOR_RESET%
-        timeout /t 5 /nobreak >nul
-    ) else (
-        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de programmer le redemarrage.%COLOR_RESET%
-    )
-)
+if not "!SKIP_PAUSE!"=="1" echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour appliquer toutes les modifications.%COLOR_RESET%
+call :PROMPT_MANUAL_REBOOT
 exit /b
 
 :OPTIMISATIONS_SYSTEME
 cls
 call :INIT_PROFILS
+set "SYSTEM_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 1 : OPTIMISATIONS SYSTEME%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1013,7 +1042,7 @@ set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
 REM  Backup du fichier hosts avant modification
-copy "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
+copy /Y "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
 REM  Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
 powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h='%HOSTS%';$tmp=[System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($h),([System.IO.Path]::GetFileName($h)+'.'+[guid]::NewGuid().ToString('N')+'.tmp'));$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path -LiteralPath $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII)}else{$cur=''};$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;if(Test-Path -LiteralPath $h){(Get-Item -LiteralPath $h).Attributes='Normal'};[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);[System.IO.File]::Copy($tmp,$h,$true);Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 0}catch{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
 
@@ -1028,6 +1057,8 @@ set "HOSTS="
 
 REM  1.6 - Services optimises
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Optimisation services%COLOR_RESET%
+set "SERVICE_CONFIG_ERROR=0"
+set "SERVICE_CONFIG_SKIPPED=0"
 
 REM  1 - Services vitaux -> AUTOMATIQUE
 for %%S in (
@@ -1036,11 +1067,10 @@ for %%S in (
     SysMain
     defragsvc
 ) do (
-  reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
+  call :SET_EXISTING_SERVICE_START "%%S" 2
 )
 REM  Configuration du service par utilisateur WpnUserService
-reg query "HKLM\SYSTEM\CurrentControlSet\Services\WpnUserService" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\WpnUserService" /v Start /t REG_DWORD /d 2 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services vitaux et synchronisation en Automatique%COLOR_RESET%
+call :SET_EXISTING_SERVICE_START "WpnUserService" 2
 
 REM  2 - Services occasionnels et utiles -> MANUEL (demand)
 for %%S in (
@@ -1080,11 +1110,10 @@ for %%S in (
     SystemSuggestions
     uhssvc
 ) do (
-  reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
+  call :SET_EXISTING_SERVICE_START "%%S" 3
 )
 REM  CDPUserSvc est un service par utilisateur
-reg query "HKLM\SYSTEM\CurrentControlSet\Services\CDPUserSvc" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\CDPUserSvc" /v Start /t REG_DWORD /d 3 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services utiles et occasionnels en mode Manuel%COLOR_RESET%
+call :SET_EXISTING_SERVICE_START "CDPUserSvc" 3
 
 REM  3 - Services inutiles et telemetrie -> DESACTIVES
 for %%S in (
@@ -1106,9 +1135,17 @@ for %%S in (
     WalletService
     WMPNetworkSvc
 ) do (
-  reg query "HKLM\SYSTEM\CurrentControlSet\Services\%%S" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\%%S" /v Start /t REG_DWORD /d 4 /f >nul 2>&1
+  call :SET_EXISTING_SERVICE_START "%%S" 4
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services telemetrie et legacy desactives%COLOR_RESET%
+if "!SERVICE_CONFIG_ERROR!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services existants configures selon le profil%COLOR_RESET%
+) else (
+    set "SYSTEM_SECTION_ERROR=1"
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Au moins un service existant n'a pas pu etre configure.%COLOR_RESET%
+)
+if !SERVICE_CONFIG_SKIPPED! GTR 0 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%!SERVICE_CONFIG_SKIPPED! service^(s^) absent^(s^) ignore^(s^) - aucune cle fantome creee%COLOR_RESET%
+set "SERVICE_CONFIG_ERROR="
+set "SERVICE_CONFIG_SKIPPED="
 
 REM  Services critiques laisses intacts : Bluetooth, Hello, RDP, Spooler, PlugPlay
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Services optimises (Bluetooth/VPN/Hello/RDP preserves)%COLOR_RESET%
@@ -1245,17 +1282,28 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Thread Director NORMAL : Auto AC/DC%COLOR_RESET%
 )
 
-REM  1.18 - DisablePagefileEncryption (Gaming uniquement : reduit latence I/O, incompatible BitLocker)
+REM  1.18 - DisablePagefileEncryption (tweak Gaming teste ; suppression de la surcharge en Normal)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation du chiffrement du fichier d'echange ^(Gaming^)...%COLOR_RESET%
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption=1 ^(Gaming, BitLocker incompatible^)%COLOR_RESET%
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Chiffrement du fichier d'echange desactive ^(Gaming^)%COLOR_RESET%
 ) else (
-    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%DisablePagefileEncryption conserve au defaut ^(Normal : BitLocker compatible^)%COLOR_RESET%
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /f >nul 2>&1
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Surcharge DisablePagefileEncryption supprimee ^(Normal^)%COLOR_RESET%
 )
 
-call :FINISH_ACTION "Optimisations systeme" "appliquees"
-exit /b
+if "!SYSTEM_SECTION_ERROR!"=="0" (
+    set "SYSTEM_SECTION_ERROR="
+    call :FINISH_ACTION "Optimisations systeme" "appliquees"
+    exit /b 0
+)
+echo.
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %COLOR_RED%[ERREUR]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%Optimisations systeme appliquees partiellement%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+set "SYSTEM_SECTION_ERROR="
+call :PROMPT_MANUAL_REBOOT
+exit /b 1
 
 :OPTIMISATIONS_MEMOIRE
 cls
@@ -1271,7 +1319,7 @@ echo.
 if "!PROFIL_POWER!"=="0" (
     echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%MAX PERF%COLOR_RESET%%COLOR_WHITE% - compression memoire OFF si RAM ^> 8 Go%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%ECO%COLOR_RESET%%COLOR_WHITE% - compression memoire conservee ^(autonomie^)%COLOR_RESET%
+    echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%ECO%COLOR_RESET%%COLOR_WHITE% - compression memoire activee ^(autonomie^)%COLOR_RESET%
 )
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
@@ -1328,7 +1376,14 @@ if "!PROFIL_POWER!"=="1" (
             echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de desactiver la compression memoire.%COLOR_RESET%
         )
     ) else (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%RAM de 8 Go ou moins : compression memoire conservee%COLOR_RESET%
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%RAM de 8 Go ou moins : reactivation de la compression memoire...%COLOR_RESET%
+        powershell -NoProfile -Command "try { Enable-MMAgent -MemoryCompression -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
+        if !errorlevel! EQU 0 (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Compression memoire activee ^(RAM inferieure ou egale a 8 Go^)%COLOR_RESET%
+        ) else (
+            set "MEMORY_SECTION_ERROR=1"
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de reactiver la compression memoire.%COLOR_RESET%
+        )
     )
 )
 
@@ -1366,7 +1421,6 @@ fsutil behavior set disable8dot3 1 >nul 2>&1
 fsutil behavior set memoryusage 2 >nul 2>&1
 fsutil behavior set mftzone 2 >nul 2>&1
 fsutil behavior set disablecompression 1 >nul 2>&1
-fsutil behavior set encryptpagingfile 0 >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres NTFS optimises - TRIM actif, metadonnees reduites%COLOR_RESET%
 
 REM  3.2 - Optimisations I/O NTFS
@@ -1417,6 +1471,7 @@ exit /b
 :OPTIMISATIONS_GPU
 cls
 call :INIT_PROFILS
+set "GPU_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 4 : OPTIMISATIONS GPU%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1543,15 +1598,31 @@ if "!HAS_NVIDIA!"=="1" (
             set "NPI_VALID=0"
         )
 
+        REM NPI v3 a retire temporairement l'import CLI avant sa restauration en v3.0.1.10.
+        REM Refuser explicitement ces versions evite un succes apparent sans profil importe.
+        set "NPI_CLI_SUPPORTED=0"
         if "!NPI_VALID!"=="1" (
-            echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du profil NVIDIA optimise...%COLOR_RESET%
-            start /wait "" "!NPI_DIR!\nvidiaProfileInspector.exe" -silentImport "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
-            if !errorlevel! EQU 0 (
-                echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique avec succes%COLOR_RESET%
+            powershell -NoProfile -Command "try { $v=[version](Get-Item -LiteralPath (Join-Path $env:NPI_DIR 'nvidiaProfileInspector.exe')).VersionInfo.FileVersion; if($v.Major -eq 3 -and $v -lt [version]'3.0.1.10'){exit 1}; exit 0 } catch { exit 1 }" >nul 2>&1
+            if !errorlevel! EQU 0 set "NPI_CLI_SUPPORTED=1"
+        )
+
+        if "!NPI_VALID!"=="1" (
+            if "!NPI_CLI_SUPPORTED!"=="1" (
+                echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application du profil NVIDIA optimise...%COLOR_RESET%
+                start /wait "" "!NPI_DIR!\nvidiaProfileInspector.exe" -silentImport "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+                if !errorlevel! EQU 0 (
+                    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA Profile Inspector applique avec succes%COLOR_RESET%
+                ) else (
+                    set "GPU_SECTION_ERROR=1"
+                    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%NVIDIA Profile Inspector n'a pas pu importer le profil.%COLOR_RESET%
+                )
             ) else (
-                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%NVIDIA Profile Inspector n'a pas pu importer le profil.%COLOR_RESET%
+                set "GPU_SECTION_ERROR=1"
+                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Version NVIDIA Profile Inspector incompatible avec l'import silencieux.%COLOR_RESET%
+                echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Utilisez NPI 2.4.x ou NPI 3.0.1.10 et version ulterieure.%COLOR_RESET%
             )
         ) else (
+            set "GPU_SECTION_ERROR=1"
             echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement ou fichiers corrompus.%COLOR_RESET%
         )
 
@@ -1560,19 +1631,51 @@ if "!HAS_NVIDIA!"=="1" (
         rmdir "!NPI_DIR!" >nul 2>&1
         set "NPI_EXE_SRC="
         set "NPI_PROFILE_SRC="
+        set "NPI_CLI_SUPPORTED="
     ) else (
-        echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Profil NVIDIA global ignore en profil NORMAL pour preserver autonomie, chauffe et silence%COLOR_RESET%
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration ciblee des valeurs NVIDIA modifiees par le profil Gaming...%COLOR_RESET%
+        set "NPI_EXE_SRC=%~dp0Tools\NVIDIA Inspector\nvidiaProfileInspector.exe"
+        set "NPI_PROFILE_SRC=%~dp0Tools\NVIDIA Inspector\Kaylers_profile.nip"
+        if exist "!NPI_EXE_SRC!" if exist "!NPI_PROFILE_SRC!" (
+            REM Verifie dans l'assembly fourni : ResetValue appelle DRS_RestoreProfileDefaultSetting puis SaveSettings.
+            REM Le NIP importe Base Profile ; les memes SettingID sont donc bien restaures au defaut du pilote.
+            REM Les personnalisations NVIDIA utilisant d'autres SettingID ne sont pas touchees.
+            powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $a=[Reflection.Assembly]::LoadFrom($env:NPI_EXE_SRC); $t=$a.GetType('nspector.Common.DrsServiceLocator'); $svc=$t.GetField('SettingService',[Reflection.BindingFlags]'Public,NonPublic,Static').GetValue($null); [xml]$x=Get-Content -LiteralPath $env:NPI_PROFILE_SRC -Raw; $ids=@($x.SelectNodes('/ArrayOfProfile/Profile/Settings/ProfileSetting/SettingID') | ForEach-Object {[uint32]$_.InnerText} | Sort-Object -Unique); if(-not $svc -or $ids.Count -eq 0){exit 2}; foreach($id in $ids){$removed=$false; $svc.ResetValue('Base Profile',$id,[ref]$removed)}; exit 0 } catch { exit 1 }" >nul 2>&1
+            if !errorlevel! EQU 0 (
+                echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Valeurs NVIDIA Gaming restaurees aux valeurs du pilote ^(Normal^)%COLOR_RESET%
+            ) else (
+                set "GPU_SECTION_ERROR=1"
+                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de restaurer les valeurs NVIDIA du profil Gaming.%COLOR_RESET%
+            )
+        ) else (
+            set "GPU_SECTION_ERROR=1"
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%NVIDIA Profile Inspector ou le profil source est introuvable.%COLOR_RESET%
+        )
+        set "NPI_EXE_SRC="
+        set "NPI_PROFILE_SRC="
+        set "NPI_VALID="
     )
 ) else (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%GPU NVIDIA non detecte - NVIDIA Profile Inspector ignore%COLOR_RESET%
 )
 
-call :FINISH_ACTION "Optimisations GPU" "terminees"
-exit /b
+if "!GPU_SECTION_ERROR!"=="0" (
+    set "GPU_SECTION_ERROR="
+    call :FINISH_ACTION "Optimisations GPU" "terminees"
+    exit /b 0
+)
+echo.
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %COLOR_RED%[ERREUR]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%Optimisations GPU appliquees partiellement%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+set "GPU_SECTION_ERROR="
+call :PROMPT_MANUAL_REBOOT
+exit /b 1
 
 :OPTIMISATIONS_RESEAU
 cls
 call :INIT_PROFILS
+set "NETWORK_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 5 : OPTIMISATIONS RESEAU ET INTERNET%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -1631,7 +1734,11 @@ REM minRto n'est pas un parametre 'set global' valide (uniquement 'set supplemen
 if "!PROFIL_USAGE!"=="0" (
     netsh int tcp set global rss=enabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
 ) else (
-    netsh int tcp set global rss=enabled >nul 2>&1
+    REM initialRTO=3000 = valeur par defaut du template TCP (Interop/SG, Win 8+).
+    REM Le plancher RTO a 300ms est defini par le pilote TCP/IP (pas une KB specifique).
+    REM Sous Win11 24H2+ le defaut global netsh est 1000, mais on explicite 3000
+    REM pour le profil Normal afin de limiter les retransmissions SYN prematures.
+    netsh int tcp set global rss=enabled initialrto=3000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
 )
 if "!PROFIL_POWER!"=="0" (
     if "!PROFIL_USAGE!"=="0" (
@@ -1644,12 +1751,14 @@ if "!PROFIL_POWER!"=="0" (
 )
 
 REM  BBR2 applique sur les templates valides listes par "netsh int tcp set supplemental ?".
+REM  template=custom n'existe pas sur Win11 (invalide) -> remplace par InternetCustom + DatacenterCustom
 netsh int tcp set supplemental template=automatic congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=internet congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=internetcustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=datacenter congestionprovider=bbr2 >nul 2>&1
+netsh int tcp set supplemental template=datacentercustom congestionprovider=bbr2 >nul 2>&1
 netsh int tcp set supplemental template=compat congestionprovider=bbr2 >nul 2>&1
-REM template=custom n'existe pas sur Windows (pas de template custom valide) : supprime
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif ^(templates valides : Automatic, Internet, Datacenter, Compat^)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BBR2 actif ^(Automatic, Internet, InternetCustom, Datacenter, DatacenterCustom, Compat^)%COLOR_RESET%
 
 REM  TCP Pacing + ECN : essentiels pour BBR2 (pacing = parametre principal de BBR, ECN = signaux precoces congestion)
 netsh int tcp set global pacingprofile=always >nul 2>&1
@@ -1662,6 +1771,10 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLO
 if "!PROFIL_USAGE!"=="0" (
     REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, pas de suppression hors section restauration.
     reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /t REG_DWORD /d 1500 /f >nul 2>&1
+) else (
+    REM Suppression -> retour au defaut Windows (1024). Les datagrammes UDP > 1024 octets
+    REM empruntent alors le chemin lent (pended I/O). C'est le comportement normal attendu.
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /f >nul 2>&1
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1690,14 +1803,14 @@ if "!PROFIL_POWER!"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK optimises%COLOR_RESET%
 ) else (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration Nagle/DelACK valeurs defaut ^(Normal^)...%COLOR_RESET%
-    call :SET_NAGLE_PROFILE 2 0 1
+    call :RESET_NAGLE_PROFILE
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK restaures ^(defauts Windows^)%COLOR_RESET%
 )
 
 REM  5.7 - Optimisation cartes reseau
 if "!PROFIL_POWER!"=="0" (
     if "!PROFIL_USAGE!"=="0" (
-        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO OFF, ITR 200 + registre force, EEE OFF^)...%COLOR_RESET%
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Gaming+MaxPerf ^(RSC/LSO et Interrupt Moderation OFF, ITR 200, EEE OFF^)...%COLOR_RESET%
     ) else (
         echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Normal+MaxPerf ^(RSC/LSO ON, ITR defaut, EEE OFF^)...%COLOR_RESET%
     )
@@ -1705,27 +1818,40 @@ if "!PROFIL_POWER!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration NIC Eco ^(RSC/LSO/checksum ON, energie preservee^)...%COLOR_RESET%
 )
 call :SET_NIC_PROFILE !PROFIL_POWER! !PROFIL_USAGE!
-if "!PROFIL_POWER!"=="0" (
-    if "!PROFIL_USAGE!"=="0" (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence gaming ^(Gaming+MaxPerf^)%COLOR_RESET%
-    ) else (
-        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour usage general ^(Normal+MaxPerf^)%COLOR_RESET%
-    )
+if !errorlevel! NEQ 0 (
+    set "NETWORK_SECTION_ERROR=1"
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Configuration NIC appliquee partiellement.%COLOR_RESET%
 ) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
+    if "!PROFIL_POWER!"=="0" (
+        if "!PROFIL_USAGE!"=="0" (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour latence gaming ^(Gaming+MaxPerf^)%COLOR_RESET%
+        ) else (
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour usage general ^(Normal+MaxPerf^)%COLOR_RESET%
+        )
+    ) else (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%NIC optimisee pour debit/stabilite/autonomie ^(Eco^)%COLOR_RESET%
+    )
 )
 REM  5.8 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
-if "!PROFIL_POWER!"=="1" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preservation gestion energie USB ^(selective suspend conserve^)...%COLOR_RESET%
+set "USB_POWER_DEFERRED=0"
+if "!PROFIL_POWER!"=="1" if "!SKIP_PAUSE!"=="1" set "USB_POWER_DEFERRED=1"
+if "!USB_POWER_DEFERRED!"=="1" (
+    REM En TOUT_OPTIMISER ECO, la section 7 restaure deja l'USB sur le plan Equilibre actif.
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Restauration USB differee a la section Energie pour eviter un double passage.%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation gestion energie USB ^(selective suspend + USB 3 LPM^)...%COLOR_RESET%
+    if "!PROFIL_POWER!"=="1" (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Preservation gestion energie USB ^(selective suspend conserve^)...%COLOR_RESET%
+    ) else (
+        echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation gestion energie USB ^(selective suspend + USB 3 LPM^)...%COLOR_RESET%
+    )
+    call :SET_USB_POWER !PROFIL_POWER!
+    if "!PROFIL_POWER!"=="1" (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%USB Selective Suspend preserve - Economie batterie maintenue%COLOR_RESET%
+    ) else (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee - Latence minimale%COLOR_RESET%
+    )
 )
-call :SET_USB_POWER !PROFIL_POWER!
-if "!PROFIL_POWER!"=="1" (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%USB Selective Suspend preserve - Economie batterie maintenue%COLOR_RESET%
-) else (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Gestion energie USB desactivee - Latence minimale%COLOR_RESET%
-)
+set "USB_POWER_DEFERRED="
 REM  5.9 - QoS Fortnite DSCP 46 (Gaming uniquement)
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Configuration QoS Fortnite ^(DSCP 46^)...%COLOR_RESET%
@@ -1751,6 +1877,7 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Suppression QoS Fortnite ^(Normal^)...%COLOR_RESET%
     reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_UDP" /f >nul 2>&1
     reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\QoS\Fortnite_TCP" /f >nul 2>&1
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\QoS" /v "Do not use NLA" /f >nul 2>&1
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%QoS Fortnite supprimee%COLOR_RESET%
 )
 
@@ -1784,8 +1911,15 @@ nbtstat -R >nul 2>&1
 nbtstat -RR >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pile reseau optimisee (DNS/NetBIOS purges)%COLOR_RESET%
 
+if "!NETWORK_SECTION_ERROR!"=="1" (
+    set "NETWORK_SECTION_ERROR="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Optimisations reseau appliquees partiellement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    exit /b 1
+)
+set "NETWORK_SECTION_ERROR="
 call :FINISH_ACTION "Optimisations reseau" "appliquees"
-exit /b
+exit /b 0
 
 :OPTIMISATIONS_PERIPHERIQUES
 cls
@@ -2244,6 +2378,9 @@ call :PROMPT_MANUAL_REBOOT
 exit /b 1
 
 :RESTAURER_ECONOMIES_ENERGIE
+set "PROFIL_POWER=1"
+call :INIT_PROFILS
+set "POWER_RESTORE_ERROR=0"
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 7 : RESTAURATION DES ECONOMIES D'ENERGIE%COLOR_RESET%
@@ -2254,22 +2391,18 @@ echo %COLOR_WHITE%  aux valeurs par defaut de Windows.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
-REM  7.0 - Restaurer tous les plans d'alimentation aux valeurs d'usine Microsoft
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de tous les plans d'alimentation aux valeurs d'usine...%COLOR_RESET%
-powershell -NoProfile -Command "$src='using System; using System.Runtime.InteropServices; public static class WinOptPower { [DllImport(""powrprof.dll"")] public static extern uint PowerRestoreDefaultPowerSchemes(); }'; Add-Type -TypeDefinition $src -ErrorAction Stop; $r=[WinOptPower]::PowerRestoreDefaultPowerSchemes(); if($r-ne 0){exit [int]$r}" >nul 2>&1
-if !errorlevel! EQU 0 (
-    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plans d'alimentation restaures (tous les schemas et valeurs par defaut)%COLOR_RESET%
-) else (
-    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec de la restauration des plans d'alimentation.%COLOR_RESET%
-)
+REM  7.0 - Activer Equilibre sans effacer les plans OEM/personnalises.
+REM  PowerRestoreDefaultPowerSchemes est volontairement exclu : l'API supprime TOUS les plans courants.
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Selection du plan Equilibre sans supprimer les plans personnalises...%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation du plan Equilibre Windows...%COLOR_RESET%
 powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre Windows actif%COLOR_RESET%
 ) else (
+    set "POWER_RESTORE_ERROR=1"
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible d'activer le plan Equilibre Windows.%COLOR_RESET%
 )
-REM  Le plan UP duplique (99999999-...) est automatiquement supprime par la restauration d'usine
+REM Le plan Ultimate duplique est conserve : il peut etre reutilise sans proliferer les GUID.
 
 REM  7.1 - Demarrage rapide (Fast Startup)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du demarrage rapide (Fast Startup)...%COLOR_RESET%
@@ -2283,15 +2416,13 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Hibernation reactivee%COLOR_RES
 
 REM  7.3 - USB Selective Suspend
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation de la mise en veille selective USB...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /f >nul 2>&1
-REM  Revert powercfg USB selective suspend (1 = Enabled = default)
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
-REM  Revert USB 3 Link Power Management (2 = Moderate savings = default)
-powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2 >nul 2>&1
-powercfg /setactive SCHEME_CURRENT >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mise en veille selective USB reactivee%COLOR_RESET%
+call :SET_USB_POWER 1
+if !errorlevel! EQU 0 (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mise en veille selective USB et autorisation WMI restaurees%COLOR_RESET%
+) else (
+    set "POWER_RESTORE_ERROR=1"
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Restauration de la gestion d'energie USB incomplete.%COLOR_RESET%
+)
 
 REM  7.4 - Timer Coalescing
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du Timer Coalescing...%COLOR_RESET%
@@ -2331,23 +2462,18 @@ if exist "%STR_STARTUP_LNK%" (
 REM  7.6 - Restaurer Intel Thread Director (visibilite panneau)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilite Intel Thread Director...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
-REM Restauration de la valeur Thread Director a la valeur default 0 (All Processors) :
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 0 >nul 2>&1
+REM 5 = Auto : Windows choisit la classe de coeur selon la charge et le materiel.
+powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
+powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 93b8b6dc-0698-4d1c-9ee4-0644e900c85d 5 >nul 2>&1
 powercfg /setactive SCHEME_CURRENT >nul 2>&1
 REM bae08b81-2d5e-4688-ad6a-13243356654b : GUID non documente MS Learn 2026 (Voir 7.x commentaire) - pas de reg delete necessaire
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilite Intel Thread Director restauree (valeurs par defaut via 7.0)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Intel Thread Director restaure en mode Auto%COLOR_RESET%
 
 REM  7.7 - Restaurer Core Parking (powercfg + visibilite panneau)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration du Core Parking...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
-REM  Revert des valeurs powercfg (0 = gestion dynamique Windows)
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 0 >nul 2>&1
-powercfg /setacvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 0 >nul 2>&1
-powercfg /setdcvalueindex SCHEME_CURRENT 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 0 >nul 2>&1
-powercfg /setactive SCHEME_CURRENT >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking restaure (gestion dynamique Windows)%COLOR_RESET%
+REM Le plan Equilibre conserve ses valeurs OEM/Windows : 0/100 ne sont pas des defauts universels.
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Core Parking laisse aux valeurs du plan Equilibre%COLOR_RESET%
 
 REM  7.8 - Power Throttling
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation du Power Throttling...%COLOR_RESET%
@@ -2380,15 +2506,25 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 
 REM  7.12 - Economies d'energie reseau (NIC)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des economies d'energie reseau (NIC) et bindings...%COLOR_RESET%
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | ForEach-Object {$n=$_.Name; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; Reset-NetAdapterAdvancedProperty -Name $n -DisplayName '*' -ErrorAction SilentlyContinue}; $bindingIds=@('ms_lldp','ms_lltdio','ms_implat','ms_rspndr'); Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object {foreach($id in $bindingIds){Enable-NetAdapterBinding -Name $_.Name -ComponentID $id -ErrorAction SilentlyContinue}}" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC et bindings restaures%COLOR_RESET%
+call :SET_NIC_PROFILE 1 1
+if !errorlevel! NEQ 0 (
+    set "POWER_RESTORE_ERROR=1"
+    set "NIC_RESTORE_ERROR=1"
+)
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $bindingIds=@('ms_lldp','ms_lltdio','ms_implat','ms_rspndr'); Get-NetAdapter -ErrorAction SilentlyContinue | ForEach-Object {foreach($id in $bindingIds){Enable-NetAdapterBinding -Name $_.Name -ComponentID $id -ErrorAction SilentlyContinue}}" >nul 2>&1
+if "!NIC_RESTORE_ERROR!"=="1" (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Restauration NIC appliquee partiellement.%COLOR_RESET%
+) else (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC et bindings restaures%COLOR_RESET%
+)
+set "NIC_RESTORE_ERROR="
 
 REM  7.13 - Visibilite des parametres processeur dans le panneau
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilite des parametres processeur...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilite restauree (valeurs par defaut via 7.0)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilite des parametres restauree%COLOR_RESET%
 
 REM  7.14 - ASPM (PCI Express)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation ASPM sur le bus PCI Express...%COLOR_RESET%
@@ -2441,50 +2577,57 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Parametres d'economie des perip
 REM  7.21 - Gestion d'energie PCIe (visibilite panneau)
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilite PCIe...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\501a4d13-42af-4429-9fd1-a8218c268e20\ee12f906-d277-404b-b6da-e5fa1a576df5" /v Attributes /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilite PCIe restauree (valeur par defaut via 7.0)%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visibilite PCIe restauree%COLOR_RESET%
 
 REM  7.22 - Energie PCIe GPU (ASPM restaure en 7.11, valeurs powercfg via 7.0)
 
-REM  7.23 - Plans d'alimentation avances (restaures via API 7.0)
+REM  7.23 - Les surcharges de l'optimiseur ont ete annulees sans toucher aux autres plans.
 
 set "STR_STARTUP_LNK="
+if "!POWER_RESTORE_ERROR!"=="1" (
+    set "POWER_RESTORE_ERROR="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Economies d'energie restaurees partiellement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    exit /b 1
+)
+set "POWER_RESTORE_ERROR="
 call :FINISH_ACTION "Economies d'energie" "restaurees"
-exit /b
+exit /b 0
 
 :TOGGLE_PROTECTIONS_SECURITE
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% GESTION DES PROTECTIONS DE SECURITE%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% MITIGATIONS CPU SEULES ^(SPECTRE/MELTDOWN^)%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Permet de desactiver ou restaurer les protections CPU contre les failles%COLOR_RESET%
-echo %COLOR_WHITE%  Spectre/Meltdown et autres vulnerabilites noyau (gain FPS possible).%COLOR_RESET%
-echo %COLOR_WHITE%  Le mode perf demande l'usage pour appliquer le bon niveau Gaming/Normal.%COLOR_RESET%
+echo %COLOR_WHITE%  Permet de desactiver ou restaurer uniquement les mitigations CPU%COLOR_RESET%
+echo %COLOR_WHITE%  ^(Spectre/Meltdown, KVAShadow, STIBP, Retpoline, Driver Blocklist^)%COLOR_RESET%
+echo %COLOR_WHITE%  sans toucher a VBS/HVCI/CFG/LSA. Necessite de choisir l'usage.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_RED%Desactiver Protections Securite (mode perf)%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_GREEN%Restaurer Protections Securite (recommande)%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Principal%COLOR_RESET%
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M]: %COLOR_RESET%"
 call :AZCHOICE 12M
-if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
-if !errorlevel! EQU 2 goto :DO_RESTAURER_PROTECTIONS
-if !errorlevel! EQU 1 goto :DO_DESACTIVER_PROTECTIONS
+if !errorlevel! EQU 3 goto :TOGGLE_PROTECTIONS_NOYAU
+if !errorlevel! EQU 2 goto :PROTECTIONS_MITI_RESTORE
+if !errorlevel! EQU 1 goto :PROTECTIONS_MITI_DISABLE
 goto :TOGGLE_PROTECTIONS_SECURITE
 
-:DO_RESTAURER_PROTECTIONS
+:PROTECTIONS_MITI_RESTORE
 call :RESTAURER_PROTECTIONS_SECURITE
-goto :TOGGLE_PROTECTIONS_SECURITE
+goto :TOGGLE_PROTECTIONS_NOYAU
 
-:DO_DESACTIVER_PROTECTIONS
-call :CHOISIR_PROFILS "CONFIGURATION PROFILS - SECURITE" "USAGE"
-if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_SECURITE
+:PROTECTIONS_MITI_DISABLE
+call :CHOISIR_PROFILS "CONFIGURATION PROFILS - MITIGATIONS CPU" "USAGE"
+if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_NOYAU
 call :DESACTIVER_PROTECTIONS_SECURITE
-if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_SECURITE
-goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_NOYAU
+goto :TOGGLE_PROTECTIONS_NOYAU
 
 :DESACTIVER_PROTECTIONS_SECURITE
 call :INIT_PROFILS
@@ -2564,7 +2707,6 @@ echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Desactive la blocklist de 
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Blocklist de pilotes vulnerables desactivee%COLOR_RESET%
 
-call :FINISH_ACTION "Protections securite" "desactivees"
 exit /b
 
 :RESTAURER_PROTECTIONS_SECURITE
@@ -2617,8 +2759,126 @@ bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
 REM  CFG doit etre ACTIVE par defaut (requis pour Vanguard / anti-cheat)
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
 
-call :FINISH_ACTION "Protections securite" "restaurees"
 exit /b
+
+REM =================================================================================
+REM TOGGLE_PROTECTIONS_NOYAU - Menu fusionne VBS/HVCI + Mitigations CPU
+REM Fusion de l'ancien [3] Gerer VBS/HVCI et [8] Gerer Protections Securite
+REM 4 modes : Securite Max / Gaming / Perf Max / Mitigations CPU seules
+REM =================================================================================
+:TOGGLE_PROTECTIONS_NOYAU
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% GERER PROTECTIONS NOYAU ^(VBS/HVCI + MITIGATIONS CPU^)%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_WHITE%  Menu unifie pour gerer VBS ^(Virtualization Based Security^), HVCI ^(Memory Integrity^),%COLOR_RESET%
+echo %COLOR_WHITE%  les mitigations CPU ^(Spectre/Meltdown/KVAShadow/STIBP^) et la blocklist de pilotes.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Mode Securite Max%COLOR_RESET%
+echo       %COLOR_WHITE%VBS/HVCI=ON, Credential Guard=ON, Mitigations CPU=ON, Driver Blocklist=ON%COLOR_RESET%
+echo       %COLOR_WHITE%Protection maximale du noyau ^(defaut Windows recommande^).%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_CYAN%Mode Gaming%COLOR_RESET%
+echo       %COLOR_WHITE%VBS/HVCI=ON ^(compatible anti-cheat^), Mitigations CPU=OFF, Driver Blocklist=OFF%COLOR_RESET%
+echo       %COLOR_WHITE%Perfs preservees, compatible FaceIT/Vanguard/Valorant.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%Mode Performance Max%COLOR_RESET%
+echo       %COLOR_WHITE%VBS/HVCI=OFF, Mitigations CPU=OFF, Driver Blocklist=OFF%COLOR_RESET%
+echo       %COLOR_WHITE%FPS max. Risque : certains anti-triche peuvent refuser le lancement.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[4]%COLOR_RESET% %COLOR_MAGENTA%Mitigations CPU seules%COLOR_RESET%
+echo       %COLOR_WHITE%Active/Desactive uniquement Spectre/Meltdown et autres mitigations CPU%COLOR_RESET%
+echo       %COLOR_WHITE%sans toucher a VBS/HVCI. Ajustement fin.%COLOR_RESET%
+echo.
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-4, M]: %COLOR_RESET%"
+call :AZCHOICE 1234M
+if !errorlevel! EQU 5 goto :PROTECTIONS_RETURN
+if !errorlevel! EQU 4 goto :TOGGLE_PROTECTIONS_SECURITE
+if !errorlevel! EQU 3 goto :PROTECTIONS_PERF_MAX
+if !errorlevel! EQU 2 goto :PROTECTIONS_GAMING
+if !errorlevel! EQU 1 goto :PROTECTIONS_SECURITY_MAX
+goto :TOGGLE_PROTECTIONS_NOYAU
+
+:PROTECTIONS_SECURITY_MAX
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% MODE SECURITE MAX - VBS/HVCI + MITIGATIONS CPU ACTIVES%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+REM Etape 1 : Restaurer les mitigations CPU (supprime toutes les cles de desactivation)
+call :RESTAURER_PROTECTIONS_SECURITE
+REM Etape 2 : Activer VBS, HVCI et Credential Guard
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de VBS, HVCI et Credential Guard...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard actives - Mitigations CPU restaurees%COLOR_RESET%
+call :FINISH_ACTION "Mode Securite Max" "applique"
+goto :PROTECTIONS_RETURN
+
+:PROTECTIONS_GAMING
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% MODE GAMING - VBS/HVCI ACTIF, MITIGATIONS CPU DESACTIVEES%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+set "SKIP_PAUSE_TMP=!SKIP_PAUSE!"
+set "SKIP_PAUSE=1"
+set "PROFIL_USAGE_TMP=!PROFIL_USAGE!"
+set "PROFIL_USAGE=0"
+call :INIT_PROFILS
+call :DESACTIVER_PROTECTIONS_SECURITE
+set "PROFIL_USAGE=!PROFIL_USAGE_TMP!"
+set "PROFIL_USAGE_TMP="
+set "SKIP_PAUSE=!SKIP_PAUSE_TMP!"
+set "SKIP_PAUSE_TMP="
+call :FINISH_ACTION "Mode Gaming" "applique"
+goto :PROTECTIONS_RETURN
+
+:PROTECTIONS_PERF_MAX
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% MODE PERFORMANCE MAX - TOUTES PROTECTIONS DESACTIVEES%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+REM Etape 1 : Desactiver mitigations CPU en mode Normal (ne touche pas VBS/HVCI)
+set "SKIP_PAUSE_TMP=!SKIP_PAUSE!"
+set "SKIP_PAUSE=1"
+set "PROFIL_USAGE_TMP=!PROFIL_USAGE!"
+set "PROFIL_USAGE=1"
+call :INIT_PROFILS
+call :DESACTIVER_PROTECTIONS_SECURITE
+set "PROFIL_USAGE=!PROFIL_USAGE_TMP!"
+set "PROFIL_USAGE_TMP="
+REM Etape 2 : Desactiver VBS/HVCI completement
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de VBS/HVCI...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+powershell -NoProfile -Command "Set-ProcessMitigation -System -Remove -Disable CFG" >nul 2>&1
+bcdedit /set hypervisorlaunchtype off >nul 2>&1
+set "SKIP_PAUSE=!SKIP_PAUSE_TMP!"
+set "SKIP_PAUSE_TMP="
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et mitigations CPU desactivees%COLOR_RESET%
+call :FINISH_ACTION "Mode Performance Max" "applique"
+goto :PROTECTIONS_RETURN
+
+:PROTECTIONS_RETURN
+goto :MENU_PRINCIPAL
 
 :APPLY_SMARTSCREEN_DISABLE_EXTRA
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation avancee SmartScreen ^(Shell, AppHost, Edge^)...%COLOR_RESET%
@@ -2772,7 +3032,16 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de Tamper Protect
 reg add "HKLM\SOFTWARE\Microsoft\Windows Defender\Features" /v "TamperProtection" /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "if ((Get-MpComputerStatus).IsTamperProtected -eq $true) { exit 1 } else { exit 0 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Tamper Protection encore activee - desactivez-la manuellement dans la Securite Windows.%COLOR_RESET%
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Tamper Protection est encore activee.%COLOR_RESET%
+    if "!SKIP_PAUSE!"=="1" (
+        echo %COLOR_WHITE%Desactivez-la manuellement dans Securite Windows apres le redemarrage.%COLOR_RESET%
+        set "DESACTIVER_DEFENDER_ERROR=1"
+        goto :DEFENDER_SECTION_END
+    )
+    echo %COLOR_WHITE%La desactivation est arretee avant de laisser Defender dans un etat partiel.%COLOR_RESET%
+    echo %COLOR_WHITE%Desactivez-la manuellement dans Securite Windows, puis relancez cette action.%COLOR_RESET%
+    pause
+    exit /b 1
 )
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des services Windows Defender...%COLOR_RESET%
@@ -2814,115 +3083,11 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de SmartScreen...
   echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Preferences Defender desactivees ^(effectif selon Tamper Protection^)%COLOR_RESET%
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Reglages Defender appliques ^(effectif selon Tamper Protection / version Windows^)%COLOR_RESET%
 call :FINISH_ACTION "Windows Defender" "desactive"
-exit /b
+exit /b 0
 
-:TOGGLE_VBS_HVCI
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% GERER VBS / HVCI (ISOLATION DU NOYAU)%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  VBS (= Virtualization Based Security) et HVCI (= Memory Integrity) sont des protections%COLOR_RESET%
-echo %COLOR_WHITE%  du noyau Windows. Elles renforcent la securite mais coutent jusqu'a -25%% de FPS en jeu.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %STYLE_BOLD%%COLOR_RED%ATTENTION :%COLOR_RESET% %COLOR_YELLOW%Certains jeux avec anti-triche (Valorant, CS2, Call of Duty)%COLOR_RESET%
-echo %COLOR_YELLOW%exigent que VBS/HVCI soit ACTIVE pour pouvoir lancer le jeu.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer VBS/HVCI (Securite maximale)%COLOR_RESET%
-echo       %COLOR_WHITE%Active toutes les protections noyau. Perf reduite, securite maximale.%COLOR_RESET%
-echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver VBS/HVCI (100%% performances)%COLOR_RESET%
-echo       %COLOR_WHITE%Desactive tout. Gain FPS max, mais certains jeux anti-triche peuvent refuser de lancer.%COLOR_RESET%
-echo %COLOR_YELLOW%[3]%COLOR_RESET% %STYLE_BOLD%%COLOR_CYAN%Mode Mixte (recommandee)%COLOR_RESET%
-echo       %COLOR_WHITE%VBS/HVCI restent actifs ^(jeux compatibles^), mais les mitigations CPU sont desactivees pour les perfs.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au Menu Gestion Windows%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, 3, M]: %COLOR_RESET%"
-call :AZCHOICE 123M
-if !errorlevel! EQU 4 goto :MENU_GESTION_WINDOWS
-if !errorlevel! EQU 3 (
-  cls
-  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-  echo %STYLE_BOLD%%COLOR_WHITE% MODE GAMING - VBS/HVCI%COLOR_RESET%
-  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-  echo.
-  echo %COLOR_WHITE%  VBS=1, HVCI=1, LSA=0, CFG=1 - Compatible FaceIT/Vanguard%COLOR_RESET%
-  echo %COLOR_WHITE%  Mitigations CPU desactivees ^(KVAShadow=0^)%COLOR_RESET%
-  echo.
-  echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-  echo.
-  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application...%COLOR_RESET%
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKVAShadow /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v KvaOpt /t REG_DWORD /d 0 /f >nul 2>&1
-  powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-  bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
-  echo %COLOR_GREEN%[OK]%COLOR_RESET%
-  call :FINISH_ACTION "VBS/HVCI" "Mode Gaming"
-  goto :TOGGLE_VBS_HVCI
-)
-if !errorlevel! EQU 2 (
-  cls
-  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-  echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION VBS / HVCI%COLOR_RESET%
-  echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-  echo.
-  echo %COLOR_WHITE%  VBS=0, HVCI=0, LSA=0, CFG=0 - Performances max%COLOR_RESET%
-  echo.
-  echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-  echo.
-  echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application...%COLOR_RESET%
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /t REG_DWORD /d 0 /f >nul 2>&1
-  reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-  bcdedit /set hypervisorlaunchtype off >nul 2>&1
-  echo %COLOR_GREEN%[OK]%COLOR_RESET%
-  call :FINISH_ACTION "VBS/HVCI" "desactive"
-  goto :TOGGLE_VBS_HVCI
-)
-cls
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION VBS / HVCI%COLOR_RESET%
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-echo %COLOR_WHITE%  Active VBS, HVCI et Credential Guard pour securite maximale%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de VBS, HVCI et Credential Guard...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v HypervisorEnforcedCodeIntegrity /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
-bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 1 /f >nul 2>&1
-REM CFG doit rester ACTIVE pour Vanguard (Valorant)
-powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI et Credential Guard actives.%COLOR_RESET%
-call :FINISH_ACTION "VBS/HVCI" "active"
-goto :TOGGLE_VBS_HVCI
+:DEFENDER_SECTION_END
+exit /b 1
 
-:TOGGLE_UAC
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% GERER UAC (CONTROLE DE COMPTE UTILISATEUR)%COLOR_RESET%
@@ -3405,12 +3570,14 @@ exit /b
 :CORE_ACTIVER_WIDGETS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour les Widgets...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" /v EnableFeeds /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f >nul 2>&1
 exit /b
 
 :CORE_DESACTIVER_WIDGETS
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des restrictions pour les Widgets...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" /v EnableFeeds /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
 exit /b
 
@@ -3472,7 +3639,7 @@ echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %COLOR_GREEN%[TERMINE]%COLOR_RESET% %STYLE_BOLD%%COLOR_WHITE%%~1 %~2%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
+if not "!SKIP_PAUSE!"=="1" echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser les changements.%COLOR_RESET%
 call :PROMPT_MANUAL_REBOOT
 exit /b
 
@@ -3602,7 +3769,7 @@ if "!ONEDRIVE_REMOVE_OK!"=="1" (
     call :FINISH_ACTION "OneDrive" "desinstalle"
 ) else (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Desinstallation OneDrive incomplete : executable ou dossier utilisateur encore present.%COLOR_RESET%
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage peut liberer les fichiers encore verrouilles.%COLOR_RESET%
+    if not "!SKIP_PAUSE!"=="1" echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage peut liberer les fichiers encore verrouilles.%COLOR_RESET%
     call :PROMPT_MANUAL_REBOOT
 )
 set "ONEDRIVE_REMOVE_OK="
@@ -3780,7 +3947,7 @@ set "SUPPR_DATA="
 if "!EDGE_REMOVE_OK!"=="1" (
     call :FINISH_ACTION "Microsoft Edge" "desinstalle"
 ) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage peut liberer les fichiers encore verrouilles.%COLOR_RESET%
+    if not "!SKIP_PAUSE!"=="1" echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage peut liberer les fichiers encore verrouilles.%COLOR_RESET%
     call :PROMPT_MANUAL_REBOOT
 )
 set "EDGE_REMOVE_OK="
@@ -4031,10 +4198,13 @@ set "SAGEID=100"
 for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul') do (
     reg delete "%%R" /v StateFlags%SAGEID% /f >nul 2>&1
 ) 2>nul
-for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Previous Installations" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "User file versions" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows ESD installation files" "Windows Upgrade Log Files") do (
+REM Exclusions volontaires : Previous Installations (confirmation etape 13), Windows ESD
+REM (source de reinitialisation) et User file versions (donnees de recuperation utilisateur).
+for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows Upgrade Log Files") do (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
 )
-powershell -NoProfile -Command "try {$p=Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID% /d %SystemDrive%' -NoNewWindow -PassThru -ErrorAction Stop; if(-not $p.WaitForExit(120000)){exit 2}; exit $p.ExitCode} catch {exit 1}" >nul 2>&1
+REM /sagerun nettoie tous les disques ; /d est ignore (non documente avec /sagerun).
+powershell -NoProfile -Command "try {$p=Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID%' -NoNewWindow -PassThru -ErrorAction Stop; if(-not $p.WaitForExit(120000)){exit 2}; exit $p.ExitCode} catch {exit 1}" >nul 2>&1
 set "CLEANMGR_RC=!errorlevel!"
 if not "!CLEANMGR_RC!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Cleanmgr continue en arriere-plan ou n'a pas termine normalement.%COLOR_RESET%
@@ -4128,7 +4298,7 @@ call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache npm"
 powershell -NoProfile -Command "$cache=npm config get cache 2>$null; if($cache -and (Test-Path $cache)){ Remove-Item -LiteralPath $cache -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'OK' }" >nul 2>&1
 
 REM  Calcul final (PowerShell pour la precision des decimales)
-for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ""$beforeGB $afterGB $freedGB"""') do (
+for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ('{0} {1} {2}' -f $beforeGB,$afterGB,$freedGB)"') do (
     set "SPACE_BEFORE_GB=%%a"
     set "SPACE_AFTER_GB=%%b"
     set "SPACE_FREED_GB=%%c"
@@ -4146,7 +4316,7 @@ echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%SPACE_BEFORE_GB% 
 echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%SPACE_AFTER_GB% Go%COLOR_RESET%
 echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%SPACE_FREED_GB% Go%COLOR_RESET%
 echo.
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser.%COLOR_RESET%
+if not "!SKIP_PAUSE!"=="1" echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser.%COLOR_RESET%
 call :PROMPT_MANUAL_REBOOT
 set "SAGEID="
 set "SPACE_BEFORE_MB="
@@ -4165,24 +4335,9 @@ echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Detection des versions installees (V14 - 2015-2022)...%COLOR_RESET%
 
-REM  Initialisation
-set VC2015X86=0
-set VC2015X64=0
+REM  Detection via les cles VC14 officielles (Installed=1), sans heuristique sur les DLL.
+call :DETECT_VC14_RUNTIME
 set "RUNTIME_ERROR=0"
-
-REM  Detection DLL : vcruntime140.dll (VC++ 2015 base) ET vcruntime140_1.dll (VS2019+)
-REM  vcruntime140_1.dll est ajoutee a partir de VS 2017 update 8 / VS 2019.
-REM  Si elle manque alors que 140.dll existe, le redist VC++ 2015-2017 ancien est present et doit etre reinstalle
-if exist "%SystemRoot%\System32\vcruntime140.dll" if exist "%SystemRoot%\System32\vcruntime140_1.dll" set VC2015X64=1
-if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" if exist "%SystemRoot%\SysWOW64\vcruntime140_1.dll" set VC2015X86=1
-
-REM  Fallback registry pour les versions manquantes
-set "REG_DUMP=%TEMP%\vc_uninstall_dump_%RANDOM%_%RANDOM%.txt"
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s > "%REG_DUMP%" 2>nul
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s >> "%REG_DUMP%" 2>nul
-
-if "%VC2015X64%"=="0" type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x64" /C:"X64" >nul 2>&1 && set VC2015X64=1
-if "%VC2015X86%"=="0" type "%REG_DUMP%" | findstr /I /C:"Visual C++" | findstr /I /C:"2015" /C:"2017" /C:"2019" /C:"2022" | findstr /I /C:"x86" /C:"X86" >nul 2>&1 && set VC2015X86=1
 
 REM  Compter combien sont deja installes
 set /a "VCINSTALLED_COUNT=%VC2015X86%+%VC2015X64%" 2>nul
@@ -4194,11 +4349,9 @@ REM  Si tout est deja installe, afficher message et retourner
 if "%VCINSTALLED_COUNT%"=="2" (
     echo.
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Toutes les versions V14 sont deja installees.%COLOR_RESET%
-    if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
     set "VC2015X86="
     set "VC2015X64="
     set "VCINSTALLED_COUNT="
-    set "REG_DUMP="
     if "!SKIP_PAUSE!"=="0" (
         echo.
         pause
@@ -4275,12 +4428,10 @@ if "%VC2015X64%"=="0" (
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification des installations...%COLOR_RESET%
 
-REM  Re-detection des DLLs apres installation
-set VC2015X86_NEW=0
-set VC2015X64_NEW=0
-
-if exist "%SystemRoot%\System32\vcruntime140.dll" if exist "%SystemRoot%\System32\vcruntime140_1.dll" set VC2015X64_NEW=1
-if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" if exist "%SystemRoot%\SysWOW64\vcruntime140_1.dll" set VC2015X86_NEW=1
+REM  Re-detection avec la meme source de verite qu'avant l'installation.
+call :DETECT_VC14_RUNTIME
+set "VC2015X86_NEW=!VC2015X86!"
+set "VC2015X64_NEW=!VC2015X64!"
 
 REM  Calculer les vrais comptes
 set /a "VCINSTALL=%VC2015X86_NEW%+%VC2015X64_NEW%" 2>nul
@@ -4296,7 +4447,6 @@ if "!SKIP_PAUSE!"=="0" timeout /t 3 /nobreak >nul
 
 REM  Nettoyage des fichiers temporaires
 if exist "%VCREDIST_DIR%" rd /s /q "%VCREDIST_DIR%" >nul 2>&1
-if exist "%REG_DUMP%" del /f /q "%REG_DUMP%" >nul 2>&1
 set "VC_STEP="
 set "VC_TOTAL="
 set "VCREDIST_DIR="
@@ -4307,7 +4457,6 @@ set "VC2015X86_NEW="
 set "VC2015X64_NEW="
 set "VCINSTALL="
 set "VCINSTALLED_COUNT="
-set "REG_DUMP="
 set "VC_EXIT="
 goto :INSTALLER_DIRECTX_SECTION
 
@@ -4338,7 +4487,15 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification de l'installation 
 
 REM  Detection de DirectX June 2010 (XAudio2_7.dll est un bon indicateur)
 set "DX_INSTALLED=0"
-if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
+REM Presence de XAudio2_7.dll dans au moins une des deux architectures = DX installe.
+REM Le redist June 2010 place toujours les deux, mais on utilise OR pour eviter
+REM les faux negatifs si un seul repertoire est present (reparation partielle, etc.).
+if defined ProgramFiles(x86) (
+    if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
+    if exist "%SystemRoot%\SysWOW64\XAudio2_7.dll" set "DX_INSTALLED=1"
+) else (
+    if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
+)
 
 if "%DX_INSTALLED%"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 est deja installe sur ce systeme.%COLOR_RESET%
@@ -4457,6 +4614,57 @@ REM  ===========================================================================
 powershell -NoLogo -NoProfile -Command "$ack=[int]'%~1'; $noDelay=[int]'%~2'; $delAck=[int]'%~3'; Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress }; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value $ack -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value $noDelay -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value $delAck -Force | Out-Null } }" >nul 2>&1
 exit /b
 
+:RESET_NAGLE_PROFILE
+REM Les cles sont absentes par defaut : les supprimer restaure le comportement TCP natif.
+powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' -ErrorAction SilentlyContinue | ForEach-Object { Remove-ItemProperty -LiteralPath $_.PSPath -Name TcpAckFrequency,TCPNoDelay,TcpDelAckTicks -ErrorAction SilentlyContinue }" >nul 2>&1
+exit /b
+
+:SELECT_TARGET_POWER_SCHEME
+REM Selection silencieuse pour TOUT OPTIMISER. Aucun autre reglage de la section 7 n'est execute ici.
+if "%~1"=="1" (
+    powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
+    if errorlevel 1 exit /b 1
+    exit /b 0
+)
+set "AIO_TARGET_GUID="
+for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (set "AIO_TARGET_GUID=%%G" & set "AIO_TARGET_GUID=!AIO_TARGET_GUID: =!")
+if not defined AIO_TARGET_GUID (
+    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "99999999-9999-9999-9999-999999999999"') do (set "AIO_TARGET_GUID=%%G" & set "AIO_TARGET_GUID=!AIO_TARGET_GUID: =!")
+)
+if not defined AIO_TARGET_GUID (
+    powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1
+    if errorlevel 1 exit /b 1
+    set "AIO_TARGET_GUID=99999999-9999-9999-9999-999999999999"
+)
+powercfg /setactive !AIO_TARGET_GUID! >nul 2>&1
+if errorlevel 1 (
+    set "AIO_TARGET_GUID="
+    exit /b 1
+)
+set "AIO_TARGET_GUID="
+exit /b 0
+
+:DETECT_VC14_RUNTIME
+set "VC2015X86=0"
+set "VC2015X64=0"
+REM Microsoft enregistre les runtimes v14 dans VC\Runtimes\{x86^|x64}.
+REM /reg:32 vise le package x86 et /reg:64 le package x64 sur Windows 64 bits.
+REM Attention : Installed=1 peut persister apres desinstallation si Visual Studio
+REM avec composant C++ est installe (StackOverflow #67493523). On verifie donc aussi
+REM la presence de la DLL principale comme filet de securite.
+if defined ProgramFiles(x86) (
+    reg query "HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" /v Installed /reg:32 2>nul | findstr /R /I "Installed.*REG_DWORD.*0x1" >nul
+    if !errorlevel! EQU 0 if exist "%SystemRoot%\SysWOW64\vcruntime140.dll" set "VC2015X86=1"
+    reg query "HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" /v Installed /reg:64 2>nul | findstr /R /I "Installed.*REG_DWORD.*0x1" >nul
+    if !errorlevel! EQU 0 if exist "%SystemRoot%\System32\vcruntime140.dll" set "VC2015X64=1"
+) else (
+    reg query "HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x86" /v Installed 2>nul | findstr /R /I "Installed.*REG_DWORD.*0x1" >nul
+    if !errorlevel! EQU 0 if exist "%SystemRoot%\System32\vcruntime140.dll" set "VC2015X86=1"
+    REM Aucun package x64 n'est attendu sur un Windows 32 bits.
+    set "VC2015X64=1"
+)
+exit /b 0
+
 :CREATE_STR_STARTUP_SHORTCUT
 powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
 exit /b
@@ -4465,15 +4673,30 @@ exit /b
 powershell -NoProfile -Command "Get-ChildItem -Path ""$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk"" -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
 exit /b
 
+:SET_EXISTING_SERVICE_START
+REM  %~1 = nom du service ; %~2 = valeur Start. Une cle absente est ignoree, jamais creee.
+reg query "HKLM\SYSTEM\CurrentControlSet\Services\%~1" >nul 2>&1
+if !errorlevel! NEQ 0 (
+    set /a "SERVICE_CONFIG_SKIPPED+=1"
+    exit /b 0
+)
+reg add "HKLM\SYSTEM\CurrentControlSet\Services\%~1" /v Start /t REG_DWORD /d %~2 /f >nul 2>&1
+if !errorlevel! NEQ 0 (
+    set "SERVICE_CONFIG_ERROR=1"
+    exit /b 1
+)
+exit /b 0
+
 REM  Parametres : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
 REM               %~2 = PROFIL_USAGE (0=Gaming, 1=Normal).
-REM  Gaming+MaxPerf (0,0) : RSC/LSO OFF, ITR 200, EEE/Wake OFF, buffers max.
+REM  Gaming+MaxPerf (0,0) : RSC/LSO/InterruptModeration OFF, ITR 200, EEE/Wake OFF, buffers max.
 REM  Normal+MaxPerf (0,1) : RSC/LSO ON, ITR defaut, EEE/Wake OFF, buffers max.
 REM  Eco (1,*) : RSC/LSO/checksum ON, PowerManagement ON, economie pilote conservee.
+REM  Toutes les modifications sont groupees avant un unique redemarrage de chaque carte.
 REM  Source unique de verite pour la section 5.7 (optimisation) et 7.12 (restauration).
 :SET_NIC_PROFILE
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $eco=('%~1' -eq '1'); $gaming=('%~2' -eq '0'); function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return}; foreach($v in $vals){try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop; break}catch{}}}; Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Up'} | ForEach-Object {$n=$_.Name; $props=@{}; Get-NetAdapterAdvancedProperty -Name $n -ErrorAction SilentlyContinue | ForEach-Object {$props[$_.RegistryKeyword]=$_}; Enable-NetAdapterRss -Name $n -ErrorAction SilentlyContinue; if($eco -or (-not $gaming)){Enable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name $n -ErrorAction SilentlyContinue}; SetP $n '*IPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv4' @('3') $props; SetP $n '*TCPChecksumOffloadIPv6' @('3') $props; SetP $n '*UDPChecksumOffloadIPv4' @('3') $props; SetP $n '*UDPChecksumOffloadIPv6' @('3') $props; if($eco){Enable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props}else{Disable-NetAdapterPowerManagement -Name $n -ErrorAction SilentlyContinue; SetP $n '*FlowControl' @('0') $props; SetP $n '*GreenGbe' @('0') $props; if($gaming){SetP $n '*RscIPv6' @('0') $props}; SetP $n '*PacketCoalescing' @('0') $props; SetP $n 'EnableExtraPowerSaving' @('0') $props; SetP $n '*EEE' @('0') $props; SetP $n 'AdvancedEEE' @('0') $props; SetP $n 'EnableGreenEthernet' @('0') $props; SetP $n 'PowerSavingMode' @('0') $props; SetP $n 'GigaLite' @('0') $props; SetP $n 'ReduceSpeedOnPowerDown' @('0') $props; if($gaming){try{$desc=$_.InterfaceDescription;$w=Get-WmiObject Win32_NetworkAdapter|?{$_.Name-eq$desc};if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k;New-ItemProperty -Path $r -Name 'ITR' -PropertyType DWord -Value 200 -Force | Out-Null;New-ItemProperty -Path $r -Name 'TxIntDelay' -PropertyType DWord -Value 0 -Force | Out-Null}}catch{}}; SetP $n '*WakeOnMagicPacket' @('0') $props; SetP $n '*WakeOnPattern' @('0') $props; SetP $n 'S5WakeOnLan' @('0') $props; SetP $n '*ShutdownLinkSpeed' @('0') $props; SetP $n 'S3S4WolLinkSpeed' @('0') $props; SetP $n 'EnableDynamicPowerGating' @('0') $props; SetP $n 'AutoPowerSaveModeEnabled' @('0') $props; SetP $n 'EnableConnectedPowerGating' @('0') $props; SetP $n '*NicAutoPowerSaver' @('0') $props; SetP $n 'TxIntDelay' @('0') $props; if($_.InterfaceDescription -match 'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props; SetP $n 'uAPSDSupport' @('0') $props; SetP $n 'FatChannelIntolerant' @('0') $props}; $rxp=$props['*ReceiveBuffers']; if($rxp -and $rxp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$rxp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*ReceiveBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; $txp=$props['*TransmitBuffers']; if($txp -and $txp.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$txp.NumericParameterMaxValue,2048).ToString(); try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword '*TransmitBuffers' -RegistryValue $v -ErrorAction Stop}catch{}}; foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw]; if($p -and $p.NumericParameterMaxValue -gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString(); if($v -ne $p.RegistryValue[0]){try{Set-NetAdapterAdvancedProperty -Name $n -RegistryKeyword $kw -RegistryValue $v -ErrorAction Stop}catch{}}}}}}" >nul 2>&1
-exit /b
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$eco=('%~1'-eq'1');$gaming=('%~2'-eq'0');$script:failed=$false;$managed=@('*FlowControl','*GreenGbe','*RscIPv6','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','*WakeOnPattern','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver','TxIntDelay','MIMOPowerSaveMode','uAPSDSupport','FatChannelIntolerant','*ReceiveBuffers','*TransmitBuffers','PendingReceives','PendingTransmits','ITR','*InterruptModeration');function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return};$p=$cache[$kw];$ok=$false;foreach($v in $vals){$valid=@($p.ValidRegistryValues);if($null-ne$p.ValidRegistryValues-and $valid.Count-gt 0-and $valid-notcontains[string]$v){continue};try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -AllProperties -NoRestart -ErrorAction Stop;$script:changed=$true;$ok=$true;break}catch{}};if(-not $ok){$script:failed=$true}};function ResetP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};try{if($p.DisplayName){$p|Reset-NetAdapterAdvancedProperty -NoRestart -ErrorAction Stop}else{$d=@($p.DefaultRegistryValue);if($d.Count-eq 0-or $null-eq $d[0]){return};Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $d -AllProperties -NoRestart -ErrorAction Stop};$script:changed=$true}catch{$script:failed=$true}};function SetF($get,$set,$n){$f=& $get -Name $n -ErrorAction SilentlyContinue;if($null-eq$f){return};try{& $set -Name $n -NoRestart -ErrorAction Stop;$script:changed=$true}catch{$script:failed=$true}};try{$adapters=@(Get-NetAdapter -Physical -ErrorAction Stop|Where-Object{$_.AdminStatus-eq'Up'})}catch{exit 1};foreach($adapter in $adapters){$script:changed=$false;$n=$adapter.Name;$props=@{};Get-NetAdapterAdvancedProperty -Name $n -AllProperties -ErrorAction SilentlyContinue|ForEach-Object{if($_.RegistryKeyword){$props[$_.RegistryKeyword]=$_}};$w=Get-CimInstance Win32_NetworkAdapter -ErrorAction SilentlyContinue|Where-Object{$_.Name-eq$adapter.InterfaceDescription}|Select-Object -First 1;$r=$null;if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k};if($eco){foreach($kw in $managed){ResetP $n $kw $props}}elseif(-not $gaming){foreach($kw in @('*RscIPv6','ITR','TxIntDelay','*InterruptModeration')){ResetP $n $kw $props}};if(($eco-or(-not $gaming))-and $r){Remove-ItemProperty -Path $r -Name 'ITR','TxIntDelay' -ErrorAction SilentlyContinue;$script:changed=$true};SetF 'Get-NetAdapterRss' 'Enable-NetAdapterRss' $n;if($eco-or(-not $gaming)){SetF 'Get-NetAdapterRsc' 'Enable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Enable-NetAdapterLso' $n}else{SetF 'Get-NetAdapterRsc' 'Disable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Disable-NetAdapterLso' $n};foreach($kw in @('*IPChecksumOffloadIPv4','*TCPChecksumOffloadIPv4','*TCPChecksumOffloadIPv6','*UDPChecksumOffloadIPv4','*UDPChecksumOffloadIPv6')){SetP $n $kw @('3') $props};if($eco){SetF 'Get-NetAdapterPowerManagement' 'Enable-NetAdapterPowerManagement' $n}else{SetF 'Get-NetAdapterPowerManagement' 'Disable-NetAdapterPowerManagement' $n;foreach($kw in @('*FlowControl','*GreenGbe','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','*WakeOnPattern','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver')){SetP $n $kw @('0') $props};if($gaming){SetP $n '*RscIPv6' @('0') $props;SetP $n '*InterruptModeration' @('0') $props;SetP $n 'TxIntDelay' @('0') $props;if($r){try{New-ItemProperty -Path $r -Name 'ITR' -PropertyType DWord -Value 200 -Force -ErrorAction Stop|Out-Null;New-ItemProperty -Path $r -Name 'TxIntDelay' -PropertyType DWord -Value 0 -Force -ErrorAction Stop|Out-Null;$script:changed=$true}catch{$script:failed=$true}}};if($adapter.InterfaceDescription-match'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props;SetP $n 'uAPSDSupport' @('0') $props;SetP $n 'FatChannelIntolerant' @('0') $props};foreach($kw in @('*ReceiveBuffers','*TransmitBuffers')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,2048).ToString();SetP $n $kw @($v) $props}};foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString();SetP $n $kw @($v) $props}}};if($script:changed){try{Restart-NetAdapter -Name $n -Confirm:$false -ErrorAction Stop}catch{$script:failed=$true}}};if($script:failed){exit 1};exit 0" >nul 2>&1
+exit /b !errorlevel!
 
 REM  Parametre : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
 REM  MaxPerf (0) : desactive la gestion d'energie USB (WMI "Autoriser l'arret",
@@ -4481,25 +4704,39 @@ REM    USB Selective Suspend, USB 3 LPM, DisableSelectiveSuspend).
 REM  Eco (1) : restaure la gestion d'energie USB (annule les surcharges MaxPerf).
 REM  Source unique pour les sections 5.8 (optimisation) et 7.3 (restauration).
 :SET_USB_POWER
+set "USB_ERR=0"
 if "%~1"=="1" (
-    REM ECO: Restaurer la gestion d'energie USB (desactive les surcharges MaxPerf)
-    powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=false' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $true} -ErrorAction SilentlyContinue" >nul 2>&1
-    powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
-    powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
-    powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2 >nul 2>&1
-    powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2 >nul 2>&1
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /f >nul 2>&1
-    powercfg /setactive SCHEME_CURRENT >nul 2>&1
-    exit /b 0
+REM ECO: Restaurer la gestion d'energie USB (desactive les surcharges MaxPerf)
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=false' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $true} -ErrorAction SilentlyContinue" >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+reg delete "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /f >nul 2>&1
+powercfg /setactive SCHEME_CURRENT >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+exit /b !USB_ERR!
 )
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=true' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $false} -ErrorAction SilentlyContinue" >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 0 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
 powercfg /setacvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
 powercfg /setdcvalueindex SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 0 >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\USB" /v DisableSelectiveSuspend /t REG_DWORD /d 1 /f >nul 2>&1
+if !errorlevel! NEQ 0 set "USB_ERR=1"
 powercfg /setactive SCHEME_CURRENT >nul 2>&1
-exit /b 0
+if !errorlevel! NEQ 0 set "USB_ERR=1"
+exit /b !USB_ERR!
 
 :RUN_REMOTE_PS
 set "REMOTE_PS_FILE=%TEMP%\WindowsOptimizer_remote_%RANDOM%_%RANDOM%.ps1"
