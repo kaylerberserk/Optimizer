@@ -29,17 +29,17 @@
 
 **Windows Optimizer** est un script d'automatisation professionnel conçu pour transformer une installation Windows standard en une station de travail ou de jeu haute performance. 
 
-Ce script se distingue par sa **stabilité** et sa **polyvalence** : il est universel et a été rigoureusement testé sur tous les environnements, du PC de Gaming au poste de Bureautique, en passant par les Machines Virtuelles (VM). Contrairement aux versions "Lite" modifiées de Windows, ce script ne supprime aucun composant système vital, garantissant un système complet mais parfaitement optimisé.
+Ce script privilégie une configuration lisible et des profils explicites pour Windows 10 et 11. Le résultat dépend toutefois de la version de Windows, des pilotes, du matériel et des logiciels installés. Créez un point de restauration et lisez les avertissements avant les options sensibles (sécurité, Edge, OneDrive et nettoyage avancé).
 
 ---
 
-## 🚀 Démarrage Rapide (Moins de 5 minutes)
+## 🚀 Démarrage rapide
 
 ### Option A — PowerShell (recommandé)
 ```powershell
 irm "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1" | iex
 ```
-Collez cette commande dans **PowerShell (non-admin)** — elle télécharge, s'élève automatiquement en administrateur et lance le script.
+Collez cette commande dans **PowerShell (non-admin)** — elle utilise toujours la version présente sur la branche `main`, s'élève automatiquement en administrateur et lance le script.
 
 ### Option B — Téléchargement manuel
 1. **Téléchargement** : Accédez au fichier [**All in One.cmd**](https://github.com/kaylerberserk/WindowsOptimizer/blob/main/All%20in%20One.cmd) et cliquez sur le bouton **Download**.
@@ -56,7 +56,7 @@ Collez cette commande dans **PowerShell (non-admin)** — elle télécharge, s'�
 
 L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose quelques questions (profil + options) et en déduit automatiquement la configuration optimale.
 
-Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage, **Réseau** demande les deux, et **Énergie/Sécurité** redemandent l'usage uniquement quand un réglage dépend de Gaming vs Normal.
+Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage et **Réseau** demande les deux. Le menu **Protections Sécurité** propose séparément trois niveaux explicites.
 
 #### Axe 1 — Usage (`PROFIL_USAGE`)
 > *Pilote la **latence applicative** : périphériques d'entrée, pile TCP, latence GPU.*
@@ -97,43 +97,43 @@ Exceptions réseau :
 - **[3] Disques** : Optimisation des accès I/O pour accélérer le chargement des jeux et logiciels.
 - **[4] GPU** : Configuration des priorités graphiques et réduction du délai d'affichage (latency).
 - **[5] Réseau** : Optimisation de la pile TCP/IP (TCP Pacing + ECN, TcpMaxDataRetransmissions=5, MSI cartes réseau + USB) et tuning fin de la carte réseau selon le profil (Eco : RSC/LSO/checksum ON, énergie préservée, Interrupt Moderation restaurée ; MaxPerf : EEE/GreenGbe/PacketCoalescing OFF, RSC/LSO et Interrupt Moderation OFF en Gaming, ITR=200 en Gaming+MaxPerf, Rx/Tx buffers max).
-- **[6] Input** : Optimisation de la fréquence d'interrogation pour une souris et un clavier plus réactifs.
+- **[6] Input** : Ajustement de la réponse clavier/souris, des files d'entrée et du mode MSI des contrôleurs compatibles.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance, avec choix d'usage pour appliquer le bon tuning NIC.
-- **[8] Sécurité** : Gestion des mitigations processeur (Spectre/Meltdown) pour regagner des cycles CPU, avec choix d'usage pour le mode Gaming/Normal.
+- **[8] Sécurité** : Choix entre Sécurité Max, Gaming et Performance Max pour VBS/HVCI, CFG, mitigations processeur et liste de pilotes vulnérables.
 
 ### 🧰 Outils & Utilitaires
 
 - **[N] Nettoyage Avancé** : Nettoyage système complet en 26 étapes (fichiers temporaires, caches W11, Widgets/Copilot/Recall, icônes, OneDrive, Defender, etc.).
 - **[R] Point de Restauration** : Crée un point de restauration système avant toute modification.
-- **[G] Gestion Windows** : Menu dédié (Defender, UAC, VBS/HVCI, Edge, OneDrive…).
-- **[W] MAS** : Lien vers l'outil d'activation communautaire pour Windows et Office.
-- **[T] WinUtil** : Accès à la boîte à outils de maintenance de Chris Titus Tech.
+- **[G] Gestion Windows** : Menu dédié (Defender, UAC, animations, IA/Widgets, Edge, OneDrive…).
+- **[W] MAS** : Lance le script officiel MAS depuis son URL de mise à jour continue. À utiliser dans le respect des licences Windows/Office.
+- **[T] WinUtil** : Lance la dernière version officielle disponible de WinUtil.
 - **[Q] Quitter** : Ferme le script.
 
 ### 📂 Gestion Windows & Maintenance (Menu [G])
 
 | Touche | Fonction | Description |
 |:---:|---|---|
-| **[1]** | **Windows Defender** | Activation ou désactivation complète de l'antivirus intégré. |
+| **[1]** | **Windows Defender** | Activation ou désactivation étendue de Defender (temps réel, cloud, ASR, SmartScreen, services et pilotes associés). |
 | **[2]** | **UAC** | Gestion fine des notifications du Contrôle de Compte Utilisateur. |
 | **[3]** | **Animations** | Choix entre une interface visuelle riche ou ultra-réactive. |
-| **[4]** | **IA & Widgets** | Suppression de Copilot, Recall et des widgets Windows 11. |
+| **[4]** | **IA & Widgets** | Activation ou désactivation de Copilot, Recall et des Widgets Windows 11. |
 | **[5]** | **OneDrive** | Désinstallation complète de OneDrive. |
 | **[6]** | **Microsoft Edge** | Désinstallation complète de Microsoft Edge (WebView2 préservé). |
-| **[7]** | **Runtimes** | Installation des bibliothèques essentielles (Visual C++ 2015-2022, DirectX). |
+| **[7]** | **Runtimes** | Installation du Visual C++ v14 actuel et de DirectX June 2010. |
 | **[8]** | **Bloatwares** | Suppression des apps préinstallées inutiles (News, Solitaire, Skype, etc.). |
 | **[M]** | **Retour** | Retour au menu principal. |
 
-> **Note** : la gestion des protections sécurité (VBS / HVCI + mitigations CPU) a été déplacée dans le menu principal sous **[8] Protections Securite**, avec demande du profil Gaming/Normal pour adapter le mode (compatibilité anti-cheat vs performance brute).
+> **Note** : la gestion des protections sécurité (VBS/HVCI, CFG, Credential Guard et mitigations CPU) se trouve dans le menu principal sous **[8] Protections Securite**. Le script indique **Gaming** comme choix recommandé ; Sécurité Max restaure toutes les protections et Performance Max réduit davantage la sécurité.
 
 ---
 
 ## 🛡️ Sécurité & Fiabilité
 
-- **Compatible Anti-Cheat** : Le script propose une configuration optimisée qui maintient l'intégrité du système (**HVCI** et **CFG**) requise par les anti-cheats modernes tels que **Vanguard**, **FaceIT** et **Ricochet**.
-- **Réversibilité** : Chaque modification est traçable. L'option **[R]** permet de créer un point de restauration instantané et les paramètres système peuvent être restaurés via les menus dédiés.
-- **Transparence** : Script principal 100% ouvert et auditable. Les utilitaires optionnels inclus sont isolés dans `Tools\` et utilisés uniquement par les sections concernées.
-- **Zéro perte de fonctions** : Les fonctionnalités vitales (Windows Update, Microsoft Store) restent opérationnelles. Les "Bloatwares" supprimés sont uniquement les apps préinstallées non-essentielles.
+- **Mode Gaming orienté anti-cheat** : ce mode conserve **VBS/HVCI** et **CFG** afin de limiter les incompatibilités, sans garantir les exigences futures de chaque jeu ou anti-cheat.
+- **Réversibilité** : L'option **[R]** crée un point de restauration et plusieurs menus proposent un retour aux valeurs Windows. Certains choix destructifs (données OneDrive/Edge, bloatwares, caches et journaux) ne sont pas annulés automatiquement.
+- **Transparence** : le script principal est ouvert et auditable. MAS et WinUtil utilisent leurs liens officiels continuellement mis à jour ; leur contenu peut donc évoluer entre deux exécutions. Les installateurs Microsoft téléchargés sont contrôlés par signature Authenticode. Certains fichiers de `Tools\` et `Game Configs\` sont des ressources ou modèles archivés et ne sont pas invoqués automatiquement.
+- **Fonctions essentielles préservées** : Windows Update, Microsoft Store et WebView2 ne sont pas volontairement supprimés. Les fonctions dépendantes d'une application retirée peuvent néanmoins changer.
 - **Edge/OneDrive optionnels** : Contrairement aux bloatwares, Edge et OneDrive sont conservés par défaut mais peuvent être désinstallés via le menu **[G] → [5]** (OneDrive) ou **[G] → [6]** (Edge).
 
 ---
@@ -142,36 +142,36 @@ Exceptions réseau :
 
 ### 🏠 Installation & Sécurité
 
-**Q : Est-ce que ce script va "casser" mon Windows ?**  
-R : Non. Contrairement aux ISO modifiées, ce script n'altère pas les fichiers système. L'option **[R]** assure une sécurité totale en cas de besoin de retour en arrière.
+**Q : Est-ce que ce script peut provoquer une incompatibilité ?**
+R : Oui, comme tout outil qui modifie des stratégies, services, pilotes ou paramètres réseau. Créez d'abord un point de restauration, choisissez le profil Normal/Eco en cas de doute et évitez les options de sécurité ou de désinstallation dont vous n'avez pas besoin.
 
 **Q : Mon antivirus détecte le script, pourquoi ?**  
-R : C'est un faux positif. Le script manipule des clés de registre système, ce qui est jugé "suspect" par certains moteurs, bien que les actions soient bénéfiques.
+R : Les commandes d'administration, les téléchargements et les modifications de sécurité peuvent déclencher une alerte. Ne supposez pas automatiquement qu'il s'agit d'un faux positif : vérifiez le dépôt, le diff et les fichiers téléchargés avant exécution.
 
 **Q : Puis-je lancer le script plusieurs fois ?**  
-R : Oui, le script vérifie l'état actuel avant d'appliquer un changement. Le relancer après une mise à jour majeure de Windows est d'ailleurs recommandé.
+R : Les profils principaux sont conçus pour converger vers l'état choisi, mais certaines actions destructives ne sont pas répétables ni réversibles. Relisez le résumé et les confirmations à chaque exécution.
 
 ### 🎮 Performance & Gaming
 
 **Q : Quel gain de FPS puis-je espérer ?**  
-R : Le gain varie selon votre matériel, mais vous constaterez surtout une meilleure stabilité du framerate (moins de drops) et une réponse plus instantanée de vos périphériques.
+R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester par une latence ou une stabilité plus régulière ; aucun gain de FPS n'est garanti.
 
-**Q : Pourquoi désactiver les mitigations Spectre/Meltdown (Option 8) ?**  
-R : Ces protections ajoutent une charge au processeur. En les désactivant, on regagne de la performance brute, mais c'est une option réservée aux utilisateurs qui acceptent le risque de sécurité associé. L'option 8 désactive les mitigations CPU (Spectre/Meltdown, CI Policy) tout en conservant VBS/HVCI/CFG actifs pour la compatibilité anti-cheat.
+**Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
+R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Le mode Gaming conserve VBS/HVCI/CFG mais réduit des mitigations CPU, SEHOP et Credential Guard ; Performance Max réduit davantage les protections. Sécurité Max restaure les protections recommandées.
 
-**Q : Est-ce sûr pour le jeu en ligne ?**  
-R : Absolument. Le script n'interfère jamais avec les fichiers de jeu. Pour les titres exigeants (Valorant/FaceIT/Ricochet), utilisez l'option **[8] Protections Securite** dans le menu principal : VBS et HVCI restent activés (exigés par les anti-cheats) mais les mitigations CPU coûteuses sont désactivées pour libérer les performances.
+**Q : Est-ce compatible avec tous les jeux en ligne ?**
+R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming conserve VBS/HVCI/CFG pour limiter les conflits avec les anti-cheats modernes, mais chaque jeu et chaque politique de sécurité peuvent évoluer.
 
 ### 🌐 Maintenance & Divers
 
 **Q : Est-ce que le nettoyage (Option N) supprime mes documents ?**  
-R : Absolument pas. Il cible uniquement les fichiers temporaires, caches de mises à jour et logs système qui encombrent votre disque.
+R : Il ne cible pas les dossiers Documents/Images/Vidéos. Il vide toutefois la corbeille, des caches, des dumps et d'anciens journaux de diagnostic. Les journaux Event Viewer actifs, l'historique Windows Update et les fichiers de récupération sont conservés.
 
 **Q : Puis-je réinstaller OneDrive ou Edge plus tard ?**  
-R : Oui, ils peuvent être réinstallés via le site officiel de Microsoft à tout moment.
+R : OneDrive peut être réinstallé depuis Microsoft. Pour Edge, retirez d'abord les valeurs `InstallDefault` et `Install{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}` sous `HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate` si la stratégie de blocage est active, puis utilisez l'installateur Microsoft.
 
 **Q : Quels "Bloatwares" sont supprimés ?**  
-R : Le script effectue un nettoyage ciblé pour supprimer les éléments publicitaires ou non-essentiels, tout en garantissant la stabilité du système.
+R : Le script cible une liste explicite d'applications préinstallées non essentielles et vérifie leur suppression. Leur absence peut néanmoins modifier certaines intégrations Windows.
 
 #### 🗑️ Supprimé
 | Catégorie | Applications |
@@ -191,7 +191,7 @@ R : Le script effectue un nettoyage ciblé pour supprimer les éléments publici
 | **Système** | Store, Sécurité Windows, Terminal, Capture. |
 
 **Q : Combien de temps dure l'optimisation ?**  
-R : Moins de 5 minutes selon les options choisies et la vitesse de votre matériel.
+R : Les sections principales prennent généralement quelques minutes. Le nettoyage DISM, les téléchargements de runtimes et les installateurs peuvent durer nettement plus longtemps selon le PC et la connexion.
 ---
 
 <div align="center">

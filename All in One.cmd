@@ -855,7 +855,11 @@ if "!PROFIL_POWER!"=="0" (
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Mode performance applique partiellement ; consultez les erreurs affichees.%COLOR_RESET%
     )
 ) else (
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Profil Eco applique ^(reglages d'economie d'energie restaures^).%COLOR_RESET%
+    if "!AIO_POWER_ERROR!"=="0" (
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Profil Eco applique ^(reglages d'economie d'energie restaures^).%COLOR_RESET%
+    ) else (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Profil Eco applique partiellement ; consultez les erreurs affichees.%COLOR_RESET%
+    )
 )
 echo.
 
@@ -3219,6 +3223,7 @@ goto :TOGGLE_UAC
 
 :ACTIVER_UAC_SECTION
 cls
+set "UAC_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DE L'UAC%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3229,13 +3234,20 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les demandes de confirmation administrateur seront de nouveau affichees.%COLOR_RESET%
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de l'UAC...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 1 /f >nul 2>&1 || set "UAC_SECTION_ERROR=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 5 /f >nul 2>&1 || set "UAC_SECTION_ERROR=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 1 /f >nul 2>&1 || set "UAC_SECTION_ERROR=1"
 
+if "!UAC_SECTION_ERROR!"=="1" (
+    set "UAC_SECTION_ERROR="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Activation de l'UAC appliquee partiellement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    exit /b 1
+)
+set "UAC_SECTION_ERROR="
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%UAC active.%COLOR_RESET%
 call :FINISH_ACTION "UAC" "active"
-exit /b
+exit /b 0
 
 :DESACTIVER_UAC_SECTION
 if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_UAC_RUN
@@ -3254,6 +3266,7 @@ call :ASK_IF_INTERACTIVE :DESACTIVER_UAC_RUN "%STYLE_BOLD%%COLOR_YELLOW%Etes-vou
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_UAC_RUN
 cls
+set "UAC_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DE L'UAC%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3263,13 +3276,20 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'UAC...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 0 /f >nul 2>&1 || set "UAC_SECTION_ERROR=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f >nul 2>&1 || set "UAC_SECTION_ERROR=1"
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v PromptOnSecureDesktop /t REG_DWORD /d 0 /f >nul 2>&1 || set "UAC_SECTION_ERROR=1"
 
+if "!UAC_SECTION_ERROR!"=="1" (
+    set "UAC_SECTION_ERROR="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'UAC appliquee partiellement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    exit /b 1
+)
+set "UAC_SECTION_ERROR="
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%UAC desactive.%COLOR_RESET%
 call :FINISH_ACTION "UAC" "desactive"
-exit /b
+exit /b 0
 
 :TOGGLE_ANIMATIONS
 set "SKIP_PAUSE=0"
@@ -3303,6 +3323,7 @@ goto :TOGGLE_ANIMATIONS
 
 :ACTIVER_ANIMATIONS_SECTION
 cls
+set "ANIMATIONS_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% ACTIVATION DES ANIMATIONS WINDOWS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3314,34 +3335,41 @@ echo.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des animations et effets visuels...%COLOR_RESET%
 
 REM  VisualFXSetting=0 : Let Windows choose what's best (comportement Windows standard)
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "400" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v MenuAnimation /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v TooltipAnimation /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v SelectionFade /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v MenuFade /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v UserUIEffects /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v AnimateWindow /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v ComboboxAnimation /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v ListBoxSmoothScrolling /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "400" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v MenuAnimation /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v TooltipAnimation /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v SelectionFade /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v MenuFade /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v UserUIEffects /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v AnimateWindow /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v ComboboxAnimation /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v ListBoxSmoothScrolling /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
 
 REM  Activer les effets visuels supplementaires
-reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "1" /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 1 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /f >nul 2>&1
 
+if "!ANIMATIONS_SECTION_ERROR!"=="1" (
+    set "ANIMATIONS_SECTION_ERROR="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Activation des animations appliquee partiellement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    exit /b 1
+)
+set "ANIMATIONS_SECTION_ERROR="
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Animations Windows activees.%COLOR_RESET%
 call :FINISH_ACTION "Animations" "activees"
-exit /b
+exit /b 0
 
 :DESACTIVER_ANIMATIONS_SECTION
 if not "!SKIP_PAUSE!"=="0" goto :DESACTIVER_ANIMATIONS_RUN
@@ -3360,6 +3388,7 @@ call :ASK_IF_INTERACTIVE :DESACTIVER_ANIMATIONS_RUN "%STYLE_BOLD%%COLOR_YELLOW%V
 if !errorlevel! NEQ 0 exit /b
 :DESACTIVER_ANIMATIONS_RUN
 cls
+set "ANIMATIONS_SECTION_ERROR=0"
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DES ANIMATIONS WINDOWS%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -3372,34 +3401,41 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des animations et
 
 REM  VisualFXSetting=3 (Personnalise) pour que Windows utilise uniquement les cles
 REM  individuelles ci-dessous sans recalculer tous les effets (ce qui reset le menu Demarrer)
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v MenuAnimation /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v TooltipAnimation /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v SelectionFade /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v MenuFade /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v UserUIEffects /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v AnimateWindow /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v ComboboxAnimation /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v ListBoxSmoothScrolling /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\VisualEffects" /v VisualFXSetting /t REG_DWORD /d 3 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop\WindowMetrics" /v MinAnimate /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarAnimations /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Accessibility\AnimationEffects" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v MenuShowDelay /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v MenuAnimation /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v TooltipAnimation /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v SelectionFade /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v MenuFade /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v UserUIEffects /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v AnimateWindow /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v ComboboxAnimation /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v ListBoxSmoothScrolling /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\DWM" /v EnableAeroPeek /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize" /v EnableTransparency /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
 
 REM  Garder les options utiles actives (Police, Ombre icone, Drag content)
-reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "0" /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Control Panel\Desktop" /v DragFullWindows /t REG_SZ /d "1" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewAlphaSelect /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothing /t REG_SZ /d "2" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v FontSmoothingType /t REG_DWORD /d 2 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ListviewShadow /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Control Panel\Desktop" /v CursorShadow /t REG_SZ /d "0" /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ExtendedUIHoverTime /t REG_DWORD /d 0 /f >nul 2>&1 || set "ANIMATIONS_SECTION_ERROR=1"
 
+if "!ANIMATIONS_SECTION_ERROR!"=="1" (
+    set "ANIMATIONS_SECTION_ERROR="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Desactivation des animations appliquee partiellement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    exit /b 1
+)
+set "ANIMATIONS_SECTION_ERROR="
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Animations Windows desactivees.%COLOR_RESET%
 call :FINISH_ACTION "Animations" "desactivees"
-exit /b
+exit /b 0
 
 :MENU_IA_WIDGETS_RECALL
 set "SKIP_PAUSE=0"
@@ -3544,6 +3580,20 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 call :CORE_ACTIVER_RECALL
+set "AI_ACTION_RC=!errorlevel!"
+if "!AI_ACTION_RC!"=="2" (
+    set "AI_ACTION_RC="
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Recall n'est pas disponible sur cette version ou ce materiel.%COLOR_RESET%
+    pause
+    goto :MENU_IA_WIDGETS_RECALL
+)
+if not "!AI_ACTION_RC!"=="0" (
+    set "AI_ACTION_RC="
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Recall n'a pas pu etre reactive completement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    goto :MENU_IA_WIDGETS_RECALL
+)
+set "AI_ACTION_RC="
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Recall active.%COLOR_RESET%
 call :FINISH_ACTION "Recall" "active"
 goto :MENU_IA_WIDGETS_RECALL
@@ -3591,6 +3641,11 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 call :CORE_ACTIVER_WIDGETS
+if !errorlevel! NEQ 0 (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Les Widgets n'ont pas pu etre reactives completement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    goto :MENU_IA_WIDGETS_RECALL
+)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Widgets actives.%COLOR_RESET%
 call :FINISH_ACTION "Widgets" "active"
 goto :MENU_IA_WIDGETS_RECALL
@@ -3613,7 +3668,7 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% DESACTIVATION DE COPILOT%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Desactive Copilot, le bouton dans la barre des taches et bloque les domaines associes.%COLOR_RESET%
+echo %COLOR_WHITE%  Desactive Copilot, le bouton dans la barre des taches et ses integrations Edge.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
@@ -3638,33 +3693,40 @@ echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 call :CORE_ACTIVER_COPILOT
+if !errorlevel! NEQ 0 (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Copilot n'a pas pu etre reactive completement.%COLOR_RESET%
+    call :PROMPT_MANUAL_REBOOT
+    goto :MENU_IA_WIDGETS_RECALL
+)
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Copilot active.%COLOR_RESET%
 call :FINISH_ACTION "Copilot" "active"
 goto :MENU_IA_WIDGETS_RECALL
 
 
 :CORE_ACTIVER_COPILOT
+set "AI_CORE_ERROR=0"
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour Copilot...%COLOR_RESET%
-reg delete "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" /v TurnOffWindowsCopilot /f >nul 2>&1
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 1 /f >nul 2>&1
+call :DELETE_REG_VALUE_IF_PRESENT "HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot" "TurnOffWindowsCopilot"
+if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+call :DELETE_REG_VALUE_IF_PRESENT "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsCopilot" "TurnOffWindowsCopilot"
+if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowCopilotButton /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
 reg delete "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v IsCopilotAvailable /f >nul 2>&1
 reg delete "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot" /v CopilotDisabledReason /f >nul 2>&1
 reg delete "HKCU\SOFTWARE\Microsoft\Windows\Shell\Copilot\BingChat" /v IsUserEligible /f >nul 2>&1
 REM  Reactivation de Copilot dans Edge
-reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /f >nul 2>&1
-reg delete "HKCU\Software\Policies\Microsoft\Edge" /v "CopilotPageContext" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "CopilotPageContext" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "EdgeEntraCopilotPageContext" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "Microsoft365CopilotChatIconEnabled" /f >nul 2>&1
-set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
-attrib -r "%HOSTS%" >nul 2>&1
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match '(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)){ $c=$c -replace ('(?s)\r?\n?'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), ''; Set-Content -Path $h -Value $c -Encoding ASCII -Force } }" >nul 2>&1
-attrib +r "%HOSTS%" >nul 2>&1
-set "HOSTS="
+for %%V in (HubsSidebarEnabled CopilotPageContext) do (
+    call :DELETE_REG_VALUE_IF_PRESENT "HKCU\Software\Policies\Microsoft\Edge" "%%V"
+    if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+)
+for %%V in (HubsSidebarEnabled CopilotPageContext EdgeEntraCopilotPageContext Microsoft365CopilotChatIconEnabled) do (
+    call :DELETE_REG_VALUE_IF_PRESENT "HKLM\SOFTWARE\Policies\Microsoft\Edge" "%%V"
+    if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+)
+    call :REMOVE_COPILOT_HOSTS_BLOCK
+    if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
 ipconfig /flushdns >nul 2>&1
-exit /b
+exit /b !AI_CORE_ERROR!
 
 :CORE_DESACTIVER_COPILOT
 set "AI_CORE_ERROR=0"
@@ -3682,22 +3744,24 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "HubsSidebarEnabled" /t REG_D
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "CopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "EdgeEntraCopilotPageContext" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v "Microsoft365CopilotChatIconEnabled" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
-attrib -r "%HOSTS%" >nul 2>&1
-powershell -NoProfile -Command "$h='%HOSTS%'; $s='# Copilot Block Start'; $e='# Copilot Block End'; $nb=""# Copilot Block Start`r`n0.0.0.0 copilot.microsoft.com`r`n0.0.0.0 copilot-telemetry.microsoft.com`r`n0.0.0.0 msedge.api.cdp.microsoft.com`r`n# Copilot Block End""; if(Test-Path $h){ $c=Get-Content $h -Raw; if($c -match ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e))){ $c=$c -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)), $nb } else { if($c.Trim().Length -gt 0){ $c=$c.TrimEnd()+""`r`n`r`n""+$nb } else { $c=$nb } } Set-Content -Path $h -Value $c -Encoding ASCII -Force }; if($?) { exit 0 } else { exit 1 }" >nul 2>&1
-if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Blocage facultatif dans le fichier hosts ignore ; les strategies Copilot restent appliquees.%COLOR_RESET%
-attrib +r "%HOSTS%" >nul 2>&1
-set "HOSTS="
+    REM Les strategies suffisent ; nettoyer l'ancien bloc hosts qui cassait aussi le site Copilot.
+    call :REMOVE_COPILOT_HOSTS_BLOCK
+    if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Ancien bloc Copilot du fichier hosts non nettoye ; les strategies restent appliquees.%COLOR_RESET%
 ipconfig /flushdns >nul 2>&1
 exit /b !AI_CORE_ERROR!
 
 
 :CORE_ACTIVER_WIDGETS
+set "AI_CORE_ERROR=0"
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour les Widgets...%COLOR_RESET%
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" /v EnableFeeds /f >nul 2>&1
+call :DELETE_REG_VALUE_IF_PRESENT "HKLM\SOFTWARE\Policies\Microsoft\Dsh" "AllowNewsAndInterests"
+if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+call :DELETE_REG_VALUE_IF_PRESENT "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" "EnableFeeds"
+if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+REM TaskbarDa peut etre protege par Windows/UCPD. Retirer la strategie Dsh reactive deja les Widgets.
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 1 /f >nul 2>&1
-exit /b
+if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le bouton Widgets est protege par Windows ; utilisez les Parametres pour l'afficher.%COLOR_RESET%
+exit /b !AI_CORE_ERROR!
 
 :CORE_DESACTIVER_WIDGETS
 set "AI_CORE_ERROR=0"
@@ -3707,7 +3771,9 @@ for /f "tokens=3" %%B in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\Current
 if !WIDGETS_BUILD! GEQ 22000 (
     REM Windows 11 : strategie Widgets actuelle et bouton de la barre des taches.
     reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /v AllowNewsAndInterests /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+    REM TaskbarDa peut etre protege par Windows/UCPD. La strategie Dsh suffit a desactiver toute l'experience Widgets.
     reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v TaskbarDa /t REG_DWORD /d 0 /f >nul 2>&1
+    if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Bouton Widgets protege par Windows ; la strategie principale reste appliquee.%COLOR_RESET%
 ) else (
     REM Windows 10 : ancienne strategie Actualites et centres d'interet uniquement.
     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Feeds" /v EnableFeeds /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
@@ -3717,53 +3783,80 @@ exit /b !AI_CORE_ERROR!
 
 
 :CORE_ACTIVER_RECALL
+set "AI_CORE_ERROR=0"
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation des cles de registre pour Recall...%COLOR_RESET%
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowRecallEnablement" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+REM Nettoyage des anciennes valeurs non officielles posees par des versions precedentes.
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "TurnOffSavingSnapshots" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowRecallEnablement" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowAIGameFeatures" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowClickToDo" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentWorkspaces" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableRemoteAgentConnectors" /f >nul 2>&1
+for %%V in (DisableAgentWorkspaces DisableAgentConnectors DisableRemoteAgentConnectors DisableClickToDo) do (
+    call :DELETE_REG_VALUE_IF_PRESENT "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" "%%V"
+    if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+)
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageInsights" /f >nul 2>&1
-reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableClickToDo" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageCreator" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableCocreator" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableGenerativeFill" /f >nul 2>&1
+for %%V in (DisableImageCreator DisableCocreator DisableGenerativeFill) do (
+    call :DELETE_REG_VALUE_IF_PRESENT "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Paint" "%%V"
+    if !errorlevel! NEQ 0 set "AI_CORE_ERROR=1"
+)
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageSpaceForRecallSnapshots" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageDurationForRecallSnapshots" /f >nul 2>&1
-reg delete "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v "Value" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v "Value" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v "AgentActivationEnabled" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v "DisableClickToDo" /f >nul 2>&1
 reg delete "HKCU\Software\Microsoft\input\Settings" /v "InsightsEnabled" /f >nul 2>&1
-powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $ErrorActionPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f){ Enable-WindowsOptionalFeature -Online -FeatureName 'Recall' -NoRestart *>$null }" >nul 2>&1
-exit /b
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -eq $f){exit 2}; try { Enable-WindowsOptionalFeature -Online -FeatureName 'Recall' -NoRestart -ErrorAction Stop *>$null; exit 0 } catch { exit 1 }" >nul 2>&1
+set "AI_FEATURE_RC=!errorlevel!"
+if "!AI_CORE_ERROR!"=="1" (
+    set "AI_FEATURE_RC="
+    exit /b 1
+)
+if "!AI_FEATURE_RC!"=="2" (
+    set "AI_FEATURE_RC="
+    exit /b 2
+)
+if not "!AI_FEATURE_RC!"=="0" (
+    set "AI_FEATURE_RC="
+    exit /b 1
+)
+set "AI_FEATURE_RC="
+exit /b 0
 
 :CORE_DESACTIVER_RECALL
 set "AI_CORE_ERROR=0"
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application des restrictions pour Recall...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "TurnOffSavingSnapshots" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "TurnOffSavingSnapshots" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowRecallEnablement" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowAIGameFeatures" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowClickToDo" /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentWorkspaces" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableRemoteAgentConnectors" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageInsights" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowAIGameFeatures" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "AllowClickToDo" /f >nul 2>&1
+REM Valeur enumeree : 2 = forcer la desactivation (1 forcerait l'activation).
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentWorkspaces" /t REG_DWORD /d 2 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableAgentConnectors" /t REG_DWORD /d 2 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableRemoteAgentConnectors" /t REG_DWORD /d 2 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageInsights" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableClickToDo" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageCreator" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableCocreator" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableGenerativeFill" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageSpaceForRecallSnapshots" /t REG_DWORD /d 10 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageDurationForRecallSnapshots" /t REG_DWORD /d 30 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableImageCreator" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableCocreator" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "DisableGenerativeFill" /f >nul 2>&1
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Paint" /v "DisableImageCreator" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Paint" /v "DisableCocreator" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg add "HKLM\Software\Microsoft\Windows\CurrentVersion\Policies\Paint" /v "DisableGenerativeFill" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageSpaceForRecallSnapshots" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI" /v "SetMaximumStorageDurationForRecallSnapshots" /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Windows\WindowsAI" /v "DisableAIDataAnalysis" /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v Value /t REG_SZ /d "Deny" /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /t REG_DWORD /d 1 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
-reg add "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /t REG_DWORD /d 0 /f >nul 2>&1 || set "AI_CORE_ERROR=1"
+REM Nettoyer les anciennes surcharges non documentees sans modifier voix, saisie ou autorisations generales.
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\systemAIModels" /v Value /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\userActivityFeedGlobal" /v Value /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Speech_OneCore\Settings\VoiceActivation\UserPreferenceForAllApps" /v AgentActivationEnabled /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\Windows\Shell\ClickToDo" /v DisableClickToDo /f >nul 2>&1
+reg delete "HKCU\Software\Microsoft\input\Settings" /v InsightsEnabled /f >nul 2>&1
 REM La suppression du composant est un nettoyage facultatif : les strategies ci-dessus suffisent a desactiver Recall.
 REM DISM peut signaler un redemarrage requis comme un succes distinct ; cela ne doit pas invalider tout le bloc IA.
 powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; try { $f=Get-WindowsOptionalFeature -Online -FeatureName 'Recall' -ErrorAction SilentlyContinue; if($null -ne $f -and $f.State -ne 'DisabledWithPayloadRemoved'){ Disable-WindowsOptionalFeature -Online -FeatureName 'Recall' -Remove -NoRestart -ErrorAction Stop *>$null }; exit 0 } catch { exit 1 }" >nul 2>&1
@@ -3828,12 +3921,23 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Comptes OneDrive deconnectes%CO
 
 REM  Commande pour desinstaller OneDrive
 echo %COLOR_YELLOW%[3/7]%COLOR_RESET% %COLOR_WHITE%Execution du desinstalleur OneDrive Windows...%COLOR_RESET%
+set "ONEDRIVE_UNINSTALLER="
 if exist "%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe" (
-    "%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe" /uninstall
-) else (
-    "%SYSTEMROOT%\System32\OneDriveSetup.exe" /uninstall
+    set "ONEDRIVE_UNINSTALLER=%SYSTEMROOT%\SysWOW64\OneDriveSetup.exe"
+) else if exist "%SYSTEMROOT%\System32\OneDriveSetup.exe" (
+    set "ONEDRIVE_UNINSTALLER=%SYSTEMROOT%\System32\OneDriveSetup.exe"
 )
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstalleur OneDrive execute%COLOR_RESET%
+if defined ONEDRIVE_UNINSTALLER (
+    "!ONEDRIVE_UNINSTALLER!" /uninstall >nul 2>&1
+    if !errorlevel! EQU 0 (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstalleur OneDrive execute%COLOR_RESET%
+    ) else (
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le desinstalleur OneDrive a retourne une erreur ; le nettoyage continue.%COLOR_RESET%
+    )
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Desinstalleur OneDrive absent ; le nettoyage continue.%COLOR_RESET%
+)
+set "ONEDRIVE_UNINSTALLER="
 
 echo %COLOR_RED%[ATTENTION]%COLOR_RESET% %COLOR_WHITE%Suppression des cles de registre OneDrive - operation irreversible.%COLOR_RESET%
 echo %COLOR_YELLOW%[4/7]%COLOR_RESET% %COLOR_WHITE%Nettoyage des cles de registre OneDrive...%COLOR_RESET%
@@ -3898,7 +4002,7 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourcis OneDrive supprimes%C
 set "ONEDRIVE_REMOVE_OK=1"
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
 if exist "%ProgramFiles%\Microsoft OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
-if exist "%ProgramFiles(x86)%\Microsoft OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
+if defined ProgramFiles(x86) if exist "%ProgramFiles(x86)%\Microsoft OneDrive\OneDrive.exe" set "ONEDRIVE_REMOVE_OK=0"
 if exist "%USERPROFILE%\OneDrive" set "ONEDRIVE_REMOVE_OK=0"
 if "!ONEDRIVE_REMOVE_OK!"=="1" (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nettoyage complet de OneDrive termine.%COLOR_RESET%
@@ -3922,7 +4026,7 @@ echo %COLOR_WHITE%Pourquoi demander confirmation :%COLOR_RESET%
 echo %COLOR_WHITE%- Ce script retire Edge mais preserve WebView2.%COLOR_RESET%
 echo %COLOR_WHITE%- Les applis qui utilisent WebView2 continuent generalement de fonctionner.%COLOR_RESET%
 echo %COLOR_WHITE%- Windows Update peut tenter de reinstaller un navigateur de base ; comportement variable selon version.%COLOR_RESET%
-echo %COLOR_WHITE%- Certaines fonctions Windows (widgets, flux RSS) peuvent utiliser Edge par defaut.%COLOR_RESET%
+echo %COLOR_WHITE%- Recherche, Widgets, Meteo et certaines PWA peuvent ne plus fonctionner sans Edge.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%La desinstallation libere ~1 Go et reduit les processus en arriere-plan.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le risque de compatibilite est plus limite tant que WebView2 reste present.%COLOR_RESET%
@@ -3980,20 +4084,24 @@ call :REMOVE_EDGE_TASKBAR_LINKS
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Raccourci barre des taches supprime%COLOR_RESET%
 
 echo %COLOR_YELLOW%[3/12]%COLOR_RESET% %COLOR_WHITE%Tentative de desinstallation de Microsoft Edge via l'installateur officiel...%COLOR_RESET%
-if not exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" goto :EDGE_SKIP_OFFICIAL_UNINSTALLER
-pushd "%ProgramFiles(x86)%\Microsoft\Edge\Application" >nul 2>&1
-for /d %%i in (*) do (
-    if exist "%%i\Installer\setup.exe" (
-        "%%i\Installer\setup.exe" --uninstall --system-level --force-uninstall >nul 2>&1
-    )
-)
-popd >nul 2>&1
+set "EDGE_UNINSTALLER_FOUND=0"
+set "EDGE_UNINSTALLER_ERROR=0"
+if exist "%ProgramFiles%\Microsoft\Edge\Application" call :RUN_EDGE_UNINSTALLER "%ProgramFiles%\Microsoft\Edge\Application"
+if defined ProgramFiles(x86) if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application" call :RUN_EDGE_UNINSTALLER "%ProgramFiles(x86)%\Microsoft\Edge\Application"
 :EDGE_SKIP_OFFICIAL_UNINSTALLER
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstalleur Edge execute%COLOR_RESET%
+if "!EDGE_UNINSTALLER_ERROR!"=="1" (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le desinstalleur Edge a retourne une erreur ; le nettoyage force continue.%COLOR_RESET%
+) else if "!EDGE_UNINSTALLER_FOUND!"=="1" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Desinstalleur Edge execute%COLOR_RESET%
+) else (
+    echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Aucun desinstalleur Edge officiel trouve ; le nettoyage force continue.%COLOR_RESET%
+)
+set "EDGE_UNINSTALLER_FOUND="
+set "EDGE_UNINSTALLER_ERROR="
 
 echo %COLOR_YELLOW%[4/12]%COLOR_RESET% %COLOR_WHITE%Nettoyage force des dossiers programme...%COLOR_RESET%
 rd "%ProgramFiles%\Microsoft\Edge" /s /q >nul 2>&1
-rd "%ProgramFiles(x86)%\Microsoft\Edge" /s /q >nul 2>&1
+if defined ProgramFiles(x86) rd "%ProgramFiles(x86)%\Microsoft\Edge" /s /q >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Dossiers programme supprimes%COLOR_RESET%
 
 echo %COLOR_YELLOW%[5/12]%COLOR_RESET% %COLOR_WHITE%Nettoyage des cles de registre Edge...%COLOR_RESET%
@@ -4045,14 +4153,23 @@ echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Index de recherche et menu dema
 echo %COLOR_YELLOW%[11/12]%COLOR_RESET% %COLOR_WHITE%Nettoyage du cache d'icones et du MUI Cache...%COLOR_RESET%
 del "%LOCALAPPDATA%\IconCache.db" /f /q >nul 2>&1
 del "%LOCALAPPDATA%\Microsoft\Windows\Explorer\iconcache*.db" /f /q >nul 2>&1
-reg delete "HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe.FriendlyAppName" /f >nul 2>&1
+if defined ProgramFiles(x86) reg delete "HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe.FriendlyAppName" /f >nul 2>&1
 reg delete "HKCU\Software\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe.FriendlyAppName" /f >nul 2>&1
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Caches d'icones et MUI Cache nettoyes%COLOR_RESET%
 
 echo %COLOR_YELLOW%[12/12]%COLOR_RESET% %COLOR_WHITE%Blocage des reinstallations automatiques...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\EdgeUpdate" /v "DoNotUpdateToEdgeWithChromium" /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" /v "PreventFirstRunPage" /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mises a jour automatiques et reinstallation bloquees%COLOR_RESET%
+REM  Strategies Edge Update officielles. Elles sont surtout garanties sur les appareils joints a un domaine.
+set "EDGE_POLICY_ERROR=0"
+reg add "HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate" /v "InstallDefault" /t REG_DWORD /d 2 /f >nul 2>&1 || set "EDGE_POLICY_ERROR=1"
+reg add "HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate" /v "Install{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}" /t REG_DWORD /d 0 /f >nul 2>&1 || set "EDGE_POLICY_ERROR=1"
+reg delete "HKLM\SOFTWARE\Microsoft\EdgeUpdate" /v "DoNotUpdateToEdgeWithChromium" /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\MicrosoftEdge\Main" /v "PreventFirstRunPage" /f >nul 2>&1
+if "!EDGE_POLICY_ERROR!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Strategie de blocage Edge appliquee lorsqu'elle est prise en charge%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Edge est retire, mais la strategie anti-reinstallation n'a pas pu etre appliquee.%COLOR_RESET%
+)
+set "EDGE_POLICY_ERROR="
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification finale de la desinstallation...%COLOR_RESET%
 set "EDGE_REMOVE_OK=1"
@@ -4060,7 +4177,7 @@ if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
     set "EDGE_REMOVE_OK=0"
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Edge n'a pas pu etre completement desinstalle.%COLOR_RESET%
 ) else (
-    if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
+    if defined ProgramFiles(x86) if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
         set "EDGE_REMOVE_OK=0"
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Edge n'a pas pu etre completement desinstalle.%COLOR_RESET%
     ) else (
@@ -4133,13 +4250,7 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification et activation de la restauration systeme si necessaire...%COLOR_RESET%
-REM  Si DisableSR=1, SR est desactive globalement : on prepare sa reactivation.
-powershell -NoProfile -Command "$p = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' -ErrorAction SilentlyContinue; if ($null -ne $p -and $p.DisableSR -eq 1) { exit 1 } else { exit 0 }" >nul 2>&1
-if !errorlevel! NEQ 0 (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de la restauration systeme...%COLOR_RESET%
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" /t REG_DWORD /d 1 /f >nul 2>&1
-)
-powershell -NoProfile -Command "try { Enable-ComputerRestore -Drive '%SystemDrive%\' -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "try { Enable-ComputerRestore -Drive ($env:SystemDrive+'\') -ErrorAction Stop; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Restauration systeme disponible sur %SystemDrive%.%COLOR_RESET%
 ) else (
@@ -4151,9 +4262,8 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Creation d'un point de restaura
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Cette operation peut prendre 30-60 secondes...%COLOR_RESET%
 echo.
 
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "SystemRestorePointCreationFrequency" /t REG_DWORD /d 0 /f >nul 2>&1
 for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "RP_TIMESTAMP=%%a"
-powershell -NoProfile -Command "$ErrorActionPreference = 'Stop'; try { $desc = 'Optimizations_%RP_TIMESTAMP%'; Checkpoint-Computer -Description $desc -RestorePointType 'MODIFY_SETTINGS'; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'; $name='SystemRestorePointCreationFrequency'; $had=$false; $old=$null; $ok=$false; try { $p=Get-ItemProperty -LiteralPath $key -ErrorAction Stop; $had=$p.PSObject.Properties.Name -contains $name; if($had){$old=$p.$name; Set-ItemProperty -LiteralPath $key -Name $name -Value 0 -ErrorAction Stop}else{New-ItemProperty -LiteralPath $key -Name $name -PropertyType DWord -Value 0 -Force -ErrorAction Stop | Out-Null}; Checkpoint-Computer -Description 'Optimizations_%RP_TIMESTAMP%' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop; $ok=$true } catch { $ok=$false } finally { try { if($had){Set-ItemProperty -LiteralPath $key -Name $name -Value $old -ErrorAction Stop}else{Remove-ItemProperty -LiteralPath $key -Name $name -ErrorAction SilentlyContinue} } catch { $ok=$false } }; if($ok){exit 0}else{exit 1}" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Point de restauration cree avec succes.%COLOR_RESET%
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Nom : Optimizations_%RP_TIMESTAMP%%COLOR_RESET%
@@ -4173,14 +4283,21 @@ echo %COLOR_CYAN%===============================================================
 echo.
 
 REM  Analyse espace initial
+set "SPACE_BEFORE_MB="
 for /f %%a in ('powershell -NoProfile -NoLogo -Command "[int]((Get-PSDrive -Name '%SystemDrive:~0,1%').Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
-if not defined SPACE_BEFORE_MB set "SPACE_BEFORE_MB=0"
+if defined SPACE_BEFORE_MB (
+    set "SPACE_MEASURE_OK=1"
+) else (
+    set "SPACE_MEASURE_OK=0"
+    set "SPACE_BEFORE_MB=0"
+)
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
-echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, logs, rapports d'erreurs,%COLOR_RESET%
+echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, anciens logs, rapports d'erreurs,%COLOR_RESET%
 echo %COLOR_WHITE%  corbeille, caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
-echo %COLOR_WHITE%  cache npm, notifications et journaux systeme.%COLOR_RESET%
+echo %COLOR_WHITE%  cache npm, notifications et journaux archives.%COLOR_RESET%
 echo %COLOR_WHITE%  %STYLE_BOLD%Aucune donnee personnelle (favoris, mots de passe, documents) n'est touchee.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'historique Windows Update et les fichiers de recuperation sont conserves.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Continuer ? [O/N]: %COLOR_RESET%"
 call :AZCHOICE ON
@@ -4195,12 +4312,13 @@ echo.
 REM  Initialiser la barre de progression (26 etapes - caches de perf conserves)
 set /a "CLEAN_TOTAL=26"
 set /a "CLEAN_STEP=0"
+set /a "CLEAN_WARNINGS=0"
+set "CLEAN_SCRIPT_PATH=%~f0"
 
 REM  ETAPE 1 - Fichiers temporaires utilisateur (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires utilisateur"
-del /s /q /f "%temp%\*.*" >nul 2>&1
-for /d %%d in ("%temp%\*") do rd /s /q "%%d" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$self=[IO.Path]::GetFullPath($env:CLEAN_SCRIPT_PATH);Get-ChildItem -LiteralPath $env:TEMP -Force|Where-Object{$p=[IO.Path]::GetFullPath($_.FullName);$p-ne$self-and-not $self.StartsWith($p+'\',[StringComparison]::OrdinalIgnoreCase)}|Remove-Item -Recurse -Force -ErrorAction SilentlyContinue;exit 0" >nul 2>&1
 if exist "%LOCALAPPDATA%\Microsoft\Office\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\Office\*.tmp" >nul 2>&1
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.log" del /s /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.log" >nul 2>&1
 
@@ -4231,13 +4349,11 @@ del /s /q /f "%LOCALAPPDATA%\CrashDumps\*.*" >nul 2>&1
 REM  ETAPE 5 - Rapports d'erreurs et Telemetrie
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Rapports d'erreurs et Telemetrie"
-rd /s /q "%ProgramData%\Microsoft\Windows\WER" >nul 2>&1
-if not exist "%ProgramData%\Microsoft\Windows\WER" md "%ProgramData%\Microsoft\Windows\WER" >nul 2>&1
-rd /s /q "%ProgramData%\Microsoft\Diagnosis" >nul 2>&1
-if not exist "%ProgramData%\Microsoft\Diagnosis" md "%ProgramData%\Microsoft\Diagnosis" >nul 2>&1
-if exist "%LOCALAPPDATA%\Microsoft\Windows\WER" rd /s /q "%LOCALAPPDATA%\Microsoft\Windows\WER" >nul 2>&1
+for %%D in (ReportArchive ReportQueue Temp) do if exist "%ProgramData%\Microsoft\Windows\WER\%%D" rd /s /q "%ProgramData%\Microsoft\Windows\WER\%%D" >nul 2>&1
+for %%D in (ReportArchive ReportQueue Temp) do if exist "%LOCALAPPDATA%\Microsoft\Windows\WER\%%D" rd /s /q "%LOCALAPPDATA%\Microsoft\Windows\WER\%%D" >nul 2>&1
+REM  Le dossier Diagnosis et les racines WER sont conserves pour garder leurs ACL et services intacts.
 
-REM  ETAPE 6 - Cache Windows Update, SoftwareDistribution, Delivery Optimization (ameliore)
+REM  ETAPE 6 - Cache Windows Update et Delivery Optimization
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache Windows Update et Delivery Optimization"
 for %%S in (wuauserv bits cryptsvc dosvc) do (
@@ -4248,11 +4364,8 @@ for %%S in (wuauserv bits cryptsvc dosvc) do (
 )
 timeout /t 2 /nobreak >nul
 rd /s /q "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
-rd /s /q "%SystemRoot%\SoftwareDistribution\DataStore" >nul 2>&1
-rd /s /q "%SystemRoot%\SoftwareDistribution\PostRebootEventCache" >nul 2>&1
-del /s /q /f "%SystemRoot%\SoftwareDistribution\ReportingEvents.log" >nul 2>&1
 md "%SystemRoot%\SoftwareDistribution\Download" >nul 2>&1
-md "%SystemRoot%\SoftwareDistribution\DataStore" >nul 2>&1
+REM  DataStore et ReportingEvents.log contiennent l'historique Windows Update : ne pas les effacer.
 if exist "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" (
     rd /s /q "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" >nul 2>&1
     md "%ProgramData%\Microsoft\Windows\DeliveryOptimization\Cache" >nul 2>&1
@@ -4278,11 +4391,15 @@ del /s /q /f "%SystemRoot%\Logs\DISM\*.cab" >nul 2>&1
 REM  ETAPE 9 - Cache de polices
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache de polices"
+set "CLEAN_FONTCACHE_WAS_RUNNING=0"
+powershell -NoProfile -Command "try{if((Get-Service FontCache -ErrorAction Stop).Status -eq 'Running'){exit 0};exit 1}catch{exit 2}" >nul 2>&1
+if !errorlevel! EQU 0 set "CLEAN_FONTCACHE_WAS_RUNNING=1"
 net stop FontCache >nul 2>&1
 timeout /t 1 /nobreak >nul
 del /s /q /f "%SystemRoot%\ServiceProfiles\LocalService\AppData\Local\FontCache\*.*" >nul 2>&1
 del /q /f "%SystemRoot%\System32\FNTCACHE.DAT" >nul 2>&1
-net start FontCache >nul 2>&1
+if "!CLEAN_FONTCACHE_WAS_RUNNING!"=="1" net start FontCache >nul 2>&1
+set "CLEAN_FONTCACHE_WAS_RUNNING="
 
 REM  ETAPE 10 - Cache Windows Store et applications (ameliore)
 set /a "CLEAN_STEP+=1"
@@ -4295,12 +4412,13 @@ set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache DNS"
 ipconfig /flushdns >nul 2>&1
 
-REM  ETAPE 12 - Journaux Event Viewer (parallele borne a 4 processus et attente finale)
+REM  ETAPE 12 - Journaux Event Viewer archives uniquement
 set /a "CLEAN_STEP+=1"
-call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer"
-powershell -NoProfile -Command "$running=@(); $logs=wevtutil el 2>$null; foreach($l in $logs){ if($l -match '54849625-5478-4994-a5ba-3e3b0328c30d|bf022046-1f4a-4b91-8a96-bcdb4d6c39f1'){continue}; while(@($running | Where-Object {-not $_.HasExited}).Count -ge 4){$running=@($running | Where-Object {-not $_.HasExited}); Start-Sleep -Milliseconds 100}; try {$p=Start-Process wevtutil -ArgumentList @('cl',$l) -NoNewWindow -PassThru -ErrorAction Stop; $running+=@($p)} catch {}}; $running | Wait-Process -ErrorAction SilentlyContinue" >nul 2>&1
+call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Journaux Event Viewer archives"
+del /q /f "%SystemRoot%\System32\winevt\Logs\Archive-*.evtx" >nul 2>&1
+REM  Les journaux actifs Systeme, Application et Securite restent disponibles pour le diagnostic.
 
-REM  ETAPE 13 - Windows.old + $SysReset + ~BT (ameliore)
+REM  ETAPE 13 - Ancienne installation Windows avec confirmation
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Anciennes installations Windows"
 if exist "%SystemDrive%\Windows.old" (
@@ -4308,19 +4426,13 @@ if exist "%SystemDrive%\Windows.old" (
     call :ASK_IF_INTERACTIVE :SUPPR_WINDOWSOLD "Supprimer Windows.old ? [O/N]: "
     if !errorlevel! EQU 0 (
         takeown /f "%SystemDrive%\Windows.old" /r /d y >nul 2>&1
-        icacls "%SystemDrive%\Windows.old" /grant administrators:F /t >nul 2>&1
+        icacls "%SystemDrive%\Windows.old" /grant *S-1-5-32-544:F /t >nul 2>&1
         rd /s /q "%SystemDrive%\Windows.old" >nul 2>&1
     ) else (
         echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Windows.old conserve.%COLOR_RESET%
     )
 )
-if exist "%SystemDrive%\$SysReset" (
-    takeown /f "%SystemDrive%\$SysReset" /r /d y >nul 2>&1
-    icacls "%SystemDrive%\$SysReset" /grant administrators:F /t >nul 2>&1
-    rd /s /q "%SystemDrive%\$SysReset" >nul 2>&1
-)
-if exist "%SystemDrive%\$Windows.~BT" rd /s /q "%SystemDrive%\$Windows.~BT" >nul 2>&1
-if exist "%SystemDrive%\$Windows.~WS" rd /s /q "%SystemDrive%\$Windows.~WS" >nul 2>&1
+REM  $SysReset, $Windows.~BT et $Windows.~WS sont conserves : ils peuvent servir a la recuperation ou a une mise a niveau en cours.
 
 REM  ETAPE 14 - Optimisation disque (TRIM/Defrag)
 set /a "CLEAN_STEP+=1"
@@ -4330,29 +4442,33 @@ defrag %SystemDrive% /O /H >nul 2>&1
 REM  ETAPE 15 - Nettoyage Windows Cleanmgr (ameliore - plus de categories 2026)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Nettoyage Windows Cleanmgr"
-set "SAGEID=100"
-for /f "tokens=*" %%R in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" 2^>nul') do (
-    reg delete "%%R" /v StateFlags%SAGEID% /f >nul 2>&1
-) 2>nul
+call :SELECT_CLEANMGR_SAGEID
 REM Exclusions volontaires : Previous Installations (confirmation etape 13), Windows ESD
 REM (source de reinitialisation) et User file versions (donnees de recuperation utilisateur).
 for %%K in ("Active Setup Temp Folders" "BranchCache" "Content Indexer Cleaner" "Delivery Optimization Files" "Device Driver Packages" "Diagnostic Data Viewer database files" "Downloaded Program Files" "GameNewsFiles" "GameStatisticsFiles" "GameUpdateFiles" "Language Pack" "Memory Dump Files" "Offline Pages Files" "Old ChkDsk Files" "Recycle Bin" "RetailDemo Offline Content" "Service Pack Cleanup" "Setup Log Files" "System error memory dump files" "System error minidump files" "Temporary Files" "Temporary Setup Files" "Temporary Sync Files" "Thumbnail Cache" "Update Cleanup" "Upgrade Discarded Files" "Windows Defender" "Windows Error Reporting Archive Files" "Windows Error Reporting Files" "Windows Error Reporting Queue Files" "Windows Error Reporting System Archive Files" "Windows Error Reporting System Queue Files" "Windows Error Reporting Temp Files" "Windows Upgrade Log Files") do (
-    reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" >nul 2>&1
+    if !errorlevel! EQU 0 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches\%%~K" /v StateFlags%SAGEID% /t REG_DWORD /d 2 /f >nul 2>&1
 )
 REM /sagerun nettoie tous les disques ; /d est ignore (non documente avec /sagerun).
-powershell -NoProfile -Command "try {$p=Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID%' -NoNewWindow -PassThru -ErrorAction Stop; if(-not $p.WaitForExit(120000)){exit 2}; exit $p.ExitCode} catch {exit 1}" >nul 2>&1
+powershell -NoProfile -Command "try {$p=Start-Process -FilePath 'cleanmgr' -ArgumentList '/sagerun:%SAGEID%' -NoNewWindow -PassThru -ErrorAction Stop;if(-not $p.WaitForExit(120000)){try{$p.Kill();$p.WaitForExit()}catch{};exit 2};exit $p.ExitCode}catch{exit 1}" >nul 2>&1
 set "CLEANMGR_RC=!errorlevel!"
 if not "!CLEANMGR_RC!"=="0" (
-    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Cleanmgr continue en arriere-plan ou n'a pas termine normalement.%COLOR_RESET%
-) else (
-    powershell -NoProfile -Command "Get-ChildItem 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches' -ErrorAction SilentlyContinue | ForEach-Object { Remove-ItemProperty -LiteralPath $_.PSPath -Name 'StateFlags%SAGEID%' -ErrorAction SilentlyContinue }" >nul 2>&1
+    set /a "CLEAN_WARNINGS+=1"
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Cleanmgr n'a pas termine normalement ; les autres nettoyages continuent.%COLOR_RESET%
 )
+powershell -NoProfile -Command "Get-ChildItem 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches' -ErrorAction SilentlyContinue|ForEach-Object{Remove-ItemProperty -LiteralPath $_.PSPath -Name 'StateFlags%SAGEID%' -ErrorAction SilentlyContinue}" >nul 2>&1
 set "CLEANMGR_RC="
 
 REM  ETAPE 16 - Nettoyage composants systeme (via DISM)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Composants systeme (nettoyage)"
-powershell -NoProfile -Command "dism /online /Cleanup-Image /StartComponentCleanup /Quiet 2>&1 | Out-Null" >nul 2>&1
+dism /online /Cleanup-Image /StartComponentCleanup /Quiet >nul 2>&1
+set "CLEAN_DISM_RC=!errorlevel!"
+if not "!CLEAN_DISM_RC!"=="0" if not "!CLEAN_DISM_RC!"=="3010" (
+    set /a "CLEAN_WARNINGS+=1"
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%Le nettoyage des composants Windows n'a pas termine normalement ^(code !CLEAN_DISM_RC!^).%COLOR_RESET%
+)
+set "CLEAN_DISM_RC="
 
 REM  ETAPE 17 - Fichiers temporaires profil systeme (ameliore)
 set /a "CLEAN_STEP+=1"
@@ -4364,11 +4480,15 @@ del /s /q /f "%SystemRoot%\System32\config\systemprofile\AppData\LocalLow\*.tmp"
 REM  ETAPE 18 - Cache d'icones (securise - redemarre l'explorateur)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache d'icones"
-taskkill /f /im explorer.exe >nul 2>&1
-timeout /t 1 /nobreak >nul
+set "CLEAN_EXPLORER_WAS_RUNNING=0"
+tasklist /fi "imagename eq explorer.exe" 2>nul | find /i "explorer.exe" >nul
+if !errorlevel! EQU 0 set "CLEAN_EXPLORER_WAS_RUNNING=1"
+if "!CLEAN_EXPLORER_WAS_RUNNING!"=="1" taskkill /f /im explorer.exe >nul 2>&1
+if "!CLEAN_EXPLORER_WAS_RUNNING!"=="1" timeout /t 1 /nobreak >nul
 del /q /f "%LOCALAPPDATA%\Microsoft\Windows\Explorer\iconcache_*" >nul 2>&1
 del /q /f "%LOCALAPPDATA%\Microsoft\Windows\Explorer\thumbcache_*" >nul 2>&1
-start explorer.exe >nul 2>&1
+if "!CLEAN_EXPLORER_WAS_RUNNING!"=="1" start explorer.exe >nul 2>&1
+set "CLEAN_EXPLORER_WAS_RUNNING="
 
 REM  ETAPE 19 - Caches Windows 11 : Widgets, Copilot, Recall (nouveau W11 2026)
 set /a "CLEAN_STEP+=1"
@@ -4399,22 +4519,30 @@ REM  ETAPE 21 - Logs et setup OneDrive (inoffensif)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs OneDrive"
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\logs" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\logs" >nul 2>&1
-if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\setup" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup\logs" rd /s /q "%LOCALAPPDATA%\Microsoft\OneDrive\setup\logs" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.log" del /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.log" >nul 2>&1
+if exist "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.tmp" del /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\setup\*.tmp" >nul 2>&1
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive\*.tmp" del /s /q /f "%LOCALAPPDATA%\Microsoft\OneDrive\*.tmp" >nul 2>&1
 
 REM  ETAPE 22 - Logs support Windows Defender (inoffensif)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Logs support Defender"
-if exist "%ProgramData%\Microsoft\Windows Defender\Support" rd /s /q "%ProgramData%\Microsoft\Windows Defender\Support" >nul 2>&1
+if exist "%ProgramData%\Microsoft\Windows Defender\Support\*.log" del /s /q /f "%ProgramData%\Microsoft\Windows Defender\Support\*.log" >nul 2>&1
+if exist "%ProgramData%\Microsoft\Windows Defender\Support\*.cab" del /s /q /f "%ProgramData%\Microsoft\Windows Defender\Support\*.cab" >nul 2>&1
+if exist "%ProgramData%\Microsoft\Windows Defender\Support\*.tmp" del /s /q /f "%ProgramData%\Microsoft\Windows Defender\Support\*.tmp" >nul 2>&1
 if exist "%ProgramData%\Microsoft\Windows Defender\Scans\*.tmp" del /s /q /f "%ProgramData%\Microsoft\Windows Defender\Scans\*.tmp" >nul 2>&1
 
 REM  ETAPE 23 - Optimisation indexation Windows Search (compacte uniquement)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Optimisation indexation recherche"
+set "CLEAN_WSEARCH_WAS_RUNNING=0"
+powershell -NoProfile -Command "try{if((Get-Service WSearch -ErrorAction Stop).Status -eq 'Running'){exit 0};exit 1}catch{exit 2}" >nul 2>&1
+if !errorlevel! EQU 0 set "CLEAN_WSEARCH_WAS_RUNNING=1"
 net stop WSearch >nul 2>&1
 timeout /t 1 /nobreak >nul
 if exist "%ProgramData%\Microsoft\Search\Data\Applications\Windows\*.log" del /s /q /f "%ProgramData%\Microsoft\Search\Data\Applications\Windows\*.log" >nul 2>&1
-net start WSearch >nul 2>&1
+if "!CLEAN_WSEARCH_WAS_RUNNING!"=="1" net start WSearch >nul 2>&1
+set "CLEAN_WSEARCH_WAS_RUNNING="
 
 REM  ETAPE 24 - Cache RDP / Bureau a distance (nouveau)
 set /a "CLEAN_STEP+=1"
@@ -4434,14 +4562,22 @@ call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Cache npm"
 powershell -NoProfile -Command "$cache=npm config get cache 2>$null; if($cache -and (Test-Path $cache)){ Remove-Item -LiteralPath $cache -Recurse -Force -ErrorAction SilentlyContinue; Write-Output 'OK' }" >nul 2>&1
 
 REM  Calcul final (PowerShell pour la precision des decimales)
-for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ('{0} {1} {2}' -f $beforeGB,$afterGB,$freedGB)"') do (
-    set "SPACE_BEFORE_GB=%%a"
-    set "SPACE_AFTER_GB=%%b"
-    set "SPACE_FREED_GB=%%c"
+if "%SPACE_MEASURE_OK%"=="1" (
+    for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ('{0} {1} {2}' -f $beforeGB,$afterGB,$freedGB)"') do (
+        set "SPACE_BEFORE_GB=%%a"
+        set "SPACE_AFTER_GB=%%b"
+        set "SPACE_FREED_GB=%%c"
+    )
+)
+if not defined SPACE_FREED_GB (
+    set "SPACE_BEFORE_GB=N/D"
+    set "SPACE_AFTER_GB=N/D"
+    set "SPACE_FREED_GB=N/D"
 )
 
 set "CLEAN_STEP="
 set "CLEAN_TOTAL="
+set "CLEAN_SCRIPT_PATH="
 
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -4451,6 +4587,7 @@ echo.
 echo   %COLOR_WHITE%Espace avant :%COLOR_RESET% %COLOR_YELLOW%%SPACE_BEFORE_GB% Go%COLOR_RESET%
 echo   %COLOR_WHITE%Espace apres :%COLOR_RESET% %COLOR_GREEN%%SPACE_AFTER_GB% Go%COLOR_RESET%
 echo   %COLOR_WHITE%Espace gagne :%COLOR_RESET% %COLOR_CYAN%%SPACE_FREED_GB% Go%COLOR_RESET%
+if not "%CLEAN_WARNINGS%"=="0" echo   %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%%CLEAN_WARNINGS% etape^(s^) terminee^(s^) avec avertissement.%COLOR_RESET%
 echo.
 if not "!SKIP_PAUSE!"=="1" echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est recommande pour finaliser.%COLOR_RESET%
 call :PROMPT_MANUAL_REBOOT
@@ -4459,19 +4596,21 @@ set "SPACE_BEFORE_MB="
 set "SPACE_BEFORE_GB="
 set "SPACE_AFTER_GB="
 set "SPACE_FREED_GB="
+set "SPACE_MEASURE_OK="
+set "CLEAN_WARNINGS="
 goto :MENU_PRINCIPAL
 
 
 :INSTALLER_VISUAL_REDIST
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES RUNTIMES Visual C++%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DES RUNTIMES VISUAL C++ ET DIRECTX%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Detection des versions installees (V14 - 2015-2022)...%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Detection du runtime Visual C++ v14 actuel...%COLOR_RESET%
 
-REM  Detection via les cles VC14 officielles (Installed=1), sans heuristique sur les DLL.
+REM  Detection via les cles VC14 officielles (Installed=1), confirmee par la DLL principale.
 call :DETECT_VC14_RUNTIME
 set "RUNTIME_ERROR=0"
 
@@ -4488,10 +4627,7 @@ if "%VCINSTALLED_COUNT%"=="2" (
     set "VC2015X86="
     set "VC2015X64="
     set "VCINSTALLED_COUNT="
-    if "!SKIP_PAUSE!"=="0" (
-        echo.
-        pause
-    )
+    if "!SKIP_PAUSE!"=="0" timeout /t 2 /nobreak >nul
     goto :INSTALLER_DIRECTX_SECTION
 )
 
@@ -4510,54 +4646,54 @@ REM  Creer un dossier temporaire pour les installations
 set "VCREDIST_DIR=%TEMP%\VCRedistInstall_%RANDOM%_%RANDOM%"
 if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
 
-REM  VC++ 2015-2022 x86
+REM  Visual C++ v14 actuel x86
 set /a "VC_STEP+=1"
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x86"
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "Visual C++ v14 actuel x86"
 if "%VC2015X86%"=="0" (
-    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { $f='%VCREDIST_DIR%\vc2015x86.exe'; Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 5000000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f=Join-Path $env:VCREDIST_DIR 'vc2015x86.exe'; Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x86.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 5000000){throw 'size'};$s=Get-AuthenticodeSignature -LiteralPath $f;if($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'Microsoft'){throw 'signature'};exit 0 } catch { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
     if !errorlevel! NEQ 0 (
         set "RUNTIME_ERROR=1"
-        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x86.%COLOR_RESET%
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de Visual C++ v14 x86.%COLOR_RESET%
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x86.exe" /q /norestart >nul 2>&1
         set "VC_EXIT=!errorlevel!"
         if "!VC_EXIT!"=="0" (
-            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 installe.%COLOR_RESET%
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x86 installe.%COLOR_RESET%
         ) else if "!VC_EXIT!"=="3010" (
-            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 installe - redemarrage requis.%COLOR_RESET%
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x86 installe - redemarrage requis.%COLOR_RESET%
         ) else if "!VC_EXIT!"=="1641" (
-            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 installe - redemarrage initie/requis.%COLOR_RESET%
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x86 installe - redemarrage initie/requis.%COLOR_RESET%
         ) else if "!VC_EXIT!"=="1638" (
-            echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : une version compatible est deja presente.%COLOR_RESET%
+            echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x86 : une version compatible est deja presente.%COLOR_RESET%
         ) else (
             set "RUNTIME_ERROR=1"
-            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x86 : code installateur !VC_EXIT!.%COLOR_RESET%
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x86 : code installateur !VC_EXIT!.%COLOR_RESET%
         )
     )
 )
 
-REM  VC++ 2015-2022 x64
+REM  Visual C++ v14 actuel x64
 set /a "VC_STEP+=1"
-call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "VC++ 2015-2022 x64"
+call :PROGRESS_BAR %VC_STEP% %VC_TOTAL% "Visual C++ v14 actuel x64"
 if "%VC2015X64%"=="0" (
-    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { $f='%VCREDIST_DIR%\vc2015x64.exe'; Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 5000000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
+    powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f=Join-Path $env:VCREDIST_DIR 'vc2015x64.exe'; Invoke-WebRequest -Uri 'https://aka.ms/vc14/vc_redist.x64.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 5000000){throw 'size'};$s=Get-AuthenticodeSignature -LiteralPath $f;if($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'Microsoft'){throw 'signature'};exit 0 } catch { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
     if !errorlevel! NEQ 0 (
         set "RUNTIME_ERROR=1"
-        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de VC++ 2015-2022 x64.%COLOR_RESET%
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de Visual C++ v14 x64.%COLOR_RESET%
     ) else (
         start /wait "" "%VCREDIST_DIR%\vc2015x64.exe" /q /norestart >nul 2>&1
         set "VC_EXIT=!errorlevel!"
         if "!VC_EXIT!"=="0" (
-            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 installe.%COLOR_RESET%
+            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x64 installe.%COLOR_RESET%
         ) else if "!VC_EXIT!"=="3010" (
-            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 installe - redemarrage requis.%COLOR_RESET%
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x64 installe - redemarrage requis.%COLOR_RESET%
         ) else if "!VC_EXIT!"=="1641" (
-            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 installe - redemarrage initie/requis.%COLOR_RESET%
+            echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x64 installe - redemarrage initie/requis.%COLOR_RESET%
         ) else if "!VC_EXIT!"=="1638" (
-            echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : une version compatible est deja presente.%COLOR_RESET%
+            echo %COLOR_CYAN%[SKIP]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x64 : une version compatible est deja presente.%COLOR_RESET%
         ) else (
             set "RUNTIME_ERROR=1"
-            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%VC++ 2015-2022 x64 : code installateur !VC_EXIT!.%COLOR_RESET%
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Visual C++ v14 x64 : code installateur !VC_EXIT!.%COLOR_RESET%
         )
     )
 )
@@ -4623,12 +4759,10 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Verification de l'installation 
 
 REM  Detection de DirectX June 2010 (XAudio2_7.dll est un bon indicateur)
 set "DX_INSTALLED=0"
-REM Presence de XAudio2_7.dll dans au moins une des deux architectures = DX installe.
-REM Le redist June 2010 place toujours les deux, mais on utilise OR pour eviter
-REM les faux negatifs si un seul repertoire est present (reparation partielle, etc.).
+REM Sur Windows 64 bits, les runtimes x64 ET x86 doivent etre presents.
+REM Si une architecture manque, le redist est relance pour reparer l'installation.
 if defined ProgramFiles(x86) (
-    if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
-    if exist "%SystemRoot%\SysWOW64\XAudio2_7.dll" set "DX_INSTALLED=1"
+    if exist "%SystemRoot%\System32\XAudio2_7.dll" if exist "%SystemRoot%\SysWOW64\XAudio2_7.dll" set "DX_INSTALLED=1"
 ) else (
     if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
 )
@@ -4645,7 +4779,7 @@ set "DX_TEMP=%TEMP%\DirectXInstall_%RANDOM%_%RANDOM%"
 mkdir "%DX_TEMP%"
 
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Telechargement de DirectX Redist June 2010 (95 Mo)...%COLOR_RESET%
-powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f='%DX_TEMP%\directx_redist.exe'; Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 80000000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f=Join-Path $env:DX_TEMP 'directx_redist.exe'; Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 80000000){throw 'size'};$s=Get-AuthenticodeSignature -LiteralPath $f;if($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'Microsoft'){throw 'signature'};exit 0 } catch { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Echec du telechargement de DirectX.%COLOR_RESET%
     rd /s /q "%DX_TEMP%" >nul 2>&1
@@ -4663,8 +4797,29 @@ if "!DX_RESULT!"=="0" (
     if exist "%DX_TEMP%\DXSETUP.exe" (
         start /wait "" "%DX_TEMP%\DXSETUP.exe" /silent >nul 2>&1
         set "DX_RESULT=!errorlevel!"
+        if "!DX_RESULT!"=="3010" (
+            set "DX_REBOOT=1"
+            set "DX_RESULT=0"
+        )
+        if "!DX_RESULT!"=="1641" (
+            set "DX_REBOOT=1"
+            set "DX_RESULT=0"
+        )
         if "!DX_RESULT!"=="0" (
-            echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 installe avec succes.%COLOR_RESET%
+            set "DX_VERIFY=0"
+            if defined ProgramFiles(x86) (
+                if exist "%SystemRoot%\System32\XAudio2_7.dll" if exist "%SystemRoot%\SysWOW64\XAudio2_7.dll" set "DX_VERIFY=1"
+            ) else (
+                if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_VERIFY=1"
+            )
+            if "!DX_VERIFY!"=="1" (
+                echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%DirectX June 2010 installe et verifie avec succes.%COLOR_RESET%
+                if defined DX_REBOOT echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est requis par l'installateur DirectX.%COLOR_RESET%
+            ) else (
+                set "DX_RESULT=1"
+                echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%DXSETUP a termine sans erreur, mais les runtimes x86/x64 restent incomplets.%COLOR_RESET%
+            )
+            set "DX_VERIFY="
         ) else (
             echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%DXSETUP a retourne le code !DX_RESULT! - installation peut etre incomplete.%COLOR_RESET%
         )
@@ -4683,6 +4838,7 @@ rd /s /q "%DX_TEMP%" >nul 2>&1
 
 set "DX_INSTALLED="
 set "DX_TEMP="
+set "DX_REBOOT="
 if "!DX_RESULT!"=="0" (
     set "DX_RESULT="
     exit /b 0
@@ -4746,6 +4902,26 @@ exit /b 0
 REM  =================================================================================
 REM  HELPERS MATERIEL (NIC / USB) - factorisation des blocs reseaux/energie
 REM  =================================================================================
+:REMOVE_COPILOT_HOSTS_BLOCK
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h=Join-Path $env:SystemRoot 'System32\drivers\etc\hosts';$item=$null;$attrs=$null;try{if(Test-Path -LiteralPath $h){$item=Get-Item -LiteralPath $h -Force -ErrorAction Stop;$attrs=$item.Attributes;$item.IsReadOnly=$false;$c=[IO.File]::ReadAllText($h);$s='# Copilot Block Start';$e='# Copilot Block End';$n=$c -replace ('(?s)\r?\n?'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';if($n-ne$c){[IO.File]::WriteAllText($h,$n,[Text.Encoding]::ASCII)}};exit 0}catch{exit 1}finally{if($item-ne$null-and $attrs-ne$null){try{$item.Attributes=$attrs}catch{}}}" >nul 2>&1
+exit /b !errorlevel!
+
+:DELETE_REG_VALUE_IF_PRESENT
+reg query "%~1" /v "%~2" >nul 2>&1
+if !errorlevel! NEQ 0 exit /b 0
+reg delete "%~1" /v "%~2" /f >nul 2>&1
+exit /b !errorlevel!
+
+:SELECT_CLEANMGR_SAGEID
+REM  Choisir un identifiant libre pour ne pas ecraser une configuration cleanmgr existante.
+for /l %%N in (1,1,20) do (
+    set /a "SAGEID=1000 + ^(!RANDOM! %% 30000^)"
+    reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches" /s /f "StateFlags!SAGEID!" >nul 2>&1
+    if !errorlevel! NEQ 0 exit /b 0
+)
+set "SAGEID=65535"
+exit /b 0
+
 :SET_NAGLE_PROFILE
 powershell -NoLogo -NoProfile -Command "$ack=[int]'%~1'; $noDelay=[int]'%~2'; $delAck=[int]'%~3'; Get-ChildItem 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters\Interfaces' | ForEach-Object { $p=$_.PSPath; $ip=(Get-ItemProperty $p -Name DhcpIPAddress -EA SilentlyContinue).DhcpIPAddress; if(-not $ip){ $ip=(Get-ItemProperty $p -Name IPAddress -EA SilentlyContinue).IPAddress }; if($ip){ New-ItemProperty -Path $p -Name TcpAckFrequency -PropertyType DWord -Value $ack -Force | Out-Null; New-ItemProperty -Path $p -Name TCPNoDelay -PropertyType DWord -Value $noDelay -Force | Out-Null; New-ItemProperty -Path $p -Name TcpDelAckTicks -PropertyType DWord -Value $delAck -Force | Out-Null } }" >nul 2>&1
 exit /b
@@ -4804,6 +4980,19 @@ exit /b 0
 :CREATE_STR_STARTUP_SHORTCUT
 powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
 exit /b
+
+:RUN_EDGE_UNINSTALLER
+pushd "%~1" >nul 2>&1
+if !errorlevel! NEQ 0 exit /b 1
+for /d %%i in (*) do (
+    if exist "%%i\Installer\setup.exe" (
+        set "EDGE_UNINSTALLER_FOUND=1"
+        "%%i\Installer\setup.exe" --uninstall --system-level --force-uninstall >nul 2>&1
+        if !errorlevel! NEQ 0 set "EDGE_UNINSTALLER_ERROR=1"
+    )
+)
+popd >nul 2>&1
+exit /b 0
 
 :REMOVE_EDGE_TASKBAR_LINKS
 powershell -NoProfile -Command "Get-ChildItem -Path ""$env:APPDATA\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar\*.lnk"" -ErrorAction SilentlyContinue | ForEach-Object { try { $sh = (New-Object -ComObject WScript.Shell).CreateShortcut($_.FullName); if ($sh.TargetPath -match 'msedge\.exe') { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue } } catch {} }" >nul 2>&1
@@ -4876,7 +5065,7 @@ exit /b !USB_ERR!
 
 :RUN_REMOTE_PS
 set "REMOTE_PS_FILE=%TEMP%\WindowsOptimizer_remote_%RANDOM%_%RANDOM%.ps1"
-powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13; try { Invoke-WebRequest -Uri '%~1' -OutFile $env:REMOTE_PS_FILE -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $env:REMOTE_PS_FILE).Length -lt 500){exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri '%~1' -OutFile $env:REMOTE_PS_FILE -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $env:REMOTE_PS_FILE).Length -lt 500){exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
     if exist "%REMOTE_PS_FILE%" del /f /q "%REMOTE_PS_FILE%" >nul 2>&1
     set "REMOTE_PS_FILE="
