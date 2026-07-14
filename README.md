@@ -63,8 +63,8 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=1000, maxsynretransmissions=2, Tcp1323Opts=3, TCP Pacing + ECN, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO et Interrupt Moderation OFF, ITR=200, Rx/Tx buffers max. En Eco : Nagle neutre, RSC/LSO ON. |
-| **[2]** | **NORMAL** | Tcp1323Opts=3, TCP Pacing + ECN, initialRTO Windows=3000, VRR ON, veille GPU préservée, valeurs NVIDIA du preset Gaming restaurées de façon ciblée, Nagle/DelACK défaut Windows (ou neutre en Eco), SystemResponsiveness=20, accélération trackpad légère sur portable. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=3000 (= default Windows documente, optimal reseau), maxsynretransmissions=2, Tcp1323Opts=3, TCP Pacing + ECN, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO et Interrupt Moderation OFF, ITR=200, Rx/Tx buffers max. En Eco : Nagle/DelACK natifs, RSC/LSO ON. |
+| **[2]** | **NORMAL** | Tcp1323Opts=3, TCP Pacing + ECN, initialRTO=3000 (= default Windows documente, RFC 6298), VRR ON, veille GPU préservée, valeurs NVIDIA du preset Gaming restaurées de façon ciblée, Nagle/DelACK natifs, SystemResponsiveness=20, accélération trackpad légère sur portable. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
 > *Pilote **l'énergie, le niveau de tuning NIC et le plan d'alimentation**.*
@@ -75,7 +75,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 | **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO et Interrupt Moderation OFF en Gaming (restaurés en Normal/Eco), RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, ITR=200 en Gaming, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers max, gestion énergie USB désactivée (selective suspend + USB 3 LPM), compression mémoire OFF (RAM > 8 Go), MSI USB actif, économies d'énergie coupées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
-> **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — Nagle/DelACK passe en neutre (batterie avant tout), mais les timers réseau (initialRTO=1000, maxsynretransmissions=2) et les optimisations GPU/input/CPU restent agressifs.
+> **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — Nagle/DelACK revient au comportement Windows natif (batterie avant tout), mais les timers réseau (initialRTO=3000 = default Windows, maxsynretransmissions=2) et les optimisations GPU/input/CPU restent agressifs.
 >
 > Les quatre combinaisons sont convergentes : changer de profil annule explicitement les réglages exclusifs laissés par le profil précédent.
 
@@ -87,8 +87,9 @@ Chaque réglage est piloté par **un seul axe**, jamais les deux, pour éviter l
 
 Exceptions réseau :
 - **RSC/LSO/RscIPv6** : coupés uniquement en **GAMING + MAX PERF** (préservent débit/stabilité en Normal/Eco).
-- **initialRTO/maxsynretransmissions** : agressifs pour tous les profils **GAMING** (ECO ou MaxPerf).
-- **Nagle/DelACK** : agressif en Gaming+MaxPerf, neutre en Gaming+ECO.
+- **initialRTO** : 3000 ms (= default Windows documente, RFC 6298) pour les deux profils ; abaisser n'apporte pas de gain de latence reel et augmente les retransmissions SYN prematures sur reseaux instables.
+- **maxsynretransmissions** : agressif (=2) pour tous les profils **GAMING** (ECO ou MaxPerf).
+- **Nagle/DelACK** : agressif en Gaming+MaxPerf, natif Windows en Eco et en Normal+MaxPerf.
 
 ### ⚙️ Optimisations Granulaires
 
@@ -157,10 +158,10 @@ R : Les profils principaux sont conçus pour converger vers l'état choisi, mais
 R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester par une latence ou une stabilité plus régulière ; aucun gain de FPS n'est garanti.
 
 **Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
-R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Le mode Gaming conserve VBS/HVCI/CFG mais réduit des mitigations CPU, SEHOP et Credential Guard ; Performance Max réduit davantage les protections. Sécurité Max restaure les protections recommandées.
+R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Le mode Gaming conserve VBS/HVCI/CFG/SEHOP mais réduit des mitigations CPU et Credential Guard ; Performance Max réduit davantage les protections et désactive SEHOP. Sécurité Max restaure les protections recommandées.
 
 **Q : Est-ce compatible avec tous les jeux en ligne ?**
-R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming conserve VBS/HVCI/CFG pour limiter les conflits avec les anti-cheats modernes, mais chaque jeu et chaque politique de sécurité peuvent évoluer.
+R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming conserve VBS/HVCI/CFG/SEHOP pour limiter les conflits avec les anti-cheats modernes, mais chaque jeu et chaque politique de sécurité peuvent évoluer.
 
 ### 🌐 Maintenance & Divers
 

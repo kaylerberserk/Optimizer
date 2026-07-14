@@ -1744,7 +1744,7 @@ if "!PROFIL_POWER!"=="0" (
     echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%ECO%COLOR_RESET%%COLOR_WHITE% - RSC/LSO/checksum ON, autonomie prioritaire%COLOR_RESET%
 )
 if "!IS_GAMING_ECO!"=="1" (
-    echo %COLOR_YELLOW%  [*]%COLOR_RESET% %COLOR_WHITE%GAMING + ECO : Nagle neutre ^(batterie^), initialrto/maxsyn agressifs conserves ^(latence^).%COLOR_RESET%
+    echo %COLOR_YELLOW%  [*]%COLOR_RESET% %COLOR_WHITE%GAMING + ECO : Nagle natif ^(batterie^), initialrto a 3000ms ^(Windows default documente, optimal reseau^) et maxsyn agressif conserve.%COLOR_RESET%
     echo %COLOR_WHITE%     Latence GPU/input conservee, debit/stabilite mobile favorises.%COLOR_RESET%
 )
 echo.
@@ -1770,12 +1770,9 @@ netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 REM minRto n'est pas un parametre 'set global' valide (uniquement 'set supplemental') et 300ms est deja le plancher par defaut : ligne retiree (no-op).
 
 if "!PROFIL_USAGE!"=="0" (
-    netsh int tcp set global rss=enabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
+    netsh int tcp set global rss=enabled initialrto=3000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
 ) else (
-    REM initialRTO=3000 = valeur par defaut du template TCP (Interop/SG, Win 8+).
-    REM Le plancher RTO a 300ms est defini par le pilote TCP/IP (pas une KB specifique).
-    REM Sous Win11 24H2+ le defaut global netsh est 1000, mais on explicite 3000
-    REM pour le profil Normal afin de limiter les retransmissions SYN prematures.
+    REM initialRTO=3000 = default Windows documente (RFC 6298, Win 7..11 24H2+). Plage autorisee netsh 300-3000ms ; plancher RTO reste 300ms cote pile TCP/IP. 3000 est la valeur recommandee pour les deux profils (MS + avis reseau pro : un RTO plus court n'apporte pas de gain reel sur la latence en jeu et augmente les retransmissions SYN prematures sur les reseaux instables).
     netsh int tcp set global rss=enabled initialrto=3000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
 )
 if "!PROFIL_POWER!"=="0" (
@@ -1831,10 +1828,10 @@ reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\BITS" /v "EnableBypassProxyFor
 REM  Pas de suppression ici : les cles invalides/anciennes sont laissees a une section restauration/nettoyage.
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%BITS optimise ^(aucune suppression hors restauration^)%COLOR_RESET%
 
-REM  5.6 - Nagle/DelACK (ECO->neutre, Gaming+MaxPerf->agressif, Normal->defaut)
+REM  5.6 - Nagle/DelACK (ECO/Normal->defaut natif, Gaming+MaxPerf->agressif)
 if "!PROFIL_POWER!"=="1" (
-    echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : valeurs neutres pour autonomie Wi-Fi ^(TcpNoDelay=0, TcpAckFrequency=2^)%COLOR_RESET%
-    call :SET_NAGLE_PROFILE 2 0 1
+    echo %COLOR_CYAN%[ECO]%COLOR_RESET% %COLOR_WHITE%Nagle/DelACK : suppression des surcharges pour autonomie Wi-Fi ^(defaut Windows^)%COLOR_RESET%
+    call :RESET_NAGLE_PROFILE
 ) else if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation Nagle et DelACK agressif ^(Gaming+MaxPerf^)...%COLOR_RESET%
     call :SET_NAGLE_PROFILE 1 1 0
@@ -2395,6 +2392,33 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 )
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%GPU optimise%COLOR_RESET%
 
+REM  7.19 - Convergence reseau du profil Energie (parcours manuel uniquement)
+REM  TOUT_OPTIMISER a deja applique la meme matrice dans la section Reseau.
+if not "!AIO_MODE!"=="1" (
+    echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Synchronisation du profil reseau avec MaxPerf...%COLOR_RESET%
+    set "POWER_NETWORK_ERROR=0"
+    if "!PROFIL_USAGE!"=="0" (
+        netsh int tcp set global rsc=disabled >nul 2>&1
+        if !errorlevel! NEQ 0 set "POWER_NETWORK_ERROR=1"
+        call :SET_NAGLE_PROFILE 1 1 0
+        if !errorlevel! NEQ 0 set "POWER_NETWORK_ERROR=1"
+    ) else (
+        netsh int tcp set global rsc=enabled >nul 2>&1
+        if !errorlevel! NEQ 0 set "POWER_NETWORK_ERROR=1"
+        call :RESET_NAGLE_PROFILE
+        if !errorlevel! NEQ 0 set "POWER_NETWORK_ERROR=1"
+    )
+    call :SET_NIC_PROFILE 0 !PROFIL_USAGE!
+    if !errorlevel! NEQ 0 set "POWER_NETWORK_ERROR=1"
+    if "!POWER_NETWORK_ERROR!"=="1" (
+        set "POWER_SECTION_ERROR=1"
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Profil reseau MaxPerf applique partiellement.%COLOR_RESET%
+    ) else (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Profil reseau MaxPerf synchronise%COLOR_RESET%
+    )
+    set "POWER_NETWORK_ERROR="
+)
+
 REM  Appliquer l'ensemble des modifications du plan d'alimentation en une seule fois
 powercfg /S SCHEME_CURRENT >nul 2>&1
 if !errorlevel! NEQ 0 set "POWER_SECTION_ERROR=1"
@@ -2543,12 +2567,19 @@ for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Clas
 REM  7.12 - Economies d'energie reseau (NIC)
 REM Les bindings appartiennent a la section Reseau et ne sont pas modifies ici.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Reactivation des economies d'energie reseau (NIC)...%COLOR_RESET%
+set "NIC_RESTORE_ERROR=0"
+if not "!AIO_MODE!"=="1" (
+    netsh int tcp set global rsc=enabled >nul 2>&1
+    if !errorlevel! NEQ 0 set "NIC_RESTORE_ERROR=1"
+    call :RESET_NAGLE_PROFILE
+    if !errorlevel! NEQ 0 set "NIC_RESTORE_ERROR=1"
+)
 call :SET_NIC_PROFILE 1 1
 if !errorlevel! NEQ 0 (
-    set "POWER_RESTORE_ERROR=1"
     set "NIC_RESTORE_ERROR=1"
 )
 if "!NIC_RESTORE_ERROR!"=="1" (
+    set "POWER_RESTORE_ERROR=1"
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Restauration NIC appliquee partiellement.%COLOR_RESET%
 ) else (
     echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Economies d'energie NIC restaurees%COLOR_RESET%
@@ -2655,13 +2686,13 @@ echo %COLOR_WHITE%  Application des reglages de performance lies au processeur.%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
-REM  8.1 - Desactivation des protections Kernel SEHOP Exception Chain
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protections noyau (SEHOP, Exception Chain)...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Protections noyau desactivees%COLOR_RESET%
+REM  Base commune des profils : retire l'ancienne valeur legacy de Performance Max
+REM  et reactive SEHOP. Performance Max applique ensuite explicitement son override.
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /f >nul 2>&1
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled >nul 2>&1 && set "SECURITY_SECTION_ERROR=1"
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 0 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
 
-REM  8.2 - Desactivation Spectre Meltdown Memory Management
+REM  8.1 - Desactivation Spectre Meltdown Memory Management
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des protections Spectre/Meltdown...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /t REG_DWORD /d 1 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 3 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
@@ -2671,7 +2702,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v PerformMmioMitigation /t REG_DWORD /d 0 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Protections Spectre/Meltdown desactivees%COLOR_RESET%
 
-REM  8.3 - Desactivation des mitigations CPU avancees
+REM  8.2 - Desactivation des mitigations CPU avancees
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation des mitigations CPU (KVAS, STIBP, Retpoline)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v RestrictIndirectBranchPrediction /t REG_DWORD /d 0 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v EnableKvashadow /t REG_DWORD /d 0 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
@@ -2682,7 +2713,7 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management
 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mitigations CPU desactivees%COLOR_RESET%
 
 if "!PROFIL_USAGE!"=="0" (
-REM 8.4 - Mode Gaming : VBS/HVCI et CFG actifs pour preserver la compatibilite
+REM 8.3 - Mode Gaming : VBS/HVCI, CFG et SEHOP actifs pour preserver la compatibilite
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Application Mode Gaming VBS/HVCI [HVCI=1, VBS=1, CFG=1, LSA=0]...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 1 /f >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
@@ -2695,9 +2726,9 @@ bcdedit /set hypervisorlaunchtype auto >nul 2>&1 || set "SECURITY_SECTION_ERROR=
 REM CFG reste actif : c'est une protection Windows et sa desactivation globale
 REM n'est pas necessaire pour les profils proposes par ce script.
 powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1 || set "SECURITY_SECTION_ERROR=1"
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Gaming applique - VBS/HVCI et CFG actifs%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Gaming applique - VBS/HVCI, CFG et SEHOP actifs%COLOR_RESET%
 ) else (
-REM 8.4 - Mode Normal : retire tout ancien forcage VBS/HVCI/LSA du script.
+REM 8.3 - Mode Normal : retire tout ancien forcage VBS/HVCI/LSA du script.
 REM Les mitigations CPU restent reduites et CFG reste explicitement actif.
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Nettoyage des anciens forcages VBS/HVCI du script...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /f >nul 2>&1
@@ -2738,10 +2769,11 @@ echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : RESTAURATION DES PROTECTIONS DE SECUR
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 REM  8.1 - Protections noyau (SEHOP, Exception Chain)
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des protections noyau (SEHOP, Exception Chain)...%COLOR_RESET%
+echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Activation de SEHOP pour le profil Securite Max...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /f >nul 2>&1
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Protections noyau restaurees%COLOR_RESET%
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled >nul 2>&1 && set "SECURITY_RESTORE_ERROR=1"
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 0 /f >nul 2>&1 || set "SECURITY_RESTORE_ERROR=1"
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%SEHOP active pour le profil Securite Max%COLOR_RESET%
 echo.
 REM  8.2 - Mitigations Spectre/Meltdown et CPU
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Restauration des mitigations Spectre/Meltdown et CPU...%COLOR_RESET%
@@ -2803,8 +2835,8 @@ echo                              %STYLE_BOLD%%COLOR_WHITE%GERER PROTECTIONS NOY
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo   %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Securite Max%COLOR_RESET%  %COLOR_WHITE%Protections Windows actives%COLOR_RESET%
-echo   %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_CYAN%Gaming%COLOR_RESET%        %COLOR_WHITE%VBS/HVCI actifs, mitigations CPU reduites%COLOR_RESET%  %COLOR_GREEN%*** RECOMMANDE ***%COLOR_RESET%
-echo   %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%Perf Max%COLOR_RESET%      %COLOR_WHITE%VBS/HVCI desactives, CFG actif%COLOR_RESET%
+echo   %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_CYAN%Gaming%COLOR_RESET%        %COLOR_WHITE%VBS/HVCI, CFG et SEHOP actifs ; mitigations CPU reduites%COLOR_RESET%  %COLOR_GREEN%*** RECOMMANDE ***%COLOR_RESET%
+echo   %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%Perf Max%COLOR_RESET%      %COLOR_WHITE%VBS/HVCI et SEHOP desactives, CFG actif%COLOR_RESET%
 echo   %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2918,11 +2950,10 @@ set "PROFIL_USAGE_TMP="
 set "SKIP_PAUSE=!SKIP_PAUSE_TMP!"
 set "SKIP_PAUSE_TMP="
 
-REM Confirme la desactivation de SEHOP/ECV appliquee par la section precedente.
-REM DisableExceptionChainValidation=1 desactive la validation de la chaine.
+REM Mode Performance Max uniquement : desactive SEHOP. Gaming conserve cette protection.
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1 || set "PROTECTION_MODE_ERROR=1"
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1 || set "PROTECTION_MODE_ERROR=1"
-REM === Override VBS/HVCI = 0 + CFG preserve (8.4 etait skip car PROFIL_USAGE=1) ===
+REM === Override VBS/HVCI = 0 + CFG preserve (8.3 etait skip car PROFIL_USAGE=1) ===
 echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Desactivation VBS/HVCI + preservation CFG (Performance Max)...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1 || set "PROTECTION_MODE_ERROR=1"
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1 || set "PROTECTION_MODE_ERROR=1"
@@ -2944,10 +2975,10 @@ if "!PROTECTION_MODE_ERROR!"=="1" (
     goto :TOGGLE_PROTECTIONS_NOYAU
 )
 set "PROTECTION_MODE_ERROR="
-echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Performance Max applique - VBS/HVCI desactives, CFG preserve%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est necessaire pour finaliser la desactivation de VBS/HVCI.%COLOR_RESET%
+echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Mode Performance Max applique - VBS/HVCI et SEHOP desactives, CFG preserve%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est necessaire pour finaliser la desactivation de VBS/HVCI et SEHOP.%COLOR_RESET%
 
-call :FINISH_ACTION "Mode Performance Max (VBS/HVCI OFF)" "applique"
+call :FINISH_ACTION "Mode Performance Max (VBS/HVCI/SEHOP OFF)" "applique"
 goto :TOGGLE_PROTECTIONS_NOYAU
 
 :PROTECTIONS_RETURN
