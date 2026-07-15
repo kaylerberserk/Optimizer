@@ -59,6 +59,19 @@ if (!(Test-Path -LiteralPath $scriptPath) -or (Get-Item -LiteralPath $scriptPath
 }
 
 $scriptContent = Get-Content -LiteralPath $scriptPath -Raw -ErrorAction SilentlyContinue
+if ($downloaded -and $null -ne $scriptContent) {
+    # raw.githubusercontent.com sert le blob Git en LF. Les gros batchs LF peuvent rendre
+    # les labels :CALL introuvables sous cmd.exe : reecrire explicitement le fichier en CRLF.
+    try {
+        $scriptContent = [regex]::Replace($scriptContent, "\r?\n", "`r`n")
+        [IO.File]::WriteAllText($scriptPath, $scriptContent, [Text.UTF8Encoding]::new($false))
+    } catch {
+        Write-Host "[ERREUR] Impossible de preparer le script telecharge en CRLF." -ForegroundColor Red
+        Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
+        Read-Host "Appuyez sur Entree pour quitter"
+        exit 1
+    }
+}
 $firstLine = ($scriptContent -split "\r?\n", 2)[0]
 if ($firstLine -notmatch '^@echo off\s*$' -or $scriptContent.Length -lt 100000 -or
     $scriptContent -notmatch '(?m)^:MENU_PRINCIPAL\s*$' -or
@@ -71,7 +84,7 @@ if ($firstLine -notmatch '^@echo off\s*$' -or $scriptContent.Length -lt 100000 -
 
 $exitCode = 1
 try {
-    cmd /d /c "`"$scriptPath`""
+    & $env:ComSpec /d /e:on /c "`"$scriptPath`""
     $exitCode = $LASTEXITCODE
 } finally {
     if ($downloaded) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
