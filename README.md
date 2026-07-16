@@ -56,6 +56,8 @@ Collez cette commande dans **PowerShell (non-admin)** — elle utilise toujours 
 
 L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose quelques questions (profil + options) et en déduit automatiquement la configuration demandée.
 
+Le parcours automatique enchaîne ensuite les sections sans nouvelle question et affiche un résumé final. Dans le script, **[FAIT]** signifie que la commande ou l'étape a été traitée ; l'état Windows n'est pas relu après chaque tweak. Les prérequis, téléchargements, installateurs et confirmations destructives conservent leurs contrôles dédiés.
+
 Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage et **Réseau** demande les deux. Le menu **Protections Sécurité** propose séparément trois niveaux explicites.
 
 #### Axe 1 — Usage (`PROFIL_USAGE`)
@@ -88,7 +90,7 @@ Chaque réglage est principalement piloté par **un seul axe**, sauf les excepti
 Exceptions réseau :
 - **RSC/LSO/RscIPv6** : coupés uniquement en **GAMING + MAX PERF** (préservent débit/stabilité en Normal/Eco).
 - **initialRTO / maxsynretransmissions** : 3000 ms / 2 pour tous les profils, soit les valeurs Windows documentées pour l'établissement TCP (SYN) ; initialRTO ne règle pas le RTO des paquets après connexion.
-- **BBR2 / heuristics** : BBR2 est appliqué à Internet, InternetCustom, Datacenter, DatacenterCustom et Compat. Le script demande `wsh=enabled forcews=enabled` ; les versions récentes de Windows peuvent accepter la commande tout en continuant d'afficher WSH legacy comme désactivé.
+- **BBR2 / heuristics** : BBR2 est demandé sur Internet, InternetCustom, Datacenter, DatacenterCustom et Compat avec `wsh=enabled forcews=enabled`. Le correctif loopback IPv4/IPv6 (`loopbacklargemtu=disabled`) est appliqué dans la même section pour préserver les applications locales comme Steam, Battle.net et Hyper-V.
 - **Nagle/DelACK** : agressif en Gaming+MaxPerf, natif Windows en Eco et en Normal+MaxPerf.
 
 ### ⚙️ Optimisations Granulaires
