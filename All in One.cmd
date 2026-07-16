@@ -2123,20 +2123,9 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v Coa
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 REM  ============================================================================
-REM  BLOC AVANCE TIMERCOALESCING - ENTIEREMENT DESACTIVE PAR DEFAUT
-REM  Microsoft ne documente ni le type ni le format de cette valeur interne.
-REM  Ces variantes historiques sont conservees uniquement pour des tests mesures.
-REM  ATTENTION : ne decommenter qu'UNE seule commande a la fois, puis redemarrer.
-REM  Option 1 : 64 caracteres hexadecimaux, soit 32 octets a 00.
-REM  Cette variante a ete conservee apres les tests de stabilite.
-REM  reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 0000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
-REM  Option 2 ARCHIVEE - NE PAS ACTIVER : 80 octets a 00 ont provoque des plantages.
-REM  reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
-REM  Option 3 : variante historique REG_DWORD 1.
-REM  reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_DWORD /d 1 /f >nul 2>&1
-REM  Option 4 : variante historique REG_DWORD 0.
-REM  reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_DWORD /d 0 /f >nul 2>&1
-REM  Option 5 : supprimer la valeur pour rendre ce parametre a Windows.
+REM  TimerCoalescing - valeur REG_BINARY de 80 octets
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
+REM  Restauration : supprimer la valeur pour rendre sa gestion a Windows.
 REM  reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /f >nul 2>&1
 REM  ============================================================================
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\ModernSleep" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
