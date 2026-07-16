@@ -18,9 +18,7 @@
 
 ## 📌 Sommaire
 - [📖 À propos du projet](#-à-propos-du-projet)
-- [✅ Prérequis](#-prérequis)
 - [🚀 Démarrage rapide](#-démarrage-rapide)
-- [🔤 Encodage et fins de ligne](#-encodage-et-fins-de-ligne)
 - [🛠️ Guide des fonctionnalités](#️-guide-des-fonctionnalités)
 - [🛡️ Sécurité & fiabilité](#-sécurité--fiabilité)
 - [❓ FAQ (Foire aux questions)](#-faq-foire-aux-questions)
@@ -35,41 +33,14 @@ Ce script privilégie une configuration lisible et des profils explicites pour W
 
 ---
 
-## ✅ Prérequis
-
-- **Windows 10 ou Windows 11** avec les outils système standards de Windows.
-- **Windows PowerShell 5.1 (`powershell.exe`)** : le batch l'utilise directement, même si le launcher peut aussi être démarré depuis PowerShell 7.
-- **Droits administrateur** : le launcher demande automatiquement l'élévation UAC ; le batch téléchargé manuellement doit être lancé en administrateur.
-- **Connexion Internet** pour le lancement distant et les outils/runtimes téléchargés.
-- **Sauvegarde des fichiers importants** et point de restauration recommandés avant les options de sécurité, nettoyage, Edge ou OneDrive.
-
----
-
 ## 🚀 Démarrage rapide
 
-### Option A — Branche `main` via PowerShell (recommandé)
 ```powershell
 irm "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1" | iex
 ```
 Collez cette commande dans **PowerShell non administrateur**. Le launcher valide la source officielle, demande l'élévation UAC, prépare le batch téléchargé puis le lance.
 
 > `irm | iex` exécute le contenu distant actuel de la branche `main`. Relisez le dépôt et ses changements avant exécution si vous avez besoin d'une version figée et auditée.
-
-### Option B — Checkout ou fichiers locaux
-
-```powershell
-.\launcher.ps1
-```
-
-Le launcher utilise en priorité le fichier `All in One.cmd` présent dans son propre dossier. Si ce fichier est absent, il télécharge le batch depuis son `BaseUrl`. Vous pouvez aussi lancer directement `All in One.cmd` avec **Exécuter en tant qu'administrateur**.
-
-### Option C — Branche/référence officielle personnalisée
-
-```powershell
-.\launcher.ps1 -BaseUrl "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/<branche>"
-```
-
-`BaseUrl` doit rester sous `https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/`. Si un batch local est adjacent au launcher, il reste prioritaire. Les téléchargements de secours de NVIDIA Profile Inspector et SetTimerResolution sont actuellement liés à `main`, même lorsqu'un autre `BaseUrl` fournit le batch.
 
 ### Premier parcours
 
@@ -78,20 +49,6 @@ Le launcher utilise en priorité le fichier `All in One.cmd` présent dans son p
 3. Choisissez l'usage, l'énergie, puis les cinq choix complémentaires proposés : sécurité CPU, Defender, animations, fonctions IA et UAC.
 4. Les sections sont ensuite exécutées une fois, sans nouvelle question hors contrôles et confirmations dédiés.
 5. Un redémarrage est **recommandé** après un parcours complet et devient nécessaire lorsque Windows, un réglage de sécurité/pilote ou un installateur le signale.
-
----
-
-## 🔤 Encodage et fins de ligne
-
-Le contrat du script batch est volontairement strict :
-
-- `All in One.cmd` reste en **ASCII 7 bits**, **sans BOM**, avec des fins de ligne **CRLF** ;
-- les textes affichés par le batch restent sans accents et le script n'utilise pas `chcp 65001`, afin d'éviter les différences de page de code de `cmd.exe` ;
-- `.gitattributes` force CRLF pour les fichiers `.cmd`, `.bat` et `.ps1` lors d'un checkout ;
-- GitHub Raw sert généralement le batch en LF : le launcher et l'auto-contrôle initial du batch le normalisent vers CRLF avant l'exécution ;
-- cette règle ne doit pas être appliquée aux ressources binaires ou XML. Par exemple, le profil NVIDIA `.nip` conserve son encodage XML UTF-16.
-
-Le launcher refuse les batchs avec BOM ou octets non-ASCII, puis vérifie leur structure minimale. Ces contrôles évitent les ambiguïtés d'encodage mais ne constituent pas une signature cryptographique du contenu.
 
 ---
 
@@ -234,7 +191,7 @@ R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming con
 R : Il ne cible pas directement les dossiers Documents/Images/Vidéos actuels. Il vide toutefois la corbeille et supprime des caches, dumps, rapports d'erreur et journaux archivés. Si `Windows.old` existe, sa suppression définitive est proposée séparément et peut inclure d'anciennes données utilisateur. Les journaux Event Viewer actifs, l'historique Windows Update et les autres fichiers de récupération sont conservés.
 
 **Q : Puis-je réinstaller OneDrive ou Edge plus tard ?**  
-R : OneDrive peut être réinstallé depuis Microsoft, mais les fichiers locaux supprimés lors de la désinstallation ne sont pas recréés automatiquement. Pour Edge, retirez d'abord les valeurs `InstallDefault` et `Install{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}` sous `HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate` si la stratégie de blocage est active, puis utilisez l'installateur Microsoft. Le résultat dépend aussi de l'édition Windows et des stratégies de l'appareil.
+R : Oui, les deux sont réinstallables. OneDrive se réinstalle via `winget install Microsoft.OneDrive` ou depuis le site Microsoft. Edge aussi (`winget install Microsoft.Edge` ou microsoft.com/edge) — les politiques de blocage posées par le script empêchent uniquement la réinstallation automatique par Windows Update, pas une installation manuelle. Les données utilisateur (favoris Edge, dossier OneDrive) supprimées lors de la désinstallation ne sont toutefois pas récupérables.
 
 **Q : Quels "Bloatwares" sont supprimés ?**  
 R : Le script cible une liste explicite d'applications préinstallées non essentielles et vérifie leur suppression. Leur absence peut néanmoins modifier certaines intégrations Windows.
@@ -260,7 +217,7 @@ R : Le script cible une liste explicite d'applications préinstallées non essen
 R : Un redémarrage est recommandé après un parcours complet. Il est nécessaire si le script, Windows ou un installateur le signale, notamment pour certains changements VBS/HVCI/SEHOP, pilotes, alimentation ou codes installateur `3010`/`1641`.
 
 **Q : Combien de temps dure l'optimisation ?**  
-R : Les sections principales prennent généralement quelques minutes. Le nettoyage DISM, les téléchargements de runtimes et les installateurs peuvent durer nettement plus longtemps selon le PC et la connexion.
+R : Moins de 5 minutes en général. Peut être plus long selon le PC et la connexion.
 ---
 
 <div align="center">
