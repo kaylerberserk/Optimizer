@@ -24,7 +24,14 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
     if ($PSCommandPath -and (Test-Path -LiteralPath $PSCommandPath)) {
         $arguments = "-NoP -EP Bypass -File `"$PSCommandPath`" -BaseUrl `"$BaseUrl`""
     } else {
-        $arguments = "-NoP -EP Bypass -C `"& ([scriptblock]::Create((irm '$BaseUrl/launcher.ps1'))) -BaseUrl '$BaseUrl'`""
+        $baseUrlData = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl))
+        $childScript = @"
+`$baseUrl = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$baseUrlData'))
+`$launcher = Invoke-RestMethod (`$baseUrl + '/launcher.ps1')
+& ([scriptblock]::Create(`$launcher)) -BaseUrl `$baseUrl
+"@
+        $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
+        $arguments = "-NoP -EP Bypass -EncodedCommand $encodedCommand"
     }
     try {
         $process = Start-Process $ps -ArgumentList $arguments -Verb RunAs -Wait -PassThru
@@ -58,13 +65,39 @@ if (!(Test-Path -LiteralPath $scriptPath) -or (Get-Item -LiteralPath $scriptPath
     exit 1
 }
 
-$scriptContent = Get-Content -LiteralPath $scriptPath -Raw -ErrorAction SilentlyContinue
-if ($downloaded -and $null -ne $scriptContent) {
+try {
+    $scriptBytes = [IO.File]::ReadAllBytes($scriptPath)
+} catch {
+    Write-Host "[ERREUR] Impossible de lire le script." -ForegroundColor Red
+    if ($downloaded) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
+    Read-Host "Appuyez sur Entree pour quitter"
+    exit 1
+}
+
+$hasBom = ($scriptBytes.Length -ge 3 -and $scriptBytes[0] -eq 0xEF -and $scriptBytes[1] -eq 0xBB -and $scriptBytes[2] -eq 0xBF) -or
+    ($scriptBytes.Length -ge 2 -and (($scriptBytes[0] -eq 0xFF -and $scriptBytes[1] -eq 0xFE) -or
+    ($scriptBytes[0] -eq 0xFE -and $scriptBytes[1] -eq 0xFF)))
+$hasNonAscii = $false
+foreach ($byte in $scriptBytes) {
+    if ($byte -gt 0x7F) {
+        $hasNonAscii = $true
+        break
+    }
+}
+if ($hasBom -or $hasNonAscii) {
+    Write-Host "[ERREUR] Le script doit etre en ASCII sans BOM." -ForegroundColor Red
+    if ($downloaded) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
+    Read-Host "Appuyez sur Entree pour quitter"
+    exit 1
+}
+
+$scriptContent = [Text.Encoding]::ASCII.GetString($scriptBytes)
+if ($downloaded) {
     # raw.githubusercontent.com sert le blob Git en LF. Les gros batchs LF peuvent rendre
     # les labels :CALL introuvables sous cmd.exe : reecrire explicitement le fichier en CRLF.
     try {
-        $scriptContent = [regex]::Replace($scriptContent, "\r?\n", "`r`n")
-        [IO.File]::WriteAllText($scriptPath, $scriptContent, [Text.UTF8Encoding]::new($false))
+        $scriptContent = [regex]::Replace($scriptContent, "\r\n|\r|\n", "`r`n")
+        [IO.File]::WriteAllText($scriptPath, $scriptContent, [Text.Encoding]::ASCII)
     } catch {
         Write-Host "[ERREUR] Impossible de preparer le script telecharge en CRLF." -ForegroundColor Red
         Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
@@ -72,7 +105,7 @@ if ($downloaded -and $null -ne $scriptContent) {
         exit 1
     }
 }
-$firstLine = ($scriptContent -split "\r?\n", 2)[0]
+$firstLine = ($scriptContent -split "\r\n|\r|\n", 2)[0]
 if ($firstLine -notmatch '^@echo off\s*$' -or $scriptContent.Length -lt 100000 -or
     $scriptContent -notmatch '(?m)^:MENU_PRINCIPAL\s*$' -or
     $scriptContent -notmatch '(?m)^:END_SCRIPT\s*$') {

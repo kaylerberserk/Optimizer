@@ -3,7 +3,7 @@ setlocal EnableExtensions DisableDelayedExpansion
 if not defined WINOPT_SOURCE_DIR set "WINOPT_SOURCE_DIR=%~dp0"
 set "WINOPT_SELF=%~f0"
 
-:: PowerShell est requis pour le script et pour securiser les fichiers .cmd telecharges en LF.
+:: PowerShell est requis par le script et pour verifier/normaliser le format des fichiers .cmd.
 set "WINOPT_PS_MISSING=0"
 where powershell >nul 2>&1
 if errorlevel 1 set "WINOPT_PS_MISSING=1"
@@ -11,23 +11,28 @@ if "%WINOPT_PS_MISSING%"=="1" echo [ERREUR] PowerShell est introuvable. Le scrip
 if "%WINOPT_PS_MISSING%"=="1" pause
 if "%WINOPT_PS_MISSING%"=="1" exit /b 1
 
-:: GitHub sert les fichiers bruts en LF. Sur un gros batch, CMD peut alors perdre les labels :CALL.
-:: Detecter ce cas avant le premier GOTO/CALL, relancer une copie CRLF, puis transmettre son code retour.
-set "WINOPT_NEEDS_CRLF=0"
-set "WINOPT_LINE_CHECK_ERROR=0"
-powershell -NoProfile -Command "try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);for($i=0;$i -lt $b.Length;$i++){if($b[$i] -eq 10 -and ($i -eq 0 -or $b[$i-1] -ne 13)){exit 42}};exit 0}catch{exit 43}" >nul 2>&1
-if errorlevel 42 set "WINOPT_NEEDS_CRLF=1"
-if errorlevel 43 set "WINOPT_LINE_CHECK_ERROR=1"
-if "%WINOPT_LINE_CHECK_ERROR%"=="1" echo [ERREUR] Impossible de verifier les fins de ligne du script.
-if "%WINOPT_LINE_CHECK_ERROR%"=="1" pause
-if "%WINOPT_LINE_CHECK_ERROR%"=="1" exit /b 1
-if "%WINOPT_NEEDS_CRLF%"=="1" powershell -NoProfile -Command "$tmp=Join-Path $env:TEMP ('WindowsOptimizer_crlf_'+[guid]::NewGuid().ToString('N')+'.cmd');try{$c=[IO.File]::ReadAllText($env:WINOPT_SELF);$c=[regex]::Replace($c,'\r?\n',[Environment]::NewLine);[IO.File]::WriteAllText($tmp,$c,[Text.UTF8Encoding]::new($false));$p=Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/e:on','/c',([char]34+$tmp+[char]34)) -Wait -PassThru -NoNewWindow;exit $p.ExitCode}catch{Write-Host '[ERREUR] Impossible de preparer la copie CRLF du script.' -ForegroundColor Red;exit 1}finally{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue}"
-if "%WINOPT_NEEDS_CRLF%"=="1" exit /b %errorlevel%
+:: Contrat du batch : ASCII 7 bits, sans BOM et fins de ligne CRLF.
+:: GitHub sert les fichiers bruts en LF : verifier le format avant le premier GOTO/CALL,
+:: relancer une copie CRLF si necessaire, puis transmettre son code retour.
+powershell -NoProfile -Command "try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);$bom=($b.Length-ge3-and$b[0]-eq239-and$b[1]-eq187-and$b[2]-eq191)-or($b.Length-ge2-and(($b[0]-eq255-and$b[1]-eq254)-or($b[0]-eq254-and$b[1]-eq255)));if($bom){exit 44};for($i=0;$i-lt$b.Length;$i++){if($b[$i]-gt127){exit 44};if(($b[$i]-eq10-and($i-eq0-or$b[$i-1]-ne13))-or($b[$i]-eq13-and($i+1-ge$b.Length-or$b[$i+1]-ne10))){exit 42}};exit 0}catch{exit 43}" >nul 2>&1
+set "WINOPT_FORMAT_RC=%errorlevel%"
+if "%WINOPT_FORMAT_RC%"=="43" echo [ERREUR] Impossible de lire ou verifier le format du script.
+if "%WINOPT_FORMAT_RC%"=="43" pause
+if "%WINOPT_FORMAT_RC%"=="43" exit /b 1
+if "%WINOPT_FORMAT_RC%"=="44" echo [ERREUR] Le script doit etre en ASCII sans BOM.
+if "%WINOPT_FORMAT_RC%"=="44" pause
+if "%WINOPT_FORMAT_RC%"=="44" exit /b 1
+if not "%WINOPT_FORMAT_RC%"=="0" if not "%WINOPT_FORMAT_RC%"=="42" echo [ERREUR] Verification du format terminee avec le code %WINOPT_FORMAT_RC%.
+if not "%WINOPT_FORMAT_RC%"=="0" if not "%WINOPT_FORMAT_RC%"=="42" pause
+if not "%WINOPT_FORMAT_RC%"=="0" if not "%WINOPT_FORMAT_RC%"=="42" exit /b 1
+if "%WINOPT_FORMAT_RC%"=="42" powershell -NoProfile -Command "$tmp=Join-Path $env:TEMP ('WindowsOptimizer_crlf_'+[guid]::NewGuid().ToString('N')+'.cmd');try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);$c=[Text.Encoding]::ASCII.GetString($b);$crlf=[string][char]13+[char]10;$c=[regex]::Replace($c,'\r\n|\r|\n',$crlf);[IO.File]::WriteAllText($tmp,$c,[Text.Encoding]::ASCII);$p=Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/e:on','/c',([char]34+$tmp+[char]34)) -Wait -PassThru -NoNewWindow;exit $p.ExitCode}catch{Write-Host '[ERREUR] Impossible de preparer la copie CRLF du script.' -ForegroundColor Red;exit 1}finally{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue}"
+if "%WINOPT_FORMAT_RC%"=="42" set "WINOPT_RELAUNCH_RC=%errorlevel%"
+if "%WINOPT_FORMAT_RC%"=="42" exit /b %WINOPT_RELAUNCH_RC%
 
 set "WINOPT_SELF="
 set "WINOPT_PS_MISSING="
-set "WINOPT_NEEDS_CRLF="
-set "WINOPT_LINE_CHECK_ERROR="
+set "WINOPT_FORMAT_RC="
+set "WINOPT_RELAUNCH_RC="
 setlocal EnableDelayedExpansion
 cls
 :: IMPORTANT : textes SANS ACCENTS (ASCII) pour affichage fiable en console cmd.exe
@@ -2665,7 +2670,8 @@ echo %COLOR_WHITE%    - VBS pour la regularite ; CFG car son cout est faible%COL
 echo %COLOR_WHITE%    - Lancement automatique de l'hyperviseur pour eviter les regressions%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%  Desactive :%COLOR_RESET%
-echo %COLOR_WHITE%    - HVCI, SEHOP, Credential Guard et mitigations CPU couteuses%COLOR_RESET%
+echo %COLOR_WHITE%    - HVCI, SEHOP, configurations locales Credential Guard/LSA et mitigations CPU couteuses%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Une strategie d'entreprise ou un verrou UEFI peut maintenir Credential Guard actif.%COLOR_RESET%
 echo.
 echo %COLOR_DARK_GRAY%  Objectif : performances regulieres, pas toutes les valeurs a zero.%COLOR_RESET%
 echo.
@@ -3899,8 +3905,9 @@ echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_YELLOW%AVERTISSEMENT :%COLOR_RESET%
 echo %COLOR_WHITE%  Ce script va supprimer : fichiers temporaires, anciens logs, rapports d'erreurs,%COLOR_RESET%
 echo %COLOR_WHITE%  corbeille, caches Windows 11 (Widgets, Copilot, Recall), icones,%COLOR_RESET%
 echo %COLOR_WHITE%  cache npm, notifications et journaux archives.%COLOR_RESET%
-echo %COLOR_WHITE%  %STYLE_BOLD%Aucune donnee personnelle (favoris, mots de passe, documents) n'est touchee.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'historique Windows Update et les fichiers de recuperation sont conserves.%COLOR_RESET%
+echo %COLOR_WHITE%  Les dossiers Documents/Images/Videos actuels ne sont pas cibles directement.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Corbeille, dumps, caches et journaux seront supprimes ; Windows.old peut l'etre apres confirmation.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%L'historique Windows Update et les autres fichiers de recuperation sont conserves.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Continuer ? [O/N]: %COLOR_RESET%"
 call :AZCHOICE ON
