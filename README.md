@@ -20,7 +20,6 @@
 - [📖 À propos du projet](#-à-propos-du-projet)
 - [🚀 Démarrage rapide](#-démarrage-rapide)
 - [🛠️ Guide des fonctionnalités](#️-guide-des-fonctionnalités)
-- [🛡️ Sécurité & fiabilité](#-sécurité--fiabilité)
 - [❓ FAQ (Foire aux questions)](#-faq-foire-aux-questions)
 
 ---
@@ -49,6 +48,7 @@ Collez cette commande dans **PowerShell non administrateur**. Le launcher valide
 3. Choisissez l'usage, l'énergie, puis les cinq choix complémentaires proposés : sécurité CPU, Defender, animations, fonctions IA et UAC.
 4. Les sections sont ensuite exécutées une fois, sans nouvelle question hors contrôles et confirmations dédiés.
 5. Un redémarrage est **recommandé** après un parcours complet et devient nécessaire lorsque Windows, un réglage de sécurité/pilote ou un installateur le signale.
+6. **Comptez moins de 5 minutes en général**, plus selon le PC et la connexion.
 
 ---
 
@@ -58,7 +58,7 @@ Collez cette commande dans **PowerShell non administrateur**. Le launcher valide
 
 L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui définissent 4 combinaisons possibles. Le script vous pose quelques questions (profil + options) et en déduit automatiquement la configuration demandée.
 
-Le parcours automatique enchaîne ensuite les sections sans nouvelle question et affiche un résumé final. Dans le script, **[FAIT]** signifie que la commande ou l'étape a été traitée ; l'état Windows n'est pas relu après chaque tweak. Les prérequis, téléchargements, installateurs et confirmations destructives conservent leurs contrôles dédiés.
+Le parcours automatique enchaîne ensuite les sections sans nouvelle question et affiche un résumé final. Les prérequis, téléchargements, installateurs et confirmations destructives conservent leurs contrôles dédiés.
 
 Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage et **Réseau** demande les deux. Le menu **Protections Sécurité** propose séparément trois niveaux explicites.
 
@@ -137,22 +137,6 @@ Exceptions réseau :
 
 > **Note** : la gestion des protections sécurité (VBS/HVCI, CFG, Credential Guard et mitigations CPU) se trouve dans le menu principal sous **[8] Protections Securite**. Le script indique **Gaming** comme choix recommandé ; Défaut Windows active VBS/HVCI/CFG, configure l'hyperviseur sur Auto, restaure les mitigations CPU Microsoft et laisse LSA/Credential Guard non configurés afin que Windows ou les stratégies de l'organisation décident selon l'édition, l'appartenance à une entreprise et le matériel. Performance Max réduit davantage la sécurité.
 
----
-
-## 🛡️ Sécurité & fiabilité
-
-- **Mode Gaming orienté anti-cheat** : ce mode conserve **VBS/HVCI** et **CFG** afin de limiter les incompatibilités, sans garantir les exigences futures de chaque jeu ou anti-cheat.
-- **Réversibilité limitée** : l'option **[R]** crée un point de restauration et plusieurs menus proposent un retour aux valeurs Windows. Un point de restauration ne récupère pas nécessairement les fichiers supprimés, les désinstallations, la corbeille, les caches ou `Windows.old`.
-- **Sources distantes** : `irm | iex`, MAS et WinUtil utilisent du contenu distant susceptible d'évoluer. Le launcher contrôle l'hôte, le format et la structure minimale du batch, mais n'utilise pas de hash ou de signature embarquée.
-- **Installateurs Microsoft** : Visual C++ et DirectX sont contrôlés par taille et signature Authenticode Microsoft avant exécution.
-- **Outils du dépôt** : NVIDIA Profile Inspector et son profil peuvent être exécutés automatiquement en Gaming sur un GPU NVIDIA compatible. SetTimerResolution peut être installé, ajouté au démarrage et lancé en MaxPerf. Leur provenance est contrôlée surtout par chemin, taille et compatibilité, pas par une validation Authenticode systématique.
-- **Ressources non automatiques** : la configuration O&O, les modèles de `Game Configs\` et les autres outils Timer & Interrupt ne sont pas lancés automatiquement par le batch actuel.
-- **Credential Guard/LSA** : les profils demandent la suppression ou l'application de configurations locales. Une stratégie d'entreprise ou un verrou UEFI peut conserver une protection active malgré les changements registre.
-- **Fonctions essentielles préservées** : Windows Update, Microsoft Store et WebView2 ne sont pas volontairement supprimés. Les fonctions dépendantes d'Edge, OneDrive ou d'une autre application retirée peuvent néanmoins changer.
-- **Edge/OneDrive optionnels et destructifs** : ils sont conservés par défaut. OneDrive peut supprimer le dossier synchronisé restant ; Edge peut supprimer ses données utilisateur après confirmation et poser des stratégies limitant sa réinstallation automatique.
-
----
-
 ## ❓ FAQ (Foire aux questions)
 
 ### 🏠 Installation & Sécurité
@@ -164,7 +148,7 @@ R : Oui, comme tout outil qui modifie des stratégies, services, pilotes ou para
 R : Les commandes d'administration, les téléchargements et les modifications de sécurité peuvent déclencher une alerte. Ne supposez pas automatiquement qu'il s'agit d'un faux positif : vérifiez le dépôt, le diff et les fichiers téléchargés avant exécution.
 
 **Q : Puis-je lancer le script plusieurs fois ?**  
-R : Oui pour les profils principaux : Gaming/Normal et Performance Max/Eco remplacent leurs réglages exclusifs et nettoient plusieurs vestiges connus. Un parcours **Tout optimiser** n'exécute chaque section qu'une fois, mais vous pouvez relancer ensuite une section depuis le menu. Les suppressions, désinstallations, caches et autres actions destructives ne sont pas toutes répétables ni réversibles.
+R : Oui pour les profils principaux : Gaming/Normal et Performance Max/Eco remplacent leurs réglages exclusifs et nettoient plusieurs vestiges connus. Un parcours **Tout optimiser** n'exécute chaque section qu'une fois, mais vous pouvez relancer ensuite une section depuis le menu. Les suppressions, désinstallations, caches et autres actions destructives ne sont pas toutes répétables ni réversibles. Un point de restauration ne récupère pas nécessairement les fichiers supprimés, les désinstallations, la corbeille, les caches ou `Windows.old`.
 
 ### 🎮 Performance & Gaming
 
@@ -183,7 +167,7 @@ Une ancienne version ayant activé Credential Guard avec verrou UEFI peut néces
 R : Gaming conserve VBS/HVCI/CFG pour Valorant et FACEIT. Performance Max coupe HVCI et peut donc être refusé si l'anti-cheat exige Memory Integrity. TPM, Secure Boot, la virtualisation et parfois IOMMU restent à activer dans le BIOS.
 
 **Q : Est-ce compatible avec tous les jeux en ligne ?**
-R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming conserve VBS/HVCI/CFG pour limiter les conflits avec les anti-cheats modernes, mais désactive SEHOP ; chaque jeu et chaque politique de sécurité peuvent évoluer.
+R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming conserve VBS/HVCI/CFG pour limiter les conflits avec les anti-cheats modernes, mais désactive SEHOP — sans garantir les exigences futures de chaque jeu ou anti-cheat.
 
 ### 🌐 Maintenance & Divers
 
@@ -216,8 +200,20 @@ R : Le script cible une liste explicite d'applications préinstallées non essen
 **Q : Dois-je redémarrer après l'optimisation ?**
 R : Un redémarrage est recommandé après un parcours complet. Il est nécessaire si le script, Windows ou un installateur le signale, notamment pour certains changements VBS/HVCI/SEHOP, pilotes, alimentation ou codes installateur `3010`/`1641`.
 
-**Q : Combien de temps dure l'optimisation ?**  
-R : Moins de 5 minutes en général. Peut être plus long selon le PC et la connexion.
+### 🛡️ Sécurité & fiabilité
+
+**Q : Comment les téléchargements distants sont-ils vérifiés ?**
+R : `irm | iex`, MAS et WinUtil utilisent du contenu distant susceptible d'évoluer. Le launcher contrôle l'hôte, le format et la structure minimale du batch, mais n'utilise pas de hash ou de signature embarquée. Visual C++ et DirectX sont contrôlés par taille et signature Authenticode Microsoft avant exécution. Les outils du dépôt (NVIDIA Profile Inspector, SetTimerResolution) sont contrôlés surtout par chemin, taille et compatibilité, sans validation Authenticode systématique.
+
+**Q : Certains outils sont-ils exécutés automatiquement ?**
+R : NVIDIA Profile Inspector et son profil peuvent être exécutés automatiquement en Gaming sur un GPU NVIDIA compatible. SetTimerResolution peut être installé, ajouté au démarrage et lancé en MaxPerf. La configuration O&O, les modèles de `Game Configs\` et les autres outils Timer & Interrupt ne sont pas lancés automatiquement par le batch actuel.
+
+**Q : Credential Guard et LSA peuvent-ils rester actifs malgré le script ?**
+R : Les profils demandent la suppression ou l'application de configurations locales, mais une stratégie d'entreprise ou un verrou UEFI peut conserver une protection active malgré les changements de registre.
+
+**Q : Quelles fonctionnalités essentielles sont conservées ?**
+R : Windows Update, Microsoft Store et WebView2 ne sont pas volontairement supprimés. Les fonctions dépendantes d'Edge, OneDrive ou d'une autre application retirée peuvent néanmoins changer.
+
 ---
 
 <div align="center">

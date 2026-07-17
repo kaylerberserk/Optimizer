@@ -1809,12 +1809,10 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%RssBaseCpu supprime ^(defaut Windows restaure^)%COLOR_RESET%
 )
 
-echo %COLOR_YELLOW%[*]%COLOR_RESET% %COLOR_WHITE%Mise a jour des politiques groupe (gpupdate)...%COLOR_RESET%
-gpupdate /target:computer /force >nul 2>&1
 ipconfig /flushdns >nul 2>&1
 nbtstat -R >nul 2>&1
 nbtstat -RR >nul 2>&1
-echo %COLOR_CYAN%[INFO]%COLOR_RESET% %COLOR_WHITE%Commandes de mise a jour et de purge reseau executees%COLOR_RESET%
+echo %COLOR_CYAN%[INFO]%COLOR_RESET% %COLOR_WHITE%Cache DNS et NetBIOS purges%COLOR_RESET%
 
 call :FINISH_ACTION "Reglages reseau" "traites"
 exit /b 0
