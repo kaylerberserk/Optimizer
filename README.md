@@ -206,7 +206,7 @@ R : Le script cible une liste explicite d'applications préinstallées non essen
 | **Système** | Store, Sécurité Windows, Terminal, Capture. |
 
 **Q : Dois-je redémarrer après l'optimisation ?**
-R : Un redémarrage est recommandé après un parcours complet. Il est nécessaire si le script, Windows ou un installateur le signale, notamment pour certains changements VBS/HVCI/SEHOP, pilotes, alimentation ou codes installateur `3010`/`1641`.
+R : Un redémarrage est recommandé après un parcours complet. Il est nécessaire si le script, Windows ou un installateur le signale, notamment pour certains changements VBS/HVCI/SEHOP, pilotes ou alimentation.
 
 ### 🛡️ Sécurité & fiabilité
 
