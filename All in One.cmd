@@ -2473,7 +2473,6 @@ echo.
 echo %COLOR_WHITE%  Application des reglages de performance lies au processeur.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
 REM  Seuls Gaming et Performance Max atteignent ce bloc ; les deux forcent les memes valeurs SEHOP.
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2841,7 +2840,6 @@ echo.
 echo %COLOR_WHITE%  Desactive Windows Defender, SmartScreen et les taches planifiees associees.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Verification de la protection contre les modifications...%COLOR_RESET%
 powershell -NoProfile -Command "if ((Get-MpComputerStatus).IsTamperProtected -eq $true) { exit 1 } else { exit 0 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
@@ -2971,7 +2969,6 @@ echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Les applications ne de
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le reglage sera effectif apres redemarrage et reste reversible depuis ce menu.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'UAC...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableLUA /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v ConsentPromptBehaviorAdmin /t REG_DWORD /d 0 /f >nul 2>&1
@@ -3071,7 +3068,6 @@ echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%L'interface sera moins
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le reglage est reversible depuis le menu Activer. Une reconnexion peut etre necessaire.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation des animations et effets visuels...%COLOR_RESET%
 
 REM  VisualFXSetting=3 (Personnalise) pour que Windows utilise uniquement les cles
@@ -3169,7 +3165,6 @@ echo.
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application des restrictions Copilot, Widgets et Recall.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo.
 call :CORE_DESACTIVER_COPILOT
 call :CORE_DESACTIVER_WIDGETS
 call :CORE_DESACTIVER_RECALL
