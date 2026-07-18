@@ -2126,9 +2126,14 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Executive" /v Coa
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 REM  ============================================================================
-REM  TimerCoalescing - valeur REG_BINARY de 80 octets
-reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
-REM  Restauration : supprimer la valeur pour rendre sa gestion a Windows.
+REM  BLOC AVANCE TIMERCOALESCING - ENTIEREMENT DESACTIVE PAR DEFAUT
+REM  Option 1 - 80 octets : NE PAS ACTIVER. Cette valeur peut faire planter Windows au demarrage.
+REM  Cause probable : elle force le reglage des timers pendant le chargement de win32k.
+REM  Un verrou interne peut ne pas etre encore initialise, causant le crash 0x1E puis Recovery 0xC0000001.
+REM  Il s'agit d'un bug interne de Windows, pas d'une erreur de syntaxe ou de longueur de la valeur.
+REM  Toute valeur valide de 80 octets utilise ce meme chemin : aucun contournement fiable par registre.
+REM  reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /t REG_BINARY /d 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 /f >nul 2>&1
+REM  Option 2 - recommandee : supprimer la valeur pour laisser Windows gerer ce parametre normalement.
 REM  reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Windows" /v TimerCoalescing /f >nul 2>&1
 REM  ============================================================================
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power\ModernSleep" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
