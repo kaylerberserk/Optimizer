@@ -2460,7 +2460,7 @@ call :ASK_IF_INTERACTIVE "%STYLE_BOLD%%COLOR_YELLOW%Appliquer ce profil ? [O/N]:
 if !errorlevel! NEQ 0 exit /b
 :APPLIQUER_PROFIL_SECURITE_RUN
 REM Le profil d'usage Normal correspond au profil de securite Defaut Windows.
-REM Seul Performance Max utilise le socle interne de mitigations reduites sans le bloc Gaming.
+REM Performance Max desactive tout : VBS/HVCI/CFG/SEHOP, mitigations CPU, hyperviseur OFF.
 if "!PROFIL_USAGE!"=="1" if not "!SECURITY_FORCE_PERF_MAX!"=="1" (
     call :RESTAURER_PROTECTIONS_SECURITE
     exit /b !errorlevel!
@@ -2500,11 +2500,11 @@ if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
     REM CFG reste actif en Gaming (requis Valorant) ; desactive seulement en Perf Max plus bas.
 ) else (
-    REM 8.3 - Performance Max atteint directement sa cible finale, sans effacement puis reecriture.
-    echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Performance max reduit la protection de la memoire et du processeur.%COLOR_RESET%
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%HVCI et CFG sont les noms techniques des protections concernees.%COLOR_RESET%
+    REM 8.3 - Performance Max : tout desactive (VBS/HVCI/CFG/SEHOP), hyperviseur OFF.
+    echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Performance max desactive toutes les protections memoire et processeur.%COLOR_RESET%
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VBS, HVCI, CFG et SEHOP sont desactives, hyperviseur OFF.%COLOR_RESET%
     echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application du profil Performance max...%COLOR_RESET%
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
@@ -2513,11 +2513,15 @@ if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
 )
 
-REM Conserve l'interface HVCI controlable dans Gaming et Performance Max.
+REM Conserve l'interface HVCI controlable dans Gaming.
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 2 /f >nul 2>&1
 
-REM L'hyperviseur Auto est commun a Gaming et Performance Max.
-bcdedit /set hypervisorlaunchtype auto >nul 2>&1
+REM Hyperviseur : Auto en Gaming, OFF en Performance Max.
+if "!PROFIL_USAGE!"=="0" (
+    bcdedit /set hypervisorlaunchtype auto >nul 2>&1
+) else (
+    bcdedit /set hypervisorlaunchtype off >nul 2>&1
+)
 REM  Vulnerable Driver Blocklist
 echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Windows ne bloquera plus certains pilotes dangereux.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un pilote non fiable pourrait alors etre charge.%COLOR_RESET%
@@ -2531,7 +2535,7 @@ if "!PROFIL_USAGE!"=="0" (
     powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Gaming demandes : protections principales conservees.%COLOR_RESET%
 ) else (
-    REM Perf Max : CFG desactive pour performance maximale.
+    REM Perf Max : CFG desactive (toutes protections OFF).
     powershell -NoProfile -Command "Set-ProcessMitigation -System -Disable CFG" >nul 2>&1
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Performance max demandes : protections reduites.%COLOR_RESET%
 )
@@ -2594,10 +2598,11 @@ echo   %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Defaut Windows%COLOR_RESET%
 echo        %COLOR_WHITE%Securite maximale, compatible avec les jeux et anti-cheats.%COLOR_RESET%
 echo.
 echo   %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_CYAN%Gaming%COLOR_RESET%  %COLOR_GREEN%RECOMMANDE%COLOR_RESET%
-echo        %COLOR_WHITE%Jeux prioritaires, protections principales conservees.%COLOR_RESET%
+echo        %COLOR_WHITE%Optimise les jeux, protections principales conservees.%COLOR_RESET%
+echo        %COLOR_WHITE%Compatible avec les jeux et anti-cheats.%COLOR_RESET%
 echo.
-echo   %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%Performance max%COLOR_RESET%
-echo        %COLOR_WHITE%Performances maximales, protections reduites et compatibilite variable.%COLOR_RESET%
+echo   %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%Performance max%COLOR_RESET%  %COLOR_RED%DECONSEILLE%COLOR_RESET%
+echo        %COLOR_WHITE%Protections desactivees, compat. variable, instable (notamment souris).%COLOR_RESET%
 echo   %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%

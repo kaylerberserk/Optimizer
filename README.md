@@ -116,11 +116,11 @@ Exceptions réseau :
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **1 - Défaut Windows** | ON (Auto) | ON | ON (défaut) | ON (défaut) | Restaurées (Microsoft) | Windows décide |
 | **2 - Gaming ★** | ON (Auto) | ON | ON | OFF | Réduites | OFF (local) |
-| **3 - Perf Max** | ON (Auto) | OFF | OFF | OFF | OFF | OFF (local) |
+| **3 - Perf Max ⚠️** | OFF | OFF | OFF | OFF | OFF | OFF (local) |
 
-> **Gaming** est le profil recommandé. VBS ON + hyperviseur Auto améliore la régularité des timers et interruptions CPU, bénéfique pour les jeux compétitifs. CFG reste actif en Gaming (requis par Valorant/Vanguard VAN9002) et est désactivé uniquement en Perf Max pour gagner en performances.
+> **Gaming** est le profil **recommandé**. VBS ON + hyperviseur Auto améliore la régularité des timers et interruptions CPU, bénéfique pour les jeux compétitifs. CFG reste actif (requis par Valorant/Vanguard VAN9002 et FACEIT).
 > **Défaut Windows** restaure les valeurs Microsoft : VBS/HVCI/CFG actifs, hyperviseur Auto, mitigations CPU Microsoft, LSA/Credential Guard laissés à Windows ou aux stratégies d'entreprise.
-> **Performance Max** réduit davantage la sécurité : CFG/HVCI/SEHOP désactivés, VBS conservé pour la stabilité des timers.
+> **Performance Max ⚠️ — Déconseillé.** Protections désactivées (VBS/HVCI/CFG/SEHOP), hyperviseur OFF, mitigations CPU désactivées. Instable selon la config : compatibilité variable avec les jeux et anticheats, micro-latence irrégulière possible, notamment sur la souris. Préférez **Gaming** qui conserve les protections essentielles.
 
 ### 🧰 Outils & Utilitaires
 
@@ -164,15 +164,13 @@ R : Oui pour les profils principaux : Gaming/Normal et Performance Max/Eco rempl
 R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester par une latence ou une stabilité plus régulière ; aucun gain de FPS n'est garanti.
 
 **Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
-R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Le mode Gaming conserve VBS/HVCI/CFG, désactive SEHOP, réduit des mitigations CPU et demande la désactivation des configurations locales Credential Guard/LSA ; Performance Max conserve VBS mais désactive CFG/HVCI/SEHOP et réduit davantage les protections. Défaut Windows restaure VBS/HVCI/CFG, rend LSA et Credential Guard à Windows ou aux stratégies de l'organisation, supprime les surcharges SEHOP et blocklist, restaure les mitigations CPU Microsoft (`FeatureSettingsOverride=0`, masque `3`) et configure l'hyperviseur sur Auto.
+R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Le mode Gaming conserve VBS/HVCI/CFG, désactive SEHOP, réduit des mitigations CPU et demande la désactivation des configurations locales Credential Guard/LSA ; Performance Max désactive VBS/HVCI/CFG/SEHOP et les mitigations CPU, avec hyperviseur OFF. Défaut Windows restaure VBS/HVCI/CFG, rend LSA et Credential Guard à Windows ou aux stratégies de l'organisation, supprime les surcharges SEHOP et blocklist, restaure les mitigations CPU Microsoft (`FeatureSettingsOverride=0`, masque `3`) et configure l'hyperviseur sur Auto.
 
-**Q : Pourquoi Performance Max ne désactive-t-il pas toutes les protections ?**
-R : Il vise des performances régulières, pas toutes les valeurs à zéro. VBS reste actif avec l'hyperviseur en Auto pour une meilleure régularité des timers et interruptions ; CFG est désactivé pour réduire la charge CPU. HVCI et SEHOP sont désactivés, les mitigations CPU coûteuses sont réduites et les configurations locales Credential Guard/LSA sont retirées. Une stratégie ou un verrou UEFI peut toutefois les maintenir actives.
-
-Une ancienne version ayant activé Credential Guard avec verrou UEFI peut nécessiter la procédure Microsoft avec confirmation physique pour retirer ce verrou ; une écriture registre seule ne peut pas garantir sa suppression.
+**Q : Performance Max désactive-t-il toutes les protections ?**
+R : Oui : VBS/HVCI/CFG/SEHOP, hyperviseur OFF, mitigations CPU OFF. Une stratégie ou un verrou UEFI peut toutefois les maintenir actives. Une ancienne version ayant activé Credential Guard avec verrou UEFI peut nécessiter la procédure Microsoft avec confirmation physique pour retirer ce verrou ; une écriture registre seule ne peut pas garantir sa suppression.
 
 **Q : Quelle différence entre Gaming et Performance Max pour les anti-cheats ?**
-R : Gaming conserve VBS/HVCI/CFG pour Valorant (CFG requis par Vanguard) et FACEIT. Performance Max coupe HVCI et CFG, peut donc être refusé si l'anti-cheat exige Memory Integrity ou CFG. TPM, Secure Boot, la virtualisation et parfois IOMMU restent à activer dans le BIOS.
+R : Gaming conserve VBS/HVCI/CFG pour Valorant (CFG requis par Vanguard) et FACEIT. Performance Max désactive tout (VBS/HVCI/CFG + hyperviseur OFF), sera refusé par la plupart des anti-cheats modernes. TPM, Secure Boot, la virtualisation et parfois IOMMU restent à activer dans le BIOS.
 
 **Q : Est-ce compatible avec tous les jeux en ligne ?**
 R : Aucune compatibilité universelle ne peut être garantie. Le mode Gaming conserve VBS/HVCI/CFG pour limiter les conflits avec les anti-cheats modernes, mais désactive SEHOP — sans garantir les exigences futures de chaque jeu ou anti-cheat.
