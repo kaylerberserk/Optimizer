@@ -640,14 +640,14 @@ set "DESACTIVER_IA=0"
 set "DESACTIVER_UAC=0"
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-echo %COLOR_WHITE%Voulez-vous reduire certaines protections Windows ?%COLOR_RESET%
-echo %COLOR_WHITE%  Cela peut ameliorer les performances, mais reduit la protection du PC.%COLOR_RESET%
+echo %COLOR_WHITE%Voulez-vous appliquer le profil de securite lie a l'usage choisi ?%COLOR_RESET%
+echo %COLOR_WHITE%  Gaming reduit certaines protections ; Normal applique la base Defaut Windows.%COLOR_RESET%
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 echo %COLOR_WHITE%L'effet sur les performances varie selon le processeur et les logiciels.%COLOR_RESET%
 echo.
-echo %COLOR_GREEN%[O] OUI%COLOR_RESET% : Reduire les protections du processeur
-echo       %COLOR_WHITE%La protection contre certaines failles processeur sera reduite.%COLOR_RESET%
+echo %COLOR_GREEN%[O] OUI%COLOR_RESET% : Appliquer le profil de securite selectionne
+echo       %COLOR_WHITE%Les reglages dependront du profil Gaming ou Normal choisi.%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%[N] NON%COLOR_RESET% : Ne pas modifier les protections
 echo.
@@ -2452,94 +2452,96 @@ echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : APPLICATION DU PROFIL DE SECURITE%COL
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Gaming et Performance max diminuent certaines protections Windows.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Defaut Windows conserve les protections recommandees et le changement est reversible.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VBS/HVCI = integrite de la memoire ; les mitigations CPU protegent le processeur.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Defaut Windows applique une base de securite explicite, pas un retour usine.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VBS fournit l'isolation ; HVCI correspond a l'integrite de la memoire.%COLOR_RESET%
 echo %COLOR_WHITE%  Choisissez : Defaut Windows, Gaming ou Performance max.%COLOR_RESET%
 echo.
 call :ASK_IF_INTERACTIVE "%STYLE_BOLD%%COLOR_YELLOW%Appliquer ce profil ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :APPLIQUER_PROFIL_SECURITE_RUN
 REM Le profil d'usage Normal correspond au profil de securite Defaut Windows.
-REM Performance Max desactive tout : VBS/HVCI/CFG/SEHOP, mitigations CPU, hyperviseur OFF.
+REM Performance Max conserve VBS, desactive HVCI/SEHOP, remet CFG au reglage Windows et force l'hyperviseur sur Auto.
 if "!PROFIL_USAGE!"=="1" if not "!SECURITY_FORCE_PERF_MAX!"=="1" (
     call :RESTAURER_PROTECTIONS_SECURITE
     exit /b !errorlevel!
 )
+if "!PROFIL_USAGE!"=="0" (
+    call :APPLIQUER_SECURITE_GAMING
+    exit /b !errorlevel!
+)
+call :APPLIQUER_SECURITE_PERF_MAX
+exit /b !errorlevel!
+
+:APPLIQUER_SECURITE_GAMING
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% REGLAGES DE PERFORMANCE CPU%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% PROFIL DE SECURITE GAMING%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-echo %COLOR_WHITE%  Application des reglages de performance lies au processeur.%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
-REM  Seuls Gaming et Performance Max atteignent ce bloc ; les deux forcent les memes valeurs SEHOP.
+
+REM Etat cible Gaming : aucun reglage gere par l'option 8 d'un autre profil ne doit subsister.
+for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1
-
-REM  Nettoie une seule fois les vestiges d'anciens profils qui pourraient contredire la cible actuelle.
-REM  Exception Windows : un ancien Credential Guard verrouille en UEFI exige une confirmation physique pour etre retire.
-for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
-for %%V in (RunAsPPL RunAsPPLBoot) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
-
-REM  8.1 - Desactivation des mitigations CPU (Spectre, Meltdown, Downfall/GDS)
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reglage des protections du processeur...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 33554435 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Protections CPU reglees pour la performance.%COLOR_RESET%
-
-if "!PROFIL_USAGE!"=="0" (
-    REM 8.3 - Mode Gaming : VBS/HVCI/CFG actifs ; SEHOP desactive.
-    echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application du profil Gaming avec VBS, HVCI et CFG actifs...%COLOR_RESET%
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-    REM CFG reste actif en Gaming (requis Valorant) ; desactive seulement en Perf Max plus bas.
-) else (
-    REM 8.3 - Performance Max : tout desactive (VBS/HVCI/CFG/SEHOP), hyperviseur OFF.
-    echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Performance max desactive toutes les protections memoire et processeur.%COLOR_RESET%
-    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VBS, HVCI, CFG et SEHOP sont desactives, hyperviseur OFF.%COLOR_RESET%
-    echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application du profil Performance max...%COLOR_RESET%
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-    reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-)
-
-REM Conserve l'interface HVCI controlable dans Gaming.
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application de VBS/HVCI et des protections Gaming...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 2 /f >nul 2>&1
-
-REM Hyperviseur : Auto en Gaming, OFF en Performance Max.
-if "!PROFIL_USAGE!"=="0" (
-    bcdedit /set hypervisorlaunchtype auto >nul 2>&1
-) else (
-    bcdedit /set hypervisorlaunchtype off >nul 2>&1
-)
-REM  Vulnerable Driver Blocklist
-echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Windows ne bloquera plus certains pilotes dangereux.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un pilote non fiable pourrait alors etre charge.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Defaut Windows permet de restaurer ce blocage.%COLOR_RESET%
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reglage du blocage des pilotes dangereux...%COLOR_RESET%
+for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+for %%V in (RunAsPPL RunAsPPLBoot) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
+bcdedit /set hypervisorlaunchtype auto >nul 2>&1
+REM HVCI peut maintenir la blocklist active malgre cette demande locale.
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglage du blocage des pilotes demande.%COLOR_RESET%
+REM CFG revient a NOTSET et SEHOP passe a OFF sans modifier les autres mitigations systeme.
+call :SET_CFG_NOTSET_SEHOP_OFF
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Profil Gaming integral demande.%COLOR_RESET%
+exit /b 0
 
-if "!PROFIL_USAGE!"=="0" (
-    REM Gaming : CFG reactive explicitement (annule un eventuel disable de Perf Max).
-    powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Gaming demandes : protections principales conservees.%COLOR_RESET%
-) else (
-    REM Perf Max : CFG desactive (toutes protections OFF).
-    powershell -NoProfile -Command "Set-ProcessMitigation -System -Disable CFG" >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Performance max demandes : protections reduites.%COLOR_RESET%
-)
+:APPLIQUER_SECURITE_PERF_MAX
+cls
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% PROFIL DE SECURITE PERFORMANCE MAX%COLOR_RESET%
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Performance max reduit certaines protections memoire et processeur.%COLOR_RESET%
 
+REM Etat cible Performance Max : aucun reglage gere par l'option 8 d'un autre profil ne doit subsister.
+for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 33554435 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 2 /f >nul 2>&1
+for %%V in (EnableVirtualizationBasedSecurity HypervisorEnforcedCodeIntegrity) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+for %%V in (RunAsPPL RunAsPPLBoot) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
+bcdedit /set hypervisorlaunchtype auto >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
+REM CFG revient a NOTSET et SEHOP passe a OFF sans modifier les autres mitigations systeme.
+call :SET_CFG_NOTSET_SEHOP_OFF
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Profil Performance max integral demande.%COLOR_RESET%
 exit /b 0
 
 :RESTAURER_PROTECTIONS_SECURITE
@@ -2548,24 +2550,29 @@ echo %COLOR_CYAN%===============================================================
 echo %STYLE_BOLD%%COLOR_WHITE% SECTION 8 : RESTAURATION DES PROTECTIONS DE SECURITE%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-REM  8.1 - Protections noyau (SEHOP, Exception Chain)
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration du comportement Windows par defaut...%COLOR_RESET%
+REM Etat cible Defaut Windows : chaque valeur des autres profils est remplacee ou supprimee ici.
+for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
+
+REM 8.1 - Protections noyau : SEHOP actif, sans overrides Kernel historiques.
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration des protections du noyau...%COLOR_RESET%
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Surcharges du noyau supprimees ; configuration transmise a Windows.%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SEHOP actif et overrides Kernel historiques supprimes.%COLOR_RESET%
 echo.
-REM  8.2 - Mitigations Spectre/Meltdown et CPU
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration des mitigations CPU...%COLOR_RESET%
+REM 8.2 - Mitigations CPU Microsoft : active les protections par defaut documentees.
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration des mitigations CPU Microsoft...%COLOR_RESET%
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Surcharges CPU supprimees ; configuration transmise a Windows.%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Mitigations CPU Microsoft restaurees.%COLOR_RESET%
 echo.
-REM  8.3 - Blocklist de pilotes vulnerables
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration de la blocklist de pilotes vulnerables au defaut Windows...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Blocage des pilotes demande ; configuration transmise a Windows.%COLOR_RESET%
+REM 8.3 - Blocklist de pilotes vulnerables active, standard Windows 11 22H2+.
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation de la blocklist de pilotes vulnerables...%COLOR_RESET%
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 1 /f >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Blocklist de pilotes vulnerables activee.%COLOR_RESET%
 
-REM  8.4 - Profil Defaut Windows : VBS/HVCI/CFG actifs, hyperviseur Auto, sans verrou UEFI.
+REM 8.4 - Profil Defaut Windows : VBS/HVCI actifs, LSA-PPL sans verrou UEFI.
 for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity LsaCfgFlags) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2574,14 +2581,20 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWO
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 2 /f >nul 2>&1
-REM Credential Guard et LSA-PPL restent non configures : Windows ou les strategies d'entreprise decident.
-for %%V in (LsaCfgFlags RunAsPPL RunAsPPLBoot) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
-REM  L'hyperviseur Auto est commun a tous les profils.
+for %%V in (LsaCfgFlags RunAsPPLBoot) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
+
+REM Hyperviseur force sur Auto ; toutes les mitigations de processus reviennent au defaut Windows.
 bcdedit /set hypervisorlaunchtype auto >nul 2>&1
-REM Defaut Windows : CFG reactive explicitement (annule un eventuel disable de Perf Max).
-powershell -NoProfile -Command "Set-ProcessMitigation -System -Enable CFG" >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Defaut Windows demandes : protections memoire et processeur.%COLOR_RESET%
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MitigationOptions /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MitigationAuditOptions /f >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Standard de securite Windows 11 applique.%COLOR_RESET%
 exit /b 0
+
+:SET_CFG_NOTSET_SEHOP_OFF
+REM Efface seulement CFG, desactive SEHOP et preserve toutes les autres mitigations.
+powershell -NoProfile -Command "$p='HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel';[byte[]]$b=(Get-ItemProperty $p -EA 0).MitigationOptions;if(!$b){$b=New-Object byte[] 24};$b[5]=$b[5]-band 252;$b[9]=$b[9]-band 252;$b[0]=($b[0]-band 207)-bor 32;Set-ItemProperty $p MitigationOptions $b -EA Stop" >nul 2>&1
+exit /b %errorlevel%
 
 REM =================================================================================
 REM TOGGLE_PROTECTIONS_NOYAU - Menu fusionne VBS/HVCI + Mitigations CPU
@@ -2595,14 +2608,14 @@ echo                              %STYLE_BOLD%%COLOR_WHITE%GERER PROTECTIONS NOY
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo   %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Defaut Windows%COLOR_RESET%
-echo        %COLOR_WHITE%Securite maximale, compatible avec les jeux et anti-cheats.%COLOR_RESET%
+echo        %COLOR_WHITE%Base explicite : VBS/HVCI/LSA et blocklist actifs.%COLOR_RESET%
 echo.
 echo   %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_CYAN%Gaming%COLOR_RESET%  %COLOR_GREEN%RECOMMANDE%COLOR_RESET%
 echo        %COLOR_WHITE%Optimise les jeux, protections principales conservees.%COLOR_RESET%
 echo        %COLOR_WHITE%Compatible avec les jeux et anti-cheats.%COLOR_RESET%
 echo.
 echo   %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%Performance max%COLOR_RESET%  %COLOR_RED%DECONSEILLE%COLOR_RESET%
-echo        %COLOR_WHITE%Protections desactivees, compat. variable, instable (notamment souris).%COLOR_RESET%
+echo        %COLOR_WHITE%VBS conserve, CFG Windows ; HVCI/SEHOP desactives.%COLOR_RESET%
 echo   %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour%COLOR_RESET%
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
@@ -2617,13 +2630,13 @@ goto :TOGGLE_PROTECTIONS_NOYAU
 :PROTECTIONS_WINDOWS_DEFAULT
 cls
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo %STYLE_BOLD%%COLOR_WHITE% MODE DEFAUT WINDOWS : protections memoire et processeur actives%COLOR_RESET%
+echo %STYLE_BOLD%%COLOR_WHITE% MODE DEFAUT WINDOWS : base de securite explicite%COLOR_RESET%
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
-REM Supprime les surcharges Gaming/Performance Max puis applique la cible Defaut Windows.
+REM Applique integralement le profil Defaut Windows, quel que soit le profil precedent.
 call :RESTAURER_PROTECTIONS_SECURITE
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Defaut Windows demandes.%COLOR_RESET%
-call :FINISH_ACTION "Mode Defaut Windows" "applique"
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Standard de securite Windows 11 applique.%COLOR_RESET%
+call :FINISH_ACTION "Profil Defaut Windows" "applique"
 goto :TOGGLE_PROTECTIONS_NOYAU
 
 :PROTECTIONS_GAMING
@@ -2642,7 +2655,7 @@ set "PROFIL_USAGE=!PROFIL_USAGE_TMP!"
 set "PROFIL_USAGE_TMP="
 set "SKIP_PAUSE=!SKIP_PAUSE_TMP!"
 set "SKIP_PAUSE_TMP="
-call :FINISH_ACTION "Reglages du mode Gaming" "traites"
+call :FINISH_ACTION "Profil Gaming" "applique"
 goto :TOGGLE_PROTECTIONS_NOYAU
 
 :PROTECTIONS_PERF_MAX
@@ -2654,8 +2667,8 @@ echo.
 echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Performance max reduit la protection de la memoire et du processeur.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le gain varie selon le processeur et les pilotes.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Certains anti-cheats peuvent refuser le jeu.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le demarrage automatique de Windows reste en place.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le profil Defaut Windows est reversible.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le lancement BCD de l'hyperviseur sera force sur Auto.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Defaut Windows permet de restaurer la base de securite.%COLOR_RESET%
 echo %COLOR_WHITE%  Ce mode vise des performances regulieres.%COLOR_RESET%
 echo %COLOR_WHITE%  Il ne supprime pas tous les reglages.%COLOR_RESET%
 echo.
@@ -2680,9 +2693,8 @@ set "PROFIL_USAGE_TMP="
 set "SKIP_PAUSE=!SKIP_PAUSE_TMP!"
 set "SKIP_PAUSE_TMP="
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages Performance max demandes : protections reduites.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Un redemarrage est necessaire pour finaliser les reglages.%COLOR_RESET%
 
-call :FINISH_ACTION "Reglages du mode Performance max" "traites"
+call :FINISH_ACTION "Profil Performance max" "applique"
 goto :TOGGLE_PROTECTIONS_NOYAU
 
 :PROTECTIONS_RETURN
@@ -3747,13 +3759,8 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Strategie anti-reinstallation
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Verification finale de la desinstallation...%COLOR_RESET%
 set "EDGE_REMOVE_OK=1"
-if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" (
-    set "EDGE_REMOVE_OK=0"
-) else (
-    if defined ProgramFiles(x86) if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" (
-        set "EDGE_REMOVE_OK=0"
-    )
-)
+if exist "%ProgramFiles%\Microsoft\Edge\Application\msedge.exe" set "EDGE_REMOVE_OK=0"
+if defined ProgramFiles(x86) if exist "%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe" set "EDGE_REMOVE_OK=0"
 
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
