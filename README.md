@@ -112,46 +112,24 @@ Exceptions réseau :
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance, avec choix d'usage pour appliquer le bon tuning NIC.
 - **[8] Sécurité** : Choix entre 3 profils pour VBS/HVCI/CFG/SEHOP, mitigations processeur, LSA/Credential Guard, hyperviseur BCD et liste de pilotes vulnérables.
 
-| Profil | VBS | HVCI | CFG système | SEHOP | Mitigations CPU | LSA Protection | Credential Guard | Blocklist | Hyperviseur BCD |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **1 - Défaut Windows** | ON, Secure Boot requis | ON | `NOTSET` (défaut effectif ON) | Défaut Windows (ON) | Microsoft (`0/3`) | ON (`RunAsPPL=2`) | Non configuré | ON | `Auto` |
-| **2 - Gaming ★** | ON, sans exigence plateforme | ON | `NOTSET` (défaut effectif ON) | OFF | Réduites (`33554435/3`) | Non configurée localement | OFF local/policy | OFF demandé | `Auto` |
-| **3 - Perf Max ⚠️** | ON, sans exigence plateforme | OFF | `NOTSET` (défaut effectif ON) | OFF | Réduites (`33554435/3`) | Non configurée localement | OFF local/policy | OFF demandé | `Auto` |
+| Profil | Sécurité VBS / HVCI | Anti-Cheats (Valorant / FACEIT) | Usage Recommandé |
+| :--- | :---: | :---: | :--- |
+| **1 - Défaut Windows** | ✅ Activé | ✅ 100% Compatible | Sécurité maximale & comportement d'origine |
+| **2 - Gaming (Recommandé) ★** | ✅ Activé | ✅ 100% Compatible | Équilibre parfait : performances poussées et compatibilité anti-cheat totale |
+| **3 - Performance Max ⚠️** | ❌ Allégé | ⚠️ Selon les jeux | Gain maximal pour les machines dédiées exclusivement à la performance brute |
 
-#### Matrice technique détaillée
+> ### 💡 Vue d'ensemble des 3 profils
+>
+> * **Gaming (Recommandé ★)** : Conserve **VBS / HVCI** (compatibilité anti-cheat 100%), laisse **CFG** à `NOTSET` (défaut Windows), désactive **SEHOP**, réduit les mitigations CPU et demande la désactivation de la blocklist.
+> * **Défaut Windows** : Réinitialise toutes les protections contre les exploits en supprimant `MitigationOptions` et `MitigationAuditOptions`. Applique la base VBS/HVCI, les mitigations CPU Microsoft, la LSA Protection (sans verrou UEFI) et la blocklist.
+> * **Performance Max ⚠️ (Déconseillé)** : Conserve VBS et CFG, mais désactive **HVCI** et **SEHOP**, réduit les mitigations CPU et demande la désactivation de la blocklist.
 
-| Réglage géré | Défaut Windows | Gaming | Performance Max |
-|---|---|---|---|
-| `EnableVirtualizationBasedSecurity` local | `1` | `1` | `1` |
-| `RequirePlatformSecurityFeatures` local | `1` (Secure Boot) | `0` | `0` |
-| Stratégies VBS/HVCI | Valeurs supprimées | Valeurs supprimées | VBS/HVCI supprimées, exigence plateforme `0` |
-| HVCI `Enabled` | `1` | `1` | `0` |
-| HVCI `Locked` / `WasEnabledBy` | `0` / `2` | `0` / `2` | `0` / `2` |
-| CFG dans `MitigationOptions` | Valeur entière supprimée | Champs CFG effacés uniquement | Champs CFG effacés uniquement |
-| Résultat CFG attendu | `NOTSET`, défaut Windows ON | `NOTSET`, défaut Windows ON | `NOTSET`, défaut Windows ON |
-| SEHOP dans `MitigationOptions` | Valeur entière supprimée, défaut Windows | OFF ciblé | OFF ciblé |
-| `KernelSEHOPEnabled` / `DisableExceptionChainValidation` | Valeurs supprimées | `0` / `1` | `0` / `1` |
-| `MitigationAuditOptions` | Valeur supprimée, défaut Windows | Inchangée | Inchangée |
-| `FeatureSettings` | Valeur supprimée | `0` | `0` |
-| `FeatureSettingsOverride` / masque | `0` / `3` | `33554435` / `3` | `33554435` / `3` |
-| Anciens réglages CPU (`MoveImages`, GDS, KVA, STIBP, Retpoline, etc.) | Supprimés | Supprimés | Supprimés |
-| `RunAsPPL` / `RunAsPPLBoot` local | `2` / valeur supprimée | Valeurs supprimées | Valeurs supprimées |
-| `RunAsPPL` stratégie | Valeur supprimée | Valeur supprimée | Valeur supprimée |
-| `LsaCfgFlags` local / stratégie | Valeurs supprimées | `0` / `0` | `0` / `0` |
-| `VulnerableDriverBlocklistEnable` | `1` | `0` demandé | `0` demandé |
-| `WHQLSettings` | Valeur supprimée | Valeur supprimée | Valeur supprimée |
-| `hypervisorlaunchtype` | `Auto` | `Auto` | `Auto` |
-| Kernel Shadow Stacks | Inchangées | Inchangées | Inchangées |
-
-> **Gaming** est le profil **recommandé**. Il conserve VBS/HVCI, laisse CFG au vrai réglage Windows `NOTSET`, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist.
-> **Défaut Windows** supprime `MitigationOptions` et `MitigationAuditOptions` afin de rendre toutes les protections système contre les exploits à Windows. Il applique en parallèle la base explicite VBS/HVCI, les mitigations CPU Microsoft, LSA Protection sans verrou UEFI et la blocklist.
-> **Performance Max ⚠️ — Déconseillé.** Il conserve VBS et CFG au défaut Windows, mais désactive HVCI/SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist.
-
-> La matrice décrit les valeurs demandées par le script. Le matériel, une stratégie d'entreprise ou un verrou UEFI peuvent modifier l'état réellement actif après redémarrage.
-> Gaming conserve HVCI actif. Windows impose normalement la blocklist lorsque HVCI, Smart App Control ou le mode S est actif ; la valeur `0` de Gaming ne garantit donc pas un état effectif OFF. Smart App Control ou le mode S peuvent également neutraliser la demande OFF de Performance Max.
-> Gaming et Performance Max modifient uniquement les champs CFG et SEHOP dans `MitigationOptions`, afin de préserver les autres mitigations de processus. Défaut Windows supprime entièrement `MitigationOptions` et `MitigationAuditOptions`, ce qui remet toutes ces mitigations au comportement natif de Windows.
-> Pour les mitigations CPU, `0/3` et `33554435/3` correspondent respectivement à `FeatureSettingsOverride/FeatureSettingsOverrideMask`. Défaut Windows supprime `FeatureSettings` ; Gaming et Performance Max fixent `FeatureSettings=0`. Le preset performance conserve son ancien bit GDS/Downfall, même si les versions Windows actuelles peuvent l'ignorer.
-> Chaque profil écrit ou supprime explicitement chaque réglage qu'il gère. Le parcours complet sélectionne Défaut Windows pour l'usage Normal et Gaming pour l'usage Gaming ; Performance Max reste sélectionnable depuis le menu de sécurité.
+> ### 🔍 Notes & Précisions techniques
+>
+> * **Champs modifiés** : *Gaming* et *Performance Max* modifient uniquement CFG et SEHOP dans `MitigationOptions` pour préserver les autres mitigations de processus. *Défaut Windows* réinitialise l'intégralité du champ au comportement natif de Windows.
+> * **Mitigations CPU (Spectre/Meltdown)** : `0/3` correspond au profil *Défaut Windows* (mitigations Microsoft activées d'origine : `FeatureSettingsOverride=0`, `Mask=3`). `33554435/3` (0x2000003) correspond aux profils *Gaming* et *Perf Max* (mitigations réduites/désactivées pour libérer des performances processeur).
+> * **Blocklist de pilotes** : *Gaming* conserve HVCI actif. Si HVCI, Smart App Control ou le mode S restent actifs, Windows peut continuer d'imposer la blocklist même si la désactivation a été demandée.
+> * **Application automatique** : Le mode automatique **[O]** sélectionne *Défaut Windows* en usage Normal et *Gaming* en usage Gaming. *Performance Max* reste accessible séparément depuis le menu Sécurité.
 
 ### 🧰 Outils & Utilitaires
 
