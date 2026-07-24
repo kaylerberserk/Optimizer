@@ -20,21 +20,30 @@ if ($baseUri.Scheme -ne "https" -or
 }
 $BaseUrl = $baseUri.AbsoluteUri.TrimEnd("/")
 if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    $ps = if (Get-Command pwsh -ea 0) { "pwsh" } else { "powershell" }
+    $ps = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
+    $baseUrlData = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl))
     if ($PSCommandPath -and (Test-Path -LiteralPath $PSCommandPath)) {
-        $arguments = "-NoP -EP Bypass -File `"$PSCommandPath`" -BaseUrl `"$BaseUrl`""
-    } else {
-        $baseUrlData = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl))
+        $scriptPathData = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($PSCommandPath))
         $childScript = @"
+`$ErrorActionPreference = 'Stop'
 `$baseUrl = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$baseUrlData'))
-`$launcher = Invoke-RestMethod (`$baseUrl + '/launcher.ps1')
-& ([scriptblock]::Create(`$launcher)) -BaseUrl `$baseUrl
+`$scriptPath = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$scriptPathData'))
+try { & `$scriptPath -BaseUrl `$baseUrl } catch { exit 1 }
 "@
-        $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
-        $arguments = "-NoP -EP Bypass -EncodedCommand $encodedCommand"
+    } else {
+        $childScript = @"
+`$ErrorActionPreference = 'Stop'
+`$baseUrl = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$baseUrlData'))
+try {
+    `$launcher = Invoke-RestMethod (`$baseUrl + '/launcher.ps1')
+    & ([scriptblock]::Create(`$launcher)) -BaseUrl `$baseUrl
+} catch { exit 1 }
+"@
     }
+    $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedCommand)
     try {
-        $process = Start-Process $ps -ArgumentList $arguments -Verb RunAs -Wait -PassThru
+        $process = Start-Process -FilePath $ps -ArgumentList $arguments -Verb RunAs -Wait -PassThru -ErrorAction Stop
         exit $process.ExitCode
     } catch {
         Write-Host "[ERREUR] Elevation administrateur annulee ou impossible." -ForegroundColor Red
@@ -74,17 +83,14 @@ try {
     exit 1
 }
 
-$hasBom = ($scriptBytes.Length -ge 3 -and $scriptBytes[0] -eq 0xEF -and $scriptBytes[1] -eq 0xBB -and $scriptBytes[2] -eq 0xBF) -or
-    ($scriptBytes.Length -ge 2 -and (($scriptBytes[0] -eq 0xFF -and $scriptBytes[1] -eq 0xFE) -or
-    ($scriptBytes[0] -eq 0xFE -and $scriptBytes[1] -eq 0xFF)))
-$hasNonAscii = $false
+$hasInvalidEncoding = $false
 foreach ($byte in $scriptBytes) {
-    if ($byte -gt 0x7F) {
-        $hasNonAscii = $true
+    if ($byte -eq 0 -or $byte -gt 0x7F) {
+        $hasInvalidEncoding = $true
         break
     }
 }
-if ($hasBom -or $hasNonAscii) {
+if ($hasInvalidEncoding) {
     Write-Host "[ERREUR] Le script doit etre en ASCII sans BOM." -ForegroundColor Red
     if ($downloaded) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
     Read-Host "Appuyez sur Entree pour quitter"
@@ -117,8 +123,10 @@ if ($firstLine -notmatch '^@echo off\s*$' -or $scriptContent.Length -lt 100000 -
 
 $exitCode = 1
 try {
-    & $env:ComSpec /d /e:on /c "`"$scriptPath`""
-    $exitCode = $LASTEXITCODE
+    $quote = [char]34
+    $cmdArguments = "/d /e:on /v:off /s /c $quote$quote$scriptPath$quote$quote"
+    $process = Start-Process -FilePath $env:ComSpec -ArgumentList $cmdArguments -Wait -PassThru -NoNewWindow -ErrorAction Stop
+    $exitCode = $process.ExitCode
 } finally {
     if ($downloaded) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
 }

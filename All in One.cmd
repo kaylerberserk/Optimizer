@@ -14,7 +14,7 @@ if "%WINOPT_PS_MISSING%"=="1" exit /b 1
 :: Contrat du batch : ASCII 7 bits, sans BOM et fins de ligne CRLF.
 :: GitHub sert les fichiers bruts en LF : verifier le format avant le premier GOTO/CALL,
 :: relancer une copie CRLF si necessaire, puis transmettre son code retour.
-powershell -NoProfile -Command "try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);$bom=($b.Length-ge3-and$b[0]-eq239-and$b[1]-eq187-and$b[2]-eq191)-or($b.Length-ge2-and(($b[0]-eq255-and$b[1]-eq254)-or($b[0]-eq254-and$b[1]-eq255)));if($bom){exit 44};for($i=0;$i-lt$b.Length;$i++){if($b[$i]-gt127){exit 44};if(($b[$i]-eq10-and($i-eq0-or$b[$i-1]-ne13))-or($b[$i]-eq13-and($i+1-ge$b.Length-or$b[$i+1]-ne10))){exit 42}};exit 0}catch{exit 43}" >nul 2>&1
+powershell -NoProfile -Command "try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);for($i=0;$i-lt$b.Length;$i++){if($b[$i]-eq0-or$b[$i]-gt127){exit 44};if(($b[$i]-eq10-and($i-eq0-or$b[$i-1]-ne13))-or($b[$i]-eq13-and($i+1-ge$b.Length-or$b[$i+1]-ne10))){exit 42}};exit 0}catch{exit 43}" >nul 2>&1
 set "WINOPT_FORMAT_RC=%errorlevel%"
 if "%WINOPT_FORMAT_RC%"=="43" echo [ERREUR] Impossible de lire ou verifier le format du script.
 if "%WINOPT_FORMAT_RC%"=="43" pause
@@ -25,9 +25,12 @@ if "%WINOPT_FORMAT_RC%"=="44" exit /b 1
 if not "%WINOPT_FORMAT_RC%"=="0" if not "%WINOPT_FORMAT_RC%"=="42" echo [ERREUR] Verification du format terminee avec le code %WINOPT_FORMAT_RC%.
 if not "%WINOPT_FORMAT_RC%"=="0" if not "%WINOPT_FORMAT_RC%"=="42" pause
 if not "%WINOPT_FORMAT_RC%"=="0" if not "%WINOPT_FORMAT_RC%"=="42" exit /b 1
-if "%WINOPT_FORMAT_RC%"=="42" powershell -NoProfile -Command "$tmp=Join-Path $env:TEMP ('WindowsOptimizer_crlf_'+[guid]::NewGuid().ToString('N')+'.cmd');try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);$c=[Text.Encoding]::ASCII.GetString($b);$crlf=[string][char]13+[char]10;$c=[regex]::Replace($c,'\r\n|\r|\n',$crlf);[IO.File]::WriteAllText($tmp,$c,[Text.Encoding]::ASCII);$p=Start-Process -FilePath $env:ComSpec -ArgumentList @('/d','/e:on','/c',([char]34+$tmp+[char]34)) -Wait -PassThru -NoNewWindow;exit $p.ExitCode}catch{Write-Host '[ERREUR] Impossible de preparer la copie CRLF du script.' -ForegroundColor Red;exit 1}finally{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue}"
-if "%WINOPT_FORMAT_RC%"=="42" set "WINOPT_RELAUNCH_RC=%errorlevel%"
-if "%WINOPT_FORMAT_RC%"=="42" exit /b %WINOPT_RELAUNCH_RC%
+if "%WINOPT_FORMAT_RC%"=="42" powershell -NoProfile -Command "$tmp=Join-Path $env:TEMP ('WindowsOptimizer_crlf_'+[guid]::NewGuid().ToString('N')+'.cmd');try{$b=[IO.File]::ReadAllBytes($env:WINOPT_SELF);$c=[Text.Encoding]::ASCII.GetString($b);$crlf=[string][char]13+[char]10;$c=[regex]::Replace($c,'\r\n|\r|\n',$crlf);[IO.File]::WriteAllText($tmp,$c,[Text.Encoding]::ASCII);$q=[char]34;$a='/d /e:on /v:off /s /c '+$q+$q+$tmp+$q+$q;$p=Start-Process -FilePath $env:ComSpec -ArgumentList $a -Wait -PassThru -NoNewWindow;exit $p.ExitCode}catch{Write-Host '[ERREUR] Impossible de preparer la copie CRLF du script.' -ForegroundColor Red;exit 1}finally{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue}"
+if not "%WINOPT_FORMAT_RC%"=="42" goto :WINOPT_FORMAT_READY
+set "WINOPT_RELAUNCH_RC=%errorlevel%"
+exit /b %WINOPT_RELAUNCH_RC%
+
+:WINOPT_FORMAT_READY
 
 set "WINOPT_SELF="
 set "WINOPT_PS_MISSING="
@@ -265,7 +268,7 @@ set "WINOPT_HW_FILE="
 :: Detection intelligente NVIDIA : verifie que le GPU est physique (pas un GPU virtuel de VM)
 set "HAS_NVIDIA=0"
 echo !HW_GPU! | findstr /i "NVIDIA" >nul && (
-    for /f "usebackq delims=" %%V in (`powershell -NoProfile -Command "try { $v=Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' -and $_.Name -notmatch 'Virtual|Parsec|Remote|Indirect|Mirror|Microsoft Basic' }; if(-not $v){ '0'; exit }; $m=Get-CimInstance Win32_ComputerSystem; if($m.Model -match 'Virtual|VMware|VirtualBox|KVM|QEMU|Xen|Parallels'){ '0'; exit }; '1' } catch { '0' }"`) do set "HAS_NVIDIA=%%V"
+    for /f "usebackq delims=" %%V in (`powershell -NoProfile -Command "try { $v=Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' -and $_.Name -notmatch 'Virtual|Parsec|Remote|Indirect|Mirror|Microsoft Basic' }; if(-not $v){ '0'; exit }; $m=Get-CimInstance Win32_ComputerSystem; if($m.Model -match 'Virtual|VMware|VirtualBox|KVM|QEMU|Xen|Parallels'){ '0'; exit }; '1' } catch { '0' }" 2^>nul`) do set "HAS_NVIDIA=%%V"
     if not defined HAS_NVIDIA set "HAS_NVIDIA=0"
     if not "!HAS_NVIDIA!"=="1" set "HAS_NVIDIA=0"
 )
@@ -1032,13 +1035,16 @@ attrib -r "%HOSTS%" >nul 2>&1
 REM  Backup du fichier hosts avant modification
 copy /Y "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
 REM  Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
-powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h='%HOSTS%';$tmp=[System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($h),([System.IO.Path]::GetFileName($h)+'.'+[guid]::NewGuid().ToString('N')+'.tmp'));$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path -LiteralPath $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII)}else{$cur=''};$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;if(Test-Path -LiteralPath $h){(Get-Item -LiteralPath $h).Attributes='Normal'};[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);[System.IO.File]::Copy($tmp,$h,$true);Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 0}catch{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 1}"
-
-if !errorlevel! EQU 0 echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Bloc de telemetrie ajoute au fichier hosts%COLOR_RESET%
-if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Fichier hosts non modifie.%COLOR_RESET%
-if !errorlevel! NEQ 0 echo %COLOR_WHITE%Les autres reglages continuent.%COLOR_RESET%
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h=$env:HOSTS;$tmp=[System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($h),([System.IO.Path]::GetFileName($h)+'.'+[guid]::NewGuid().ToString('N')+'.tmp'));$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path -LiteralPath $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII)}else{$cur=''};$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;if(Test-Path -LiteralPath $h){(Get-Item -LiteralPath $h).Attributes='Normal'};[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);[System.IO.File]::Copy($tmp,$h,$true);Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 0}catch{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 1}" >nul 2>&1
+set "HOSTS_RC=!errorlevel!"
+if "!HOSTS_RC!"=="0" (
+    echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Bloc de telemetrie ajoute au fichier hosts%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Fichier hosts non modifie. Les autres reglages continuent.%COLOR_RESET%
+)
 attrib +r "%HOSTS%" >nul 2>&1
 if not "!AIO_MODE!"=="1" ipconfig /flushdns >nul 2>&1
+set "HOSTS_RC="
 set "HOSTS="
 
 REM  1.6 - Services optimises
@@ -1204,7 +1210,7 @@ REM  1.10 - Desactivation du stockage reserve
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation du stockage reserve Windows...%COLOR_RESET%
 reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\ReserveManager" /v PassedPolicy /t REG_DWORD /d 0 /f >nul 2>&1
 powershell -NoProfile -Command "try { Set-WindowsReservedStorageState -State Disabled -ErrorAction SilentlyContinue } catch {}" >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Desactivation du stockage reserve demandee.
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Desactivation du stockage reserve demandee.%COLOR_RESET%
 echo %COLOR_WHITE%Windows appliquera ce reglage selon son etat.%COLOR_RESET%
 
 REM  1.11 - Desactivation P2P Windows Update (Delivery Optimization)
@@ -1323,7 +1329,7 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%FTH desactive selon le profil
 REM  2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de la detection de la RAM...%COLOR_RESET%
 set "RAM_GB=0"
-for /f %%A in ('powershell -NoProfile -Command "[math]::Round(((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum) / 1GB, 0)"') do if not "%%A"=="" set "RAM_GB=%%A"
+for /f %%A in ('powershell -NoProfile -Command "[math]::Round(((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum) / 1GB, 0)" 2^>nul') do if not "%%A"=="" set "RAM_GB=%%A"
 echo %COLOR_WHITE%   RAM detectee : !RAM_GB! Go%COLOR_RESET%
 if "!PROFIL_POWER!"=="1" (
     echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Profil Economie : Reactivation de la compression memoire...%COLOR_RESET%
@@ -1373,12 +1379,12 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%TRIM actif et reglages NTFS c
 REM  3.2 - Chemins longs NTFS
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation des chemins longs de plus de 260 caracteres...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\FileSystem" /v LongPathsEnabled /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Support des chemins longs demande actif%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Activation demandee : support des chemins longs.%COLOR_RESET%
 
 REM  3.3 - TRIM sur volumes SSD
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de la verification du TRIM...%COLOR_RESET%
 set "TRIM_STATUS="
-for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'WindowsOptimizer'; $oldStampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $oldStampFile=Join-Path $oldStampDir 'last_retrim.txt'; if((Test-Path $oldStampFile) -and -not (Test-Path $stampFile)){ if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; Move-Item -Path $oldStampFile -Destination $stampFile -Force -ErrorAction SilentlyContinue }; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -ne 'HDD' -and $_.OperationalStatus -eq 'OK' -and $_.BusType -notin @('Virtual','FileBackedVirtual') }; if(-not $ssds -or $ssds.Count -eq 0){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and ($_.FileSystem -in @('NTFS','ReFS')) }; $done=$false; foreach($v in $vols){ $part=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue; if($part){ $phys=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.DeviceId -eq $part.DiskNumber }; if($phys -and $phys.MediaType -ne 'HDD' -and $phys.BusType -notin @('Virtual','FileBackedVirtual')){ try { Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction Stop | Out-Null; $done=$true } catch {} } } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }"`) do set "TRIM_STATUS=%%a"
+for /f "usebackq delims=" %%a in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "$stampDir=Join-Path $env:ProgramData 'WindowsOptimizer'; $oldStampDir=Join-Path $env:ProgramData 'OptimizerAllInOne'; $stampFile=Join-Path $stampDir 'last_retrim.txt'; $oldStampFile=Join-Path $oldStampDir 'last_retrim.txt'; if((Test-Path $oldStampFile) -and -not (Test-Path $stampFile)){ if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; Move-Item -Path $oldStampFile -Destination $stampFile -Force -ErrorAction SilentlyContinue }; $ssds=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.MediaType -ne 'HDD' -and $_.OperationalStatus -eq 'OK' -and $_.BusType -notin @('Virtual','FileBackedVirtual') }; if(-not $ssds -or $ssds.Count -eq 0){ 'NO_SSD'; exit 0 }; if((Test-Path $stampFile) -and ((Get-Date) - (Get-Item $stampFile).LastWriteTime).TotalDays -lt 30){ 'SKIP_RECENT'; exit 0 }; if(-not (Test-Path $stampDir)){ New-Item -ItemType Directory -Path $stampDir -Force | Out-Null }; $vols=Get-Volume -ErrorAction SilentlyContinue | Where-Object { $_.DriveLetter -and ($_.FileSystem -in @('NTFS','ReFS')) }; $done=$false; foreach($v in $vols){ $part=Get-Partition -DriveLetter $v.DriveLetter -ErrorAction SilentlyContinue; if($part){ $phys=Get-PhysicalDisk -ErrorAction SilentlyContinue | Where-Object { $_.DeviceId -eq $part.DiskNumber }; if($phys -and $phys.MediaType -ne 'HDD' -and $phys.BusType -notin @('Virtual','FileBackedVirtual')){ try { Optimize-Volume -DriveLetter $v.DriveLetter -ReTrim -ErrorAction Stop | Out-Null; $done=$true } catch {} } } }; if($done){ Set-Content -Path $stampFile -Value (Get-Date -Format s) -Force; 'TRIM_DONE' } else { 'NO_SSD' }" 2^>nul`) do set "TRIM_STATUS=%%a"
 if not defined TRIM_STATUS (
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Passage TRIM ignore ; le script continue.%COLOR_RESET%
 ) else if "%TRIM_STATUS%"=="TRIM_DONE" (
@@ -1409,7 +1415,7 @@ echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation de la mainten
 REM  Windows 11 detecte automatiquement les SSD et effectue du TRIM au lieu de defragmentation
 REM  Il est important de NE PAS desactiver cette tache pour maintenir le TRIM automatique
 schtasks /Change /TN "Microsoft\Windows\Defrag\ScheduledDefrag" /Enable >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Maintenance Windows des disques demandee active%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Activation demandee : maintenance automatique des disques.%COLOR_RESET%
 
 call :FINISH_ACTION "Reglages disques" "traites"
 exit /b 0
@@ -1512,7 +1518,7 @@ echo %COLOR_WHITE%Des saccades sont possibles selon la configuration.%COLOR_RESE
 REM  4.7 - Preemption GPU
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation de la gestion des priorites GPU...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler" /v EnablePreemption /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Gestion des priorites GPU demandee au pilote%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglage des priorites demande au pilote GPU.%COLOR_RESET%
 
 REM  4.8 - NVIDIA Profile Inspector
 REM  Cette section applique un profil d'optimisation NVIDIA pour reduire l'input lag.
@@ -1630,7 +1636,7 @@ if "!SKIP_PAUSE!"=="0" if "!DETECTE_PORTABLE!"=="1" (
 if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%GAMING%COLOR_RESET%%COLOR_WHITE% : connexion et carte reseau reglees pour la reactivite.%COLOR_RESET%
 ) else (
-    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% : connexion, stabilite et autonomie preservees.%COLOR_RESET%
+    echo %COLOR_WHITE%  Profil actif : %STYLE_BOLD%NORMAL%COLOR_RESET%%COLOR_WHITE% : connexion et stabilite preservees.%COLOR_RESET%
 )
 if "!PROFIL_POWER!"=="0" (
     echo %COLOR_WHITE%  Energie active : %STYLE_BOLD%Performance max%COLOR_RESET%%COLOR_WHITE% : economies de la carte reduites.%COLOR_RESET%
@@ -2170,8 +2176,19 @@ if exist "%STR_EXE%" (
 if exist "%STR_EXE%" (
     taskkill /F /IM SetTimerResolution.exe >nul 2>&1
     call :CREATE_STR_STARTUP_SHORTCUT
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution lance avec une resolution de 5070.%COLOR_RESET%
-    start "" "%STR_EXE%" --resolution 5070 --no-console
+    if !errorlevel! EQU 0 (
+        echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Raccourci SetTimerResolution configure au demarrage.%COLOR_RESET%
+    ) else (
+        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Raccourci de demarrage non cree ; le lancement continue.%COLOR_RESET%
+    )
+    start "" /D "%STR_DIR%" "%STR_EXE%" --resolution 5070 --no-console >nul 2>&1
+    set "STR_START_RC=!errorlevel!"
+    if "!STR_START_RC!"=="0" (
+        echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Lancement de SetTimerResolution demande avec une resolution de 5070.%COLOR_RESET%
+    ) else (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution n'a pas pu etre lance.%COLOR_RESET%
+    )
+    set "STR_START_RC="
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Cette resolution peut augmenter les reveils du processeur.%COLOR_RESET%
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Le mode Eco permet de la desactiver.%COLOR_RESET%
 )
@@ -2378,8 +2395,6 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages d'economie de la car
 
 REM  7.12 - Visibilite des parametres processeur dans le panneau
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilite des parametres processeur...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\93b8b6dc-0698-4d1c-9ee4-0644e900c85d" /v Attributes /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318584" /v Attributes /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power\PowerSettings\54533251-82be-4824-96c1-47b60b740d00\0cc5b647-c1df-4637-891a-dec35c318583" /v Attributes /f >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Visibilite des parametres restauree%COLOR_RESET%
 
@@ -2635,7 +2650,6 @@ echo %COLOR_CYAN%===============================================================
 echo.
 REM Applique integralement le profil Defaut Windows, quel que soit le profil precedent.
 call :RESTAURER_PROTECTIONS_SECURITE
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Standard de securite Windows 11 applique.%COLOR_RESET%
 call :FINISH_ACTION "Profil Defaut Windows" "applique"
 goto :TOGGLE_PROTECTIONS_NOYAU
 
@@ -3121,7 +3135,6 @@ echo %STYLE_BOLD%%COLOR_WHITE% GERER COPILOT, WIDGETS ET RECALL WINDOWS 11%COLOR
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Ces fonctions concernent Windows 11 ; elles restent sans effet sur Windows 10.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Sur Windows 10, aucune modification ne sera appliquee.%COLOR_RESET%
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- COPILOT ---%COLOR_RESET%
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer : Copilot%COLOR_RESET%
@@ -3515,7 +3528,7 @@ taskkill /f /im OneDriveStandaloneUpdater.exe >nul 2>&1
 timeout /t 3 /nobreak >nul
 taskkill /f /im explorer.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
-start explorer.exe
+start "" explorer.exe >nul 2>&1
 timeout /t 3 /nobreak >nul
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Processus OneDrive arretes.%COLOR_RESET%
 
@@ -3568,7 +3581,6 @@ for /f "tokens=1 delims=," %%x in ('schtasks /query /fo csv 2^>nul ^| find "OneD
 )
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Taches planifiees OneDrive supprimees.%COLOR_RESET%
 
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Traitement du desinstalleur OneDrive termine.%COLOR_RESET%
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Etape 6 sur 7 : nettoyage des dossiers OneDrive restants...%COLOR_RESET%
 if exist "%AppData%\Microsoft\OneDrive" rd "%AppData%\Microsoft\OneDrive" /q /s >nul 2>&1
 if exist "%SystemDrive%\OneDriveTemp" rd "%SystemDrive%\OneDriveTemp" /q /s >nul 2>&1
@@ -3837,7 +3849,7 @@ echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Creation d'un point de r
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%La creation peut prendre jusqu'a 60 secondes.%COLOR_RESET%
 echo.
 
-for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss"') do set "RP_TIMESTAMP=%%a"
+for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format yyyy-MM-dd_HH-mm-ss" 2^>nul') do set "RP_TIMESTAMP=%%a"
 powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $key='HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'; $name='SystemRestorePointCreationFrequency'; $had=$false; $old=$null; $ok=$false; try { $p=Get-ItemProperty -LiteralPath $key -ErrorAction Stop; $had=$p.PSObject.Properties.Name -contains $name; if($had){$old=$p.$name; Set-ItemProperty -LiteralPath $key -Name $name -Value 0 -ErrorAction Stop}else{New-ItemProperty -LiteralPath $key -Name $name -PropertyType DWord -Value 0 -Force -ErrorAction Stop | Out-Null}; Checkpoint-Computer -Description 'Optimizations_%RP_TIMESTAMP%' -RestorePointType 'MODIFY_SETTINGS' -ErrorAction Stop; $ok=$true } catch { $ok=$false } finally { try { if($had){Set-ItemProperty -LiteralPath $key -Name $name -Value $old -ErrorAction Stop}else{Remove-ItemProperty -LiteralPath $key -Name $name -ErrorAction SilentlyContinue} } catch { $ok=$false } }; if($ok){exit 0}else{exit 1}" >nul 2>&1
 if !errorlevel! EQU 0 (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Point de restauration cree avec succes.%COLOR_RESET%
@@ -3859,7 +3871,7 @@ echo.
 
 REM  Analyse espace initial
 set "SPACE_BEFORE_MB="
-for /f %%a in ('powershell -NoProfile -NoLogo -Command "[int]((Get-PSDrive -Name '%SystemDrive:~0,1%').Free / 1MB)"') do set "SPACE_BEFORE_MB=%%a"
+for /f %%a in ('powershell -NoProfile -NoLogo -Command "[int]((Get-PSDrive -Name '%SystemDrive:~0,1%').Free / 1MB)" 2^>nul') do set "SPACE_BEFORE_MB=%%a"
 if defined SPACE_BEFORE_MB (
     set "SPACE_MEASURE_OK=1"
 ) else (
@@ -4134,7 +4146,7 @@ powershell -NoProfile -Command "$cache=npm config get cache 2>$null; if($cache -
 
 REM  Calcul final (PowerShell pour la precision des decimales)
 if "%SPACE_MEASURE_OK%"=="1" (
-    for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ('{0} {1} {2}' -f $beforeGB,$afterGB,$freedGB)"') do (
+    for /f "tokens=1-3" %%a in ('powershell -NoProfile -Command "$before=[long]%SPACE_BEFORE_MB% * 1024 * 1024; $after=(Get-PSDrive -Name '%SystemDrive:~0,1%').Free; $freed=$after-$before; if($freed -lt 0){$freed=0}; $beforeGB=[math]::Round($before/1GB, 2); $afterGB=[math]::Round($after/1GB, 2); $freedGB=[math]::Round($freed/1GB, 2); Write-Output ('{0} {1} {2}' -f $beforeGB,$afterGB,$freedGB)" 2^>nul') do (
         set "SPACE_BEFORE_GB=%%a"
         set "SPACE_AFTER_GB=%%b"
         set "SPACE_FREED_GB=%%c"
@@ -4214,7 +4226,7 @@ set /a "VC_STEP=0"
 
 REM  Creer un dossier temporaire pour les installations
 set "VCREDIST_DIR=%TEMP%\VCRedistInstall_%RANDOM%_%RANDOM%"
-if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%"
+if not exist "%VCREDIST_DIR%" mkdir "%VCREDIST_DIR%" >nul 2>&1
 
 REM  Visual C++ v14 actuel x86
 set /a "VC_STEP+=1"
@@ -4284,7 +4296,7 @@ if "%DX_INSTALLED%"=="1" (
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de l'installation...%COLOR_RESET%
 set "DX_TEMP=%TEMP%\DirectXInstall_%RANDOM%_%RANDOM%"
-mkdir "%DX_TEMP%"
+mkdir "%DX_TEMP%" >nul 2>&1
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Telechargement de DirectX Redist June 2010, environ 95 Mo...%COLOR_RESET%
 powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f=Join-Path $env:DX_TEMP 'directx_redist.exe'; Invoke-WebRequest -Uri 'https://download.microsoft.com/download/8/4/A/84A35BF1-DAFE-4AE8-82AF-AD2AE20B6B14/directx_Jun2010_redist.exe' -OutFile $f -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 80000000){throw 'size'};$s=Get-AuthenticodeSignature -LiteralPath $f;if($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'Microsoft'){throw 'signature'};exit 0 } catch { Remove-Item -LiteralPath $f -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
@@ -4359,7 +4371,7 @@ echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Les applications selec
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Calculatrice, Store, Photos et Notes sont conserves.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Supprimes : News, Solitaire, Skype, People, Family et Candy Crush.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Supprimes aussi : Assistance, Maps, Office et Feedback.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Supprimes aussi : Assistance, Maps, Office, Mixed Reality et Feedback.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Conserves : Courrier, Meteo, Musique, Video, Calculatrice, Store, Photos et Notes.%COLOR_RESET%
 echo.
 <nul set /p ="%COLOR_YELLOW%Votre choix [O/N] : %COLOR_RESET%"
@@ -4372,9 +4384,34 @@ echo %STYLE_BOLD%%COLOR_WHITE% EXECUTION - SUPPRESSION DES APPLICATIONS PREINSTA
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Recherche et suppression des applications preinstallees...%COLOR_RESET%
-powershell -NoProfile -Command "$apps = @('Microsoft.BingNews', 'Microsoft.MicrosoftOfficeHub', 'Microsoft.MicrosoftSolitaireCollection', 'Microsoft.SkypeApp', 'Microsoft.FeedbackHub', 'Microsoft.GetHelp', 'Microsoft.Getstarted', 'Microsoft.OneConnect', 'Microsoft.WindowsMaps', 'Microsoft.MixedReality.Portal', 'Microsoft.People', 'Microsoft.Family', 'King.CandyCrushSaga', 'King.CandyCrushSodaSaga', 'Microsoft.QuickAssist'); $prov = Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue; foreach ($app in $apps) { if (Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue) { Write-Host \"   [INFO] Suppression de : $app ...\" -ForegroundColor Cyan; Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue | Remove-AppxPackage -AllUsers -ErrorAction SilentlyContinue } else { Write-Host \"   [IGNORE] Non installe : $app\" -ForegroundColor DarkGray }; if ($prov) { $prov | Where-Object {$_.PackageName -match $app} | Remove-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue } }"
+set "APPX_RESULT_FILE=%TEMP%\WindowsOptimizer_appx_%RANDOM%_%RANDOM%.tmp"
+set "APPX_REMOVED=0"
+set "APPX_MISSING=0"
+set "APPX_FAILED=0"
+set "APPX_RESULT_OK=0"
+powershell -NoProfile -Command "$apps=@('Microsoft.BingNews','Microsoft.MicrosoftOfficeHub','Microsoft.MicrosoftSolitaireCollection','Microsoft.SkypeApp','Microsoft.FeedbackHub','Microsoft.GetHelp','Microsoft.Getstarted','Microsoft.OneConnect','Microsoft.WindowsMaps','Microsoft.MixedReality.Portal','Microsoft.People','Microsoft.Family','King.CandyCrushSaga','King.CandyCrushSodaSaga','Microsoft.QuickAssist');$removed=0;$missing=0;$failed=0;$prov=@(Get-AppxProvisionedPackage -Online -ErrorAction SilentlyContinue);foreach($app in $apps){$packages=@(Get-AppxPackage -Name $app -AllUsers -ErrorAction SilentlyContinue);$provisioned=@($prov|Where-Object{$_.DisplayName-eq$app-or$_.PackageName-like($app+'_*')});if($packages.Count-eq0-and$provisioned.Count-eq0){$missing++;Write-Host \"   [IGNORE] Non installe : $app\" -ForegroundColor DarkGray;continue};Write-Host \"   [INFO] Suppression de : $app ...\" -ForegroundColor Cyan;$appFailed=$false;foreach($package in $packages){try{$package|Remove-AppxPackage -AllUsers -ErrorAction Stop}catch{$appFailed=$true}};foreach($package in $provisioned){try{Remove-AppxProvisionedPackage -Online -PackageName $package.PackageName -ErrorAction Stop|Out-Null}catch{$appFailed=$true}};if($appFailed){$failed++;Write-Host \"   [AVERTISSEMENT] Suppression incomplete : $app\" -ForegroundColor Yellow}else{$removed++}};[IO.File]::WriteAllText($env:APPX_RESULT_FILE,($removed.ToString()+'|'+$missing.ToString()+'|'+$failed.ToString()),[Text.Encoding]::ASCII);if($failed-gt0){exit 1};exit 0"
+set "APPX_RC=!errorlevel!"
+if exist "!APPX_RESULT_FILE!" for /f "usebackq tokens=1-3 delims=^|" %%A in ("!APPX_RESULT_FILE!") do (
+    set "APPX_REMOVED=%%A"
+    set "APPX_MISSING=%%B"
+    set "APPX_FAILED=%%C"
+    set "APPX_RESULT_OK=1"
+)
+if exist "!APPX_RESULT_FILE!" del /f /q "!APPX_RESULT_FILE!" >nul 2>&1
 echo.
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Suppression des applications preinstallees terminee.%COLOR_RESET%
+if "!APPX_RESULT_OK!"=="0" (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Le bilan de suppression n'a pas pu etre etabli.%COLOR_RESET%
+) else if "!APPX_RC!"=="0" (
+    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%!APPX_REMOVED! application(s) traitee(s) ; !APPX_MISSING! deja absente(s).%COLOR_RESET%
+) else (
+    echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%!APPX_FAILED! application(s) non supprimee(s) completement ; !APPX_REMOVED! traitee(s), !APPX_MISSING! absente(s).%COLOR_RESET%
+)
+set "APPX_RESULT_FILE="
+set "APPX_REMOVED="
+set "APPX_MISSING="
+set "APPX_FAILED="
+set "APPX_RESULT_OK="
+set "APPX_RC="
 pause
 goto :MENU_GESTION_WINDOWS
 
@@ -4516,8 +4553,8 @@ if defined ProgramFiles(x86) (
 exit /b 0
 
 :CREATE_STR_STARTUP_SHORTCUT
-powershell -NoProfile -Command "$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%STR_STARTUP_LNK%'); $Shortcut.TargetPath = '%STR_EXE%'; $Shortcut.Arguments = '--resolution 5070 --no-console'; $Shortcut.WorkingDirectory = '%STR_DIR%'; $Shortcut.Description = 'SetTimerResolution - WindowsOptimizer'; $Shortcut.Save()" >nul 2>&1
-exit /b
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut($env:STR_STARTUP_LNK);$s.TargetPath=$env:STR_EXE;$s.Arguments='--resolution 5070 --no-console';$s.WorkingDirectory=$env:STR_DIR;$s.Description='SetTimerResolution - WindowsOptimizer';$s.Save();$v=$w.CreateShortcut($env:STR_STARTUP_LNK);if(-not(Test-Path -LiteralPath $env:STR_STARTUP_LNK)-or$v.TargetPath-ne$env:STR_EXE){exit 1};exit 0}catch{exit 1}" >nul 2>&1
+exit /b !errorlevel!
 
 :RUN_EDGE_UNINSTALLER
 pushd "%~1" >nul 2>&1
