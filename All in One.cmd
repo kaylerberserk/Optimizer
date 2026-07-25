@@ -1235,11 +1235,9 @@ reg add "HKCR\Typelib\{8cec5860-07a1-11d9-b15e-000d56bfe6ee}\1.0\0\win32" /ve /t
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Touche F1 desactivee pour eviter l'ouverture de l'aide%COLOR_RESET%
 
 REM  1.15 - Optimisations audio (latence)
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation des ameliorations audio...%COLOR_RESET%
-powershell -NoProfile -Command "$path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}'; Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { $p = $_.PSPath; New-ItemProperty -Path $p -Name 'FxNonDestructiveSoftMixer' -PropertyType DWord -Value 0 -Force -ErrorAction SilentlyContinue | Out-Null; New-ItemProperty -Path $p -Name 'FxRender' -PropertyType DWord -Value 0 -Force -ErrorAction SilentlyContinue | Out-Null; New-ItemProperty -Path $p -Name 'DisableAudioEndpointDucking' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } " >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Peripheriques audio ajustes%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Audio" /v ImmersiveAudio /t REG_DWORD /d 0 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Ameliorations audio desactivees. Latence potentiellement reduite%COLOR_RESET%
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation de l'attenuation audio Windows...%COLOR_RESET%
+powershell -NoProfile -Command "$path = 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e96c-e325-11ce-bfc1-08002be10318}'; Get-ChildItem -Path $path -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\d{4}$' } | ForEach-Object { New-ItemProperty -Path $_.PSPath -Name 'DisableAudioEndpointDucking' -PropertyType DWord -Value 1 -Force -ErrorAction SilentlyContinue | Out-Null } " >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Attenuation audio desactivee (Microphone et sons synchronises)%COLOR_RESET%
 
 REM  1.16 - Desactivation Windows Platform Binary Table (WPBT)
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation de WPBT pour limiter les logiciels preinstalles...%COLOR_RESET%
@@ -1701,11 +1699,15 @@ REM  5.3 - Parametres TCP registre
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Parametres TCP registre...%COLOR_RESET%
 if "!PROFIL_USAGE!"=="0" (
     REM LanmanServer Size=1 = defaut Win11 client Minimize Memory, pas de suppression hors section restauration.
-    reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /t REG_DWORD /d 1500 /f >nul 2>&1
+    reg add "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /t REG_DWORD /d 65536 /f >nul 2>&1
+    netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
+    netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 ) else (
     REM Suppression -> retour au defaut Windows (1024). Les datagrammes UDP > 1024 octets
     REM empruntent alors le chemin lent (pended I/O). C'est le comportement normal attendu.
     reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /f >nul 2>&1
+    netsh int ipv4 set global loopbacklargemtu=enabled >nul 2>&1
+    netsh int ipv6 set global loopbacklargemtu=enabled >nul 2>&1
 )
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v Tcp1323Opts /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v SackOpts /t REG_DWORD /d 1 /f >nul 2>&1
