@@ -67,7 +67,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=3000 et maxsynretransmissions=2 (= valeurs Windows documentées), Tcp1323Opts=3, BBR2 sur les 5 templates compatibles, TCP Pacing + ECN, heuristics WSH/forcews demandés actifs, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO et Interrupt Moderation OFF, ITR=200, Rx/Tx buffers jusqu'à 2048 selon le pilote. En Eco : Nagle/DelACK natifs, RSC/LSO ON. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=3000 et maxsynretransmissions=2 (= valeurs Windows documentées), Tcp1323Opts=3, BBR2 sur les 5 templates compatibles, TCP Pacing + ECN, heuristics WSH/forcews demandés actifs, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, Interrupt Moderation ON avec ITR=200, Rx/Tx buffers jusqu'à 2048 selon le pilote. En Eco : Nagle/DelACK natifs, RSC/LSO ON. |
 | **[2]** | **NORMAL** | Tcp1323Opts=3, BBR2 sur les 5 templates compatibles, TCP Pacing + ECN, heuristics WSH/forcews demandés actifs, initialRTO=3000 et maxsynretransmissions=2 (= valeurs Windows documentées), VRR ON, veille GPU préservée, Nagle/DelACK natifs, SystemResponsiveness=20, accélération trackpad légère sur portable. Si les ressources NVIDIA compatibles sont présentes localement, le script tente aussi de restaurer de façon ciblée les valeurs modifiées par son preset Gaming. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
@@ -76,7 +76,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
 | **[1]** | **ECO** | Plan Équilibré (plans OEM/personnalisés conservés), RSC/LSO/checksum ON, gestion d'énergie NIC activée, propriétés pilote modifiées par MaxPerf restaurées, compression mémoire active, MSI USB actif. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO et Interrupt Moderation OFF en Gaming (restaurés en Normal/Eco), RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, ITR=200 en Gaming, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie USB désactivée (selective suspend + USB 3 LPM), compression mémoire OFF (RAM > 8 Go), MSI USB actif, économies d'énergie coupées. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec ITR=200 en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`disabledynamictick=yes`, `useplatformtick=no`, HPET désactivé), compression mémoire OFF (RAM > 8 Go), MSI USB actif, économies d'énergie ciblées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — Nagle/DelACK revient au comportement Windows natif (batterie avant tout), tandis qu'initialRTO=3000 et maxsynretransmissions=2 restent aux valeurs Windows documentées ; les optimisations GPU/input/CPU restent agressives.
@@ -85,7 +85,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Combinaison | Comportement principal |
 |---|---|
-| **Gaming + MaxPerf** | Réglages de latence les plus agressifs : Nagle/DelACK, RSC/LSO et Interrupt Moderation coupés, ITR=200 lorsque le pilote le permet. |
+| **Gaming + MaxPerf** | Réglages de latence les plus agressifs : Nagle/DelACK et RSC/LSO coupés, Interrupt Moderation active avec ITR=200 lorsque le pilote le permet. |
 | **Gaming + Eco** | Réglages gaming GPU/input, mais comportement réseau natif pour Nagle/DelACK et offloads conservés afin de privilégier autonomie et stabilité. |
 | **Normal + MaxPerf** | Plan et énergie MaxPerf sans les réglages réseau gaming agressifs ; RSC/LSO et propriétés de latence exclusives sont restaurés. |
 | **Normal + Eco** | Configuration la plus conservatrice : comportement réseau natif, gestion d'énergie active et plan Équilibré. |
@@ -107,7 +107,7 @@ Exceptions réseau :
 - **[2] Mémoire** : Ajustement de la gestion RAM et de la compression mémoire selon le profil d'énergie.
 - **[3] Disques** : TRIM et maintenance Windows conservés, chemins longs activés.
 - **[4] GPU** : Configuration des priorités graphiques et des options de latence prises en charge par le pilote.
-- **[5] Réseau** : Optimisation de la pile TCP/IP (TCP Pacing + ECN, TcpMaxDataRetransmissions=5, MSI cartes réseau) et tuning fin de la carte réseau selon le profil (Eco : RSC/LSO/checksum ON, énergie préservée, Interrupt Moderation restaurée ; MaxPerf : EEE/GreenGbe/PacketCoalescing OFF, RSC/LSO et Interrupt Moderation OFF en Gaming, ITR=200 en Gaming+MaxPerf, Rx/Tx buffers jusqu'à 2048 selon le pilote).
+- **[5] Réseau** : Optimisation de la pile TCP/IP (TCP Pacing + ECN, TcpMaxDataRetransmissions=5, MSI cartes réseau) et tuning fin de la carte réseau selon le profil (Eco : RSC/LSO/checksum et Interrupt Moderation ON, énergie préservée ; MaxPerf : EEE/GreenGbe/PacketCoalescing OFF, RSC/LSO OFF en Gaming, Interrupt Moderation ON avec ITR=200 en Gaming+MaxPerf, Rx/Tx buffers jusqu'à 2048 selon le pilote).
 - **[6] Input** : Ajustement de la réponse clavier/souris, des files d'entrée et du mode MSI des contrôleurs compatibles.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance, avec choix d'usage pour appliquer le bon tuning NIC.
 - **[8] Sécurité** : Choix entre 3 profils pour VBS/HVCI/CFG/SEHOP, mitigations processeur, LSA/Credential Guard, hyperviseur BCD et liste de pilotes vulnérables.
@@ -120,9 +120,9 @@ Exceptions réseau :
 
 > ### 💡 Vue d'ensemble des 3 profils
 >
-> * **Gaming (Recommandé ★)** : Conserve **VBS / HVCI** (compatibilité anti-cheat 100%), laisse **CFG** à `NOTSET` (défaut Windows), désactive **SEHOP**, réduit les mitigations CPU et demande la désactivation de la blocklist.
+> * **Gaming (Recommandé ★)** : Conserve **VBS / HVCI** (compatibilité anti-cheat 100%) et **LSA Protection** (`RunAsPPL=2` sans verrou UEFI), laisse **CFG** à `NOTSET` (défaut Windows), désactive **SEHOP**, réduit les mitigations CPU et demande la désactivation de la blocklist.
 > * **Défaut Windows** : Réinitialise toutes les protections contre les exploits en supprimant `MitigationOptions` et `MitigationAuditOptions`. Applique la base VBS/HVCI, les mitigations CPU Microsoft, la LSA Protection (sans verrou UEFI) et la blocklist.
-> * **Performance Max ⚠️ (Déconseillé)** : Désactive VBS, HVCI et SEHOP, conserve CFG, réduit les mitigations CPU et demande la désactivation de la blocklist.
+> * **Performance Max ⚠️ (Déconseillé)** : Désactive VBS, HVCI et SEHOP, conserve CFG et **LSA Protection** (`RunAsPPL=2` sans verrou UEFI), réduit les mitigations CPU et demande la désactivation de la blocklist.
 
 > ### 🔍 Notes & Précisions techniques
 >
@@ -172,14 +172,17 @@ R : Oui pour les profils principaux : Gaming/Normal et Performance Max/Eco rempl
 **Q : Quel gain de FPS puis-je espérer ?**  
 R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester par une latence ou une stabilité plus régulière ; aucun gain de FPS n'est garanti.
 
+**Q : Que fait le preset timer de Performance Max ?**
+R : Performance Max applique `disabledynamictick=yes`, `useplatformtick=no`, supprime les éventuels overrides `useplatformclock`/`tscsyncpolicy` et désactive le périphérique HPET. Ce combo a produit un polling rate plus régulier dans MouseTester sur la configuration testée, mais Microsoft classe ces options BCD comme des réglages de débogage : le preset reste expérimental et aucun gain universel n'est garanti. Le profil Eco supprime les quatre overrides BCD et réactive HPET pour rendre la sélection des timers à Windows. Un redémarrage est nécessaire après le changement.
+
 **Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
-R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Gaming conserve VBS/HVCI, laisse CFG au défaut Windows, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist. HVCI peut néanmoins maintenir cette blocklist active. Performance Max désactive VBS/HVCI/SEHOP, laisse CFG au défaut Windows, réduit les mitigations CPU et demande aussi la désactivation de la blocklist. Défaut Windows réactive VBS/HVCI/SEHOP, les mitigations CPU Microsoft, LSA Protection et la blocklist, et laisse Credential Guard non configuré. Les trois profils fixent `hypervisorlaunchtype=Auto` et ne modifient pas les Kernel Shadow Stacks.
+R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Gaming conserve VBS/HVCI, laisse CFG au défaut Windows, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist. HVCI peut néanmoins maintenir cette blocklist active. Performance Max désactive VBS/HVCI/SEHOP, laisse CFG au défaut Windows, réduit les mitigations CPU et demande aussi la désactivation de la blocklist. Défaut Windows réactive VBS/HVCI/SEHOP, les mitigations CPU et la blocklist, et laisse Credential Guard non configuré. Les trois profils conservent LSA Protection avec `RunAsPPL=2` sans verrou UEFI et ne modifient pas les Kernel Shadow Stacks. Gaming et Défaut Windows fixent `hypervisorlaunchtype=Auto` ; Performance Max supprime cette surcharge BCD.
 
 **Q : Changer plusieurs fois de profil laisse-t-il les anciens réglages actifs ?**
 R : Non pour les réglages appartenant à l'option 8. Défaut Windows, Gaming et Performance Max appliquent chacun leur propre état complet : toute valeur gérée est écrite avec la valeur cible ou supprimée si elle ne doit pas exister dans ce profil. Ainsi, Gaming → Défaut Windows, Défaut Windows → Performance Max et toutes les autres transitions demandent le même état final que l'application directe du profil choisi. Une stratégie d'entreprise ou un verrou UEFI peut cependant réimposer une valeur extérieure au script.
 
 **Q : Performance Max désactive-t-il toutes les protections ?**
-R : Non. Performance Max désactive VBS, HVCI, SEHOP et Credential Guard local/policy, laisse CFG à `NOTSET` (dont le défaut Windows effectif est ON), demande la désactivation de la blocklist, réduit les mitigations CPU, supprime les valeurs locales de LSA Protection et laisse les Kernel Shadow Stacks inchangées. Smart App Control, le mode S ou une stratégie peuvent maintenir la blocklist active. La valeur BCD `hypervisorlaunchtype` est supprimée (`deletevalue`). Une ancienne configuration Credential Guard verrouillée en UEFI peut nécessiter la procédure Microsoft avec confirmation physique pour retirer ce verrou.
+R : Non. Performance Max désactive VBS, HVCI, SEHOP et Credential Guard local/policy, laisse CFG à `NOTSET` (dont le défaut Windows effectif est ON), demande la désactivation de la blocklist, réduit les mitigations CPU, mais conserve LSA Protection avec `RunAsPPL=2` sans verrou UEFI et laisse les Kernel Shadow Stacks inchangées. Smart App Control, le mode S ou une stratégie peuvent maintenir la blocklist active. La valeur BCD `hypervisorlaunchtype` est supprimée (`deletevalue`). Une ancienne configuration Credential Guard verrouillée en UEFI peut nécessiter une procédure avec confirmation physique pour retirer ce verrou.
 
 **Q : Quelle différence entre Gaming et Performance Max pour les anti-cheats ?**
 R : Gaming conserve VBS/HVCI/CFG pour Valorant (CFG requis par Vanguard) et FACEIT. Performance Max désactive VBS/HVCI mais conserve CFG ; sa compatibilité dépend donc des exigences de chaque anti-cheat. TPM, Secure Boot, la virtualisation et parfois IOMMU restent à activer dans le BIOS.
@@ -227,7 +230,7 @@ R : `irm | iex`, MAS et WinUtil utilisent du contenu distant susceptible d'évol
 R : NVIDIA Profile Inspector et son profil peuvent être exécutés automatiquement en Gaming sur un GPU NVIDIA compatible. SetTimerResolution peut être installé, ajouté au démarrage et lancé en MaxPerf. La configuration O&O, les modèles de `Game Configs\` et les autres outils Timer & Interrupt ne sont pas lancés automatiquement par le batch actuel.
 
 **Q : Credential Guard et LSA peuvent-ils rester actifs malgré le script ?**
-R : Oui. Défaut Windows configure LSA Protection avec `RunAsPPL=2` et laisse Credential Guard non configuré. Gaming et Performance Max suppriment les valeurs locales `RunAsPPL`/`RunAsPPLBoot` et fixent `LsaCfgFlags=0` localement et dans la stratégie Device Guard. Une autre stratégie d'entreprise, l'activation par défaut de Windows ou un verrou UEFI antérieur peut néanmoins maintenir une protection active.
+R : Oui, volontairement pour LSA Protection. Les trois profils configurent `RunAsPPL=2` sans verrou UEFI et suppriment `RunAsPPLBoot` ainsi que la valeur de stratégie locale concurrente afin de converger vers le même état. Gaming et Performance Max désactivent séparément Credential Guard avec `LsaCfgFlags=0` localement et dans la stratégie Device Guard ; Défaut Windows le laisse non configuré. Une stratégie d'entreprise ou un verrou UEFI antérieur peut néanmoins imposer un autre état.
 
 **Q : Quelles fonctionnalités essentielles sont conservées ?**
 R : Windows Update, Microsoft Store et WebView2 ne sont pas volontairement supprimés. Les fonctions dépendantes d'Edge, OneDrive ou d'une autre application retirée peuvent néanmoins changer.

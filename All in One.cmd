@@ -2094,12 +2094,13 @@ REM  GUID SUB_PROCESSOR en dur (alias SUB_PROCESSOR non fiable selon la locale W
 call :SET_POWERCFG_ACDC 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318584 100
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglage des coeurs demande.%COLOR_RESET%
 
-REM  7.5 - Desactivation economies d'energie USB et Device Manager (ACPI/HID/PCI/USB)
+REM  7.5 - Desactivation economies d'energie USB et peripheriques HID/USB
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reduction de la mise en veille des peripheriques...%COLOR_RESET%
 REM Le second parametre differe l'activation du plan : elle est groupee en fin de section 7.
 call :SET_USB_POWER 0 1
+REM ACPI/PCI exclus volontairement : ces valeurs sont definies par le pilote et un forcage global peut perturber chipset, GPU, stockage ou reseau.
 powershell -NoProfile -Command "$p=@('HID','USB','USBSTOR'); foreach($s in $p){ Get-ChildItem -Path ('HKLM:\SYSTEM\CurrentControlSet\Enum\'+$s) -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -eq 'Device Parameters' -or $_.PSChildName -eq 'WDF' } | ForEach-Object { $rp = $_.Name; if($_.PSChildName -eq 'Device Parameters'){ reg add \"$rp\" /v 'EnhancedPowerManagementEnabled' /t REG_DWORD /d 0 /f >$null; reg add \"$rp\" /v 'SelectiveSuspendEnabled' /t REG_DWORD /d 0 /f >$null; reg add \"$rp\" /v 'SelectiveSuspendOn' /t REG_DWORD /d 0 /f >$null; reg add \"$rp\" /v 'WaitWakeEnabled' /t REG_DWORD /d 0 /f >$null } else { reg add \"$rp\" /v 'IdleInWorkingState' /t REG_DWORD /d 0 /f >$null } } }" >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Mise en veille des peripheriques HID, PCI et USB reduite.%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Mise en veille des peripheriques HID et USB reduite.%COLOR_RESET%
 
 REM  7.6 - Desactivation du demarrage rapide Fast Startup
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation du demarrage rapide Windows...%COLOR_RESET%
@@ -2146,9 +2147,15 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v CoalescingTim
 reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\ControlSet001\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
-REM  DisableDynamicTick : desactive l'horloge dynamique (interruptions plus predictibles)
+REM Preset timer MaxPerf experimental : polling rate MouseTester observe plus regulier sur la config testee, resultat materiel-dependent.
+REM Ces options BCD restent des reglages de diagnostic sans gain universel garanti.
+bcdedit /deletevalue useplatformclock >nul 2>&1
 bcdedit /set disabledynamictick yes >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglage des minuteries demande.%COLOR_RESET%
+bcdedit /set useplatformtick no >nul 2>&1
+bcdedit /deletevalue tscsyncpolicy >nul 2>&1
+REM Get-PnpDevice -InstanceId n'accepte pas les jokers : filtrer l'identifiant reel avant de desactiver HPET.
+powershell -NoProfile -Command "Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'ACPI\PNP0103\*' -and $_.Status -eq 'OK' } | Disable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Preset timer MaxPerf demande : Dynamic Tick OFF, Platform Tick non force et HPET desactive.%COLOR_RESET%
 
 REM  7.10 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTimerResolution...%COLOR_RESET%
@@ -2329,9 +2336,11 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v Coalescing
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\ControlSet001\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /f >nul 2>&1
-REM  Supprime la surcharge de diagnostic et rend la gestion de l'horloge a Windows.
-bcdedit /deletevalue disabledynamictick >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing et horloge dynamique rendus a Windows%COLOR_RESET%
+REM  Supprime les surcharges BCD de diagnostic et rend la gestion des horloges a Windows.
+for %%B in (useplatformclock useplatformtick disabledynamictick tscsyncpolicy) do bcdedit /deletevalue %%B >nul 2>&1
+REM  Reactive HPET s'il avait ete desactive par une ancienne version du script.
+powershell -NoProfile -Command "Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'ACPI\PNP0103\*' -and $_.Problem -eq 22 } | Enable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing, BCD des timers et HPET rendus a Windows.%COLOR_RESET%
 
 REM  7.5 - SetTimerResolution du demarrage
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Suppression de SetTimerResolution du demarrage...%COLOR_RESET%
@@ -2476,20 +2485,15 @@ echo.
 call :ASK_IF_INTERACTIVE "%STYLE_BOLD%%COLOR_YELLOW%Appliquer ce profil ? [O/N]: %COLOR_RESET%"
 if !errorlevel! NEQ 0 exit /b
 :APPLIQUER_PROFIL_SECURITE_RUN
-REM  Gaming (usage=0) > GAMING : VBS/HVCI actifs, RequirePlatform=0.
 REM  Force PerfMax (drapeau interne) > PERF_MAX : VBS/HVCI/RequirePlatform=0.
-REM  Normal+Eco (usage=1, power=1) > DEFAUT : securite Windows stock.
-REM  Normal+MaxPerf (usage=1, power=0) > PERF_MAX : pas d'hyperviseur en perf.
-if "!PROFIL_USAGE!"=="0" (
-    call :APPLIQUER_SECURITE_GAMING
-    exit /b !errorlevel!
-)
+REM  Gaming (usage=0) > GAMING : VBS/HVCI actifs, RequirePlatform=0.
+REM  Normal (usage=1) > DEFAUT : securite Windows stock, quel que soit le profil d'energie.
 if "!SECURITY_FORCE_PERF_MAX!"=="1" (
     call :APPLIQUER_SECURITE_PERF_MAX
     exit /b !errorlevel!
 )
-if "!PROFIL_POWER!"=="0" (
-    call :APPLIQUER_SECURITE_PERF_MAX
+if "!PROFIL_USAGE!"=="0" (
+    call :APPLIQUER_SECURITE_GAMING
     exit /b !errorlevel!
 )
 call :RESTAURER_PROTECTIONS_SECURITE
@@ -2521,6 +2525,10 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorE
 for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+REM LSA-PPL reste actif sans verrou UEFI : gain de securite documente, aucun gain gaming credible a le couper.
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
 bcdedit /set hypervisorlaunchtype auto >nul 2>&1
 REM HVCI peut maintenir la blocklist active malgre cette demande locale.
@@ -2555,6 +2563,10 @@ for %%V in (EnableVirtualizationBasedSecurity HypervisorEnforcedCodeIntegrity) d
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
+REM LSA-PPL reste actif sans verrou UEFI : gain de securite documente, aucun gain gaming credible a le couper.
+reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
 bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 0 /f >nul 2>&1
@@ -4589,8 +4601,8 @@ exit /b 0
 REM  Parametres : %~1 = PROFIL_POWER (0=MaxPerf, 1=Eco).
 REM               %~2 = PROFIL_USAGE (0=Gaming, 1=Normal).
 REM  Gaming+MaxPerf (0,0) : RSC/LSO OFF, InterruptModeration ON (ITR 200), EEE/Wake OFF, ARP/NS Offload OFF, buffers jusqu'a 2048.
-REM  Normal+MaxPerf (0,1) : RSC/LSO ON, ITR defaut, EEE/Wake OFF, buffers jusqu'a 2048.
-REM  Eco (1,*) : RSC/LSO/checksum ON, PowerManagement ON, economie pilote conservee.
+REM  Normal+MaxPerf (0,1) : RSC/LSO et InterruptModeration ON, ITR defaut, EEE/Wake OFF, buffers jusqu'a 2048.
+REM  Eco (1,*) : RSC/LSO/checksum et InterruptModeration ON, PowerManagement ON, economie pilote conservee.
 REM  Toutes les modifications sont groupees avant un unique redemarrage de chaque carte.
 REM  Source unique de verite pour la section 5.7 et la convergence reseau manuelle de la section 7.
 :SET_NIC_PROFILE
