@@ -2,6 +2,7 @@
 setlocal EnableExtensions DisableDelayedExpansion
 if not defined WINOPT_SOURCE_DIR set "WINOPT_SOURCE_DIR=%~dp0"
 set "WINOPT_SELF=%~f0"
+set "WINOPT_SELF_BACKUP_SOURCE=%~f0"
 
 :: PowerShell est requis par le script et pour verifier/normaliser le format des fichiers .cmd.
 set "WINOPT_PS_MISSING=0"
@@ -152,6 +153,18 @@ if !errorlevel! NEQ 0 (
     echo.
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Le script n'est pas execute avec une elevation suffisante.%COLOR_RESET%
     echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Verifiez que l'UAC est active et reexecutez en tant qu'administrateur.%COLOR_RESET%
+    pause
+    exit /b 1
+)
+
+:: Sauvegarde non ecrasante du batch avant toute modification du systeme.
+set "WINOPT_BACKUP_DIR=%ProgramData%\WindowsOptimizer\Backups"
+set "WINOPT_SECURITY_BACKUP=%WINOPT_BACKUP_DIR%\security-baseline.reg"
+set "WINOPT_SECURITY_BCD_BACKUP=%WINOPT_BACKUP_DIR%\security-hypervisorlaunchtype.txt"
+set "WINOPT_FTH_BACKUP=%WINOPT_BACKUP_DIR%\fth-state.json"
+call :BACKUP_SELF_BEFORE_EXECUTION
+if !errorlevel! NEQ 0 (
+    echo [ERREUR] Impossible de sauvegarder All in One.cmd avant execution.
     pause
     exit /b 1
 )
@@ -1117,8 +1130,13 @@ echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation du blocage d
 set "HOSTS=%SystemRoot%\System32\drivers\etc\hosts"
 attrib -r "%HOSTS%" >nul 2>&1
 
-REM  Backup du fichier hosts avant modification
-copy /Y "%HOSTS%" "%HOSTS%.bak" >nul 2>&1
+REM  Backup unique du fichier hosts avant modification ; aucun .bak existant n'est ecrase.
+call :BACKUP_HOSTS_BEFORE_CHANGE "%HOSTS%"
+set "HOSTS_BACKUP_RC=!errorlevel!"
+if "!HOSTS_BACKUP_RC!" NEQ "0" (
+    echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Backup hosts impossible : le fichier ne sera pas modifie.%COLOR_RESET%
+    set "HOSTS="
+)
 REM  Utilisation de PowerShell pour mettre a jour ou ajouter le bloc securise (Telemetrie uniquement)
 powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h=$env:HOSTS;$tmp=[System.IO.Path]::Combine([System.IO.Path]::GetDirectoryName($h),([System.IO.Path]::GetFileName($h)+'.'+[guid]::NewGuid().ToString('N')+'.tmp'));$crlf=[char]13+[char]10;$s='# Telemetry Block Start';$e='# Telemetry Block End';$domains='vortex.data.microsoft.com','vortex-win.data.microsoft.com','v10.vortex-win.data.microsoft.com','v10.events.data.microsoft.com','telecommand.telemetry.microsoft.com','oca.telemetry.microsoft.com','watson.telemetry.microsoft.com','watsonc.microsoft.com','settings.data.microsoft.com','settings-win.data.microsoft.com','mobile.events.data.microsoft.com','browser.events.data.microsoft.com','self.events.data.microsoft.com','v20.events.data.microsoft.com','telemetry.microsoft.com','telemetrycollector.microsoft.com','pipe.aria.microsoft.com','diagnostics.office.com','activity.windows.com','modern.watson.data.microsoft.com','applicationinsights.microsoft.com','azurewatson.microsoft.com';$nb=$crlf+$s+$crlf;foreach($d in $domains){$nb+='0.0.0.0 '+$d+$crlf};$nb+=$e+$crlf;try{if(Test-Path -LiteralPath $h){$cur=[System.IO.File]::ReadAllText($h,[System.Text.Encoding]::ASCII)}else{$cur=''};$cur=$cur -replace ('(?s)'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';foreach($d in $domains){$cur=$cur -replace ('(?m)^0\.0\.0\.0\s+'+[regex]::Escape($d)+'\s*$'),''};$cur=$cur.TrimEnd()+$nb;if(Test-Path -LiteralPath $h){(Get-Item -LiteralPath $h).Attributes='Normal'};[System.IO.File]::WriteAllText($tmp,$cur,[System.Text.Encoding]::ASCII);[System.IO.File]::Copy($tmp,$h,$true);Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 0}catch{Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue;exit 1}" >nul 2>&1
 set "HOSTS_RC=!errorlevel!"
@@ -1131,6 +1149,7 @@ attrib +r "%HOSTS%" >nul 2>&1
 if not "!AIO_MODE!"=="1" ipconfig /flushdns >nul 2>&1
 set "HOSTS_RC="
 set "HOSTS="
+set "HOSTS_BACKUP_RC="
 
 REM  1.6 - Services optimises
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation du reglage des services Windows...%COLOR_RESET%
@@ -1406,9 +1425,25 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Prefetch et SuperFetch config
 
 REM  2.3 - FTH OFF
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation de FTH, le mecanisme de tolerance aux pannes...%COLOR_RESET%
-reg add "HKLM\SOFTWARE\Microsoft\FTH" /v Enabled /t REG_DWORD /d 0 /f >nul 2>&1
-REM Etat FTH laisse intact : aucune suppression hors section restauration.
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%FTH desactive selon le profil demande%COLOR_RESET%
+if "!PROFIL_POWER!"=="0" (
+    call :FTH_DISABLE
+    if !errorlevel! EQU 0 (
+        echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%FTH desactive avec sauvegarde de l'etat precedent%COLOR_RESET%
+    ) else if !errorlevel! EQU 2 (
+        echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%FTH n'est pas reecrit : une modification externe a ete detectee.%COLOR_RESET%
+    ) else (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de sauvegarder ou de regler FTH.%COLOR_RESET%
+    )
+) else (
+    call :FTH_RESTORE
+    if !errorlevel! EQU 0 (
+        echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%FTH restaure selon l'etat capture avant optimisation%COLOR_RESET%
+    ) else if !errorlevel! EQU 2 (
+        echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%FTH n'est pas restaure : une modification externe a ete detectee.%COLOR_RESET%
+    ) else (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de restaurer FTH.%COLOR_RESET%
+    )
+)
 
 REM  2.4 - Compression memoire MMAgent - conditionnelle selon la RAM
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de la detection de la RAM...%COLOR_RESET%
@@ -1846,6 +1881,8 @@ if !errorlevel! NEQ 0 (
 ) else (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Profil NIC Eco demande%COLOR_RESET%
 )
+call :SET_NIC_PROFILE_CONVERGENCE !PROFIL_POWER! !PROFIL_USAGE!
+if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%La convergence des cartes reseau reste partielle.%COLOR_RESET%
 REM  5.8 - Gestion energie USB (impacte adaptateurs Wi-Fi USB, clavier, souris)
 set "USB_POWER_DEFERRED=0"
 if "!AIO_MODE!"=="1" set "USB_POWER_DEFERRED=1"
@@ -2345,6 +2382,8 @@ if not "!AIO_MODE!"=="1" (
     ) else (
         echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Synchronisation avec Performance max demandee.%COLOR_RESET%
     )
+    call :SET_NIC_PROFILE_CONVERGENCE 0 !PROFIL_USAGE!
+    if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%La convergence des cartes reseau reste partielle.%COLOR_RESET%
 )
 
 REM  Appliquer l'ensemble des modifications du plan d'alimentation en une seule fois
@@ -2479,6 +2518,8 @@ if not "!AIO_MODE!"=="1" (
     call :RESET_NAGLE_PROFILE
     call :SET_NIC_PROFILE 1 1
     if !errorlevel! NEQ 0 set "NIC_ECO_PROFILE_ERROR=1"
+    call :SET_NIC_PROFILE_CONVERGENCE 1 1
+    if !errorlevel! NEQ 0 set "NIC_ECO_PROFILE_ERROR=1"
 )
 if "!NIC_ECO_PROFILE_ERROR!"=="1" (
     echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Restauration reseau appliquee partiellement.%COLOR_RESET%
@@ -2557,7 +2598,7 @@ if "!SECURITY_FORCE_PERF_MAX!"=="1" set "SECURITY_TARGET_NAME=PERFORMANCE MAX"
 if not "!SKIP_PAUSE!"=="0" goto :APPLIQUER_PROFIL_SECURITE_RUN
 call :SCREEN_HEADER " SECTION 8 : APPLICATION DU MODE DE SECURITE"
 echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Gaming et Performance max reduisent des protections.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Defaut Windows applique la base geree par le script.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Defaut Windows restaure le snapshot ou retire les overrides de l'outil.%COLOR_RESET%
 echo %COLOR_WHITE%Il ne remet pas tout le PC dans son etat d'usine.%COLOR_RESET%
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%VBS fournit l'isolation ; HVCI correspond a l'integrite de la memoire.%COLOR_RESET%
 echo %COLOR_WHITE%Mode determine par votre parcours : !SECURITY_TARGET_NAME!%COLOR_RESET%
@@ -2567,7 +2608,7 @@ if !errorlevel! NEQ 0 exit /b
 :APPLIQUER_PROFIL_SECURITE_RUN
 REM  Force PerfMax (drapeau interne) > PERF_MAX : VBS/HVCI/RequirePlatform=0.
 REM  Gaming (usage=0) > GAMING : VBS/HVCI actifs, RequirePlatform=0.
-REM  Normal (usage=1) > DEFAUT : base explicite geree par le script, quel que soit le profil d'energie.
+REM  Normal (usage=1) > DEFAUT : snapshot restaure ou overrides retires, quel que soit le profil d'energie.
 if "!SECURITY_FORCE_PERF_MAX!"=="1" (
     call :APPLIQUER_SECURITE_PERF_MAX
     exit /b !errorlevel!
@@ -2581,6 +2622,11 @@ exit /b !errorlevel!
 
 :APPLIQUER_SECURITE_GAMING
 call :SCREEN_HEADER " APPLICATION DU MODE DE SECURITE GAMING"
+call :CAPTURE_SECURITY_BASELINE
+if !errorlevel! NEQ 0 (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%La base de securite ne peut pas etre sauvegardee ; aucune modification appliquee.%COLOR_RESET%
+    exit /b 1
+)
 
 REM Etat cible Gaming : aucun reglage gere par l'option 8 d'un autre profil ne doit subsister.
 for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
@@ -2618,6 +2664,11 @@ exit /b 0
 :APPLIQUER_SECURITE_PERF_MAX
 call :SCREEN_HEADER " APPLICATION DU MODE DE SECURITE PERFORMANCE MAX"
 echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Protections memoire et processeur reduites.%COLOR_RESET%
+call :CAPTURE_SECURITY_BASELINE
+if !errorlevel! NEQ 0 (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%La base de securite ne peut pas etre sauvegardee ; aucune modification appliquee.%COLOR_RESET%
+    exit /b 1
+)
 
 REM Etat cible Performance Max : aucun reglage gere par l'option 8 d'un autre profil ne doit subsister.
 for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
@@ -2651,45 +2702,35 @@ exit /b 0
 
 :RESTAURER_PROTECTIONS_SECURITE
 call :SCREEN_HEADER " APPLICATION DU MODE DEFAUT WINDOWS"
-REM Etat cible Defaut Windows : chaque valeur des autres profils est remplacee ou supprimee ici.
-for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
+REM Microsoft ne definit pas une valeur brute universelle pour le "defaut" :
+REM restaurer la base capturee si elle existe, sinon retirer uniquement les overrides de l'outil.
+call :RESTORE_SECURITY_BASELINE
+set "SECURITY_RESTORE_RC=!errorlevel!"
+if "!SECURITY_RESTORE_RC!"=="0" (
+    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Etat de securite precedent restaure sans ecraser les autres reglages.%COLOR_RESET%
+    set "SECURITY_RESTORE_RC="
+    exit /b 0
+)
+if "!SECURITY_RESTORE_RC!"=="1" (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%La restauration de la base de securite a echoue ; les overrides restent inchanges.%COLOR_RESET%
+    set "SECURITY_RESTORE_RC="
+    exit /b 1
+)
 
-REM 8.1 - Protections noyau : SEHOP actif, sans overrides Kernel historiques.
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration des protections du noyau...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v KernelSEHOPEnabled /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v DisableExceptionChainValidation /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SEHOP actif et overrides Kernel historiques supprimes.%COLOR_RESET%
-echo.
-REM 8.2 - Mitigations CPU Microsoft : active les protections par defaut documentees.
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration des mitigations CPU Microsoft...%COLOR_RESET%
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettings /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverride /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v FeatureSettingsOverrideMask /t REG_DWORD /d 3 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Mitigations CPU Microsoft restaurees.%COLOR_RESET%
-echo.
-REM 8.3 - Blocklist de pilotes vulnerables active, standard Windows 11 22H2+.
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation de la blocklist de pilotes vulnerables...%COLOR_RESET%
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Blocklist de pilotes vulnerables activee.%COLOR_RESET%
-
-REM 8.4 - Profil Defaut Windows : VBS/HVCI actifs, LSA-PPL sans verrou UEFI.
+REM Aucun snapshot disponible : supprimer les valeurs gerees et laisser Windows, les pilotes
+REM et les strategies effectivement configurees determiner l'etat par defaut de la machine.
+for %%V in (MoveImages EnableGdsMitigation PerformMmioMitigation RestrictIndirectBranchPrediction EnableKvashadow KvaOpt DisableStibp EnableRetpoline DisableBranchPrediction FeatureSettings FeatureSettingsOverride FeatureSettingsOverrideMask) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "%%V" /f >nul 2>&1
+for %%V in (KernelSEHOPEnabled DisableExceptionChainValidation MitigationOptions MitigationAuditOptions) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v "%%V" /f >nul 2>&1
+for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures Locked) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "%%V" /f >nul 2>&1
+for %%V in (Enabled Locked WasEnabledBy) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v "%%V" /f >nul 2>&1
 for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity LsaCfgFlags) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v EnableVirtualizationBasedSecurity /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Enabled /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v Locked /t REG_DWORD /d 0 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity" /v WasEnabledBy /t REG_DWORD /d 2 /f >nul 2>&1
-for %%V in (LsaCfgFlags RunAsPPLBoot) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
-
-REM Supprime la surcharge BCD ; Windows reprend son comportement par defaut.
-bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MitigationOptions /f >nul 2>&1
-reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel" /v MitigationAuditOptions /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Standard de securite Windows 11 applique.%COLOR_RESET%
+for %%V in (LsaCfgFlags RunAsPPLBoot RunAsPPL) do reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "%%V" /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /f >nul 2>&1
+bcdedit /deletevalue {current} hypervisorlaunchtype >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Overrides de securite retires ; Windows reprend ses valeurs gerees par defaut.%COLOR_RESET%
+set "SECURITY_RESTORE_RC="
 exit /b 0
 
 :SET_CFG_NOTSET_SEHOP_OFF
@@ -2705,7 +2746,7 @@ REM ============================================================================
 set "SKIP_PAUSE=0"
 call :SCREEN_HEADER " GERER LES PROTECTIONS WINDOWS"
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%DEFAUT WINDOWS%COLOR_RESET%
-echo %COLOR_WHITE%    Applique les protections Windows gerees par le script.%COLOR_RESET%
+echo %COLOR_WHITE%    Restaure le snapshot ou retire les overrides de l'outil.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_CYAN%GAMING%COLOR_RESET%  %COLOR_GREEN%RECOMMANDE%COLOR_RESET%
 echo %COLOR_WHITE%    Equilibre performances et protections pour tous types de jeux.%COLOR_RESET%
@@ -2727,9 +2768,9 @@ goto :TOGGLE_PROTECTIONS_NOYAU
 
 :PROTECTIONS_WINDOWS_DEFAULT
 call :SCREEN_HEADER " MODE DEFAUT WINDOWS"
-echo %COLOR_WHITE%Ce mode reactive la base geree par le script : isolation et integrite%COLOR_RESET%
-echo %COLOR_WHITE%de la memoire, protection LSA et blocage des pilotes vulnerables.%COLOR_RESET%
-echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Il remplace les reglages Gaming ou Performance max appliques auparavant.%COLOR_RESET%
+echo %COLOR_WHITE%Ce mode restaure le snapshot ou retire les overrides de l'outil.%COLOR_RESET%
+echo %COLOR_WHITE%Windows, les pilotes et les strategies determinent alors l'etat effectif.%COLOR_RESET%
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Il revient aux valeurs precedentes quand un snapshot existe.%COLOR_RESET%
 echo.
 call :ASK_CONFIRM "%STYLE_BOLD%%COLOR_YELLOW%Appliquer le mode Defaut Windows ? [O=Appliquer / N=Annuler] : %COLOR_RESET%"
 if !errorlevel! NEQ 0 goto :TOGGLE_PROTECTIONS_NOYAU
@@ -2879,9 +2920,7 @@ if !errorlevel! EQU 0 (
 )
 for %%S in (WdNisSvc Sense SecurityHealthService WdNisDrv) do (
     sc query %%S >nul 2>&1
-    if !errorlevel! EQU 0 (
-        sc config %%S start= demand >nul 2>&1
-    )
+    if !errorlevel! EQU 0 sc config %%S start= demand >nul 2>&1
 )
 for %%S in (WdBoot WdFilter) do (
     sc query %%S >nul 2>&1
@@ -2889,7 +2928,8 @@ for %%S in (WdBoot WdFilter) do (
         sc config %%S start= boot >nul 2>&1
     )
 )
-for %%S in (WinDefend WdNisSvc SecurityHealthService) do sc start %%S >nul 2>&1
+for %%S in (WinDefend WdNisSvc Sense SecurityHealthService) do sc start %%S >nul 2>&1
+for %%S in (WdNisDrv) do sc start %%S >nul 2>&1
 REM uhssvc n'existe pas sur toutes les editions : le test evite de creer une fausse cle de service.
 reg query "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" >nul 2>&1 && reg add "HKLM\SYSTEM\CurrentControlSet\Services\uhssvc" /v "Start" /t REG_DWORD /d 3 /f >nul 2>&1
 
@@ -2900,6 +2940,7 @@ reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protecti
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableBehaviorMonitoring /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v DisableOnAccessProtection /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender\Real-Time Protection" /v DisableAsyncScanOnOpen /f >nul 2>&1
+for %%V in (DisableArchiveScanning DisableEmailScanning DisableRemovableDriveScanning DisableScanningMappedNetworkDrivesForFullScan DisableScanningNetworkFiles) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender\Real-Time Protection" /v "%%V" /f >nul 2>&1
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reactivation des politiques Windows Defender...%COLOR_RESET%
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows Defender" /v DisableAntiSpyware /f >nul 2>&1
@@ -2911,6 +2952,9 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows Defender" /v SmartLockerMode /f >nul
 call :RESTORE_SMARTSCREEN_DEFAULT_EXTRA
   echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application des reglages Defender du script...%COLOR_RESET%
   powershell -NoProfile -ExecutionPolicy Bypass -Command "$ErrorActionPreference='Stop'; try { Set-MpPreference -DisableRealtimeMonitoring $false -DisableBehaviorMonitoring $false -DisableBlockAtFirstSeen $false -DisableIOAVProtection $false -DisableScriptScanning $false -DisableArchiveScanning $false -DisableEmailScanning $false -DisableRemovableDriveScanning $false -PUAProtection Enabled -MAPSReporting Advanced -SubmitSamplesConsent SendSafeSamples -EnableNetworkProtection Disabled -EnableControlledFolderAccess Disabled; $ids=@('D4F940AB-401B-4EFC-AADC-AD5F3C50688A','3B576869-A4EC-4529-8536-B80A7769E899','75668C1F-73B5-4CF0-BB93-3ECF5CB7CC84','D3E037E1-3EB8-44C8-A917-57927947596D','5BEB7EFE-FD9A-4556-801D-275E5FFC04CC','BE9BA2D9-53EA-4CDC-84E5-9B1EEEE46550','92E97FA1-2EDF-4476-BDD6-9DD0B4DDDC7B','D1E49AAC-8F56-4280-B9BA-993A6D77406C','B2B3F03D-6A65-4F7B-A9C7-1C7EF74A9BA4','01443614-CD74-433A-B99E-2ECDC07BFC25','C1DB55AB-C21A-4637-BB3F-A12568109D35'); $actions=@(); foreach($id in $ids){$actions+=0}; Remove-MpPreference -AttackSurfaceReductionRules_Ids $ids -AttackSurfaceReductionRules_Actions $actions; exit 0 } catch { exit 1 }" >nul 2>&1
+
+  powershell -NoProfile -Command "try{$s=Get-MpComputerStatus -ErrorAction Stop;if($s.AntivirusEnabled -and $s.RealTimeProtectionEnabled){exit 0};exit 1}catch{exit 1}" >nul 2>&1
+  if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Defender reste partiellement inactif ou gere par une politique externe.%COLOR_RESET%
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reactivation des taches planifiees...%COLOR_RESET%
 schtasks /Change /TN "Microsoft\Windows\Windows Defender\Windows Defender Cleanup" /Enable >nul 2>&1
@@ -4405,7 +4449,59 @@ REM  HELPERS
 REM  =================================================================================
 
 REM  --- Windows, registre et nettoyage ------------------------------------------------
+:BACKUP_SELF_BEFORE_EXECUTION
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$d=$env:WINOPT_BACKUP_DIR;$s=$env:WINOPT_SELF_BACKUP_SOURCE;if([string]::IsNullOrWhiteSpace($s)-or-not(Test-Path -LiteralPath $s)){exit 1};New-Item -ItemType Directory -Path $d -Force|Out-Null;$dst=Join-Path $d ('All in One_'+[guid]::NewGuid().ToString('N')+'.cmd');Copy-Item -LiteralPath $s -Destination $dst -Force;if(-not(Test-Path -LiteralPath $dst)-or((Get-Item -LiteralPath $dst).Length-ne(Get-Item -LiteralPath $s).Length)){exit 1};exit 0}catch{exit 1}" >nul 2>&1
+exit /b !errorlevel!
+
+:BACKUP_HOSTS_BEFORE_CHANGE
+set "WINOPT_HOSTS_SOURCE=%~1"
+if not defined WINOPT_HOSTS_SOURCE set "WINOPT_HOSTS_SOURCE=%SystemRoot%\System32\drivers\etc\hosts"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$s=$env:WINOPT_HOSTS_SOURCE;if(-not(Test-Path -LiteralPath $s)){exit 0};$d=Join-Path $env:WINOPT_BACKUP_DIR 'Hosts';New-Item -ItemType Directory -Path $d -Force|Out-Null;$dst=Join-Path $d ('hosts_'+[guid]::NewGuid().ToString('N')+'.bak');Copy-Item -LiteralPath $s -Destination $dst -Force;if(-not(Test-Path -LiteralPath $dst)-or((Get-Item -LiteralPath $dst).Length-ne(Get-Item -LiteralPath $s).Length)){exit 1};exit 0}catch{exit 1}" >nul 2>&1
+set "WINOPT_HOSTS_BACKUP_RC=!errorlevel!"
+set "WINOPT_HOSTS_SOURCE="
+exit /b !WINOPT_HOSTS_BACKUP_RC!
+
+:CAPTURE_SECURITY_BASELINE
+if exist "%WINOPT_SECURITY_BACKUP%" if exist "%WINOPT_SECURITY_BCD_BACKUP%" exit /b 0
+if exist "%WINOPT_SECURITY_BACKUP%" exit /b 1
+if exist "%WINOPT_SECURITY_BCD_BACKUP%" exit /b 1
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$r=$env:WINOPT_SECURITY_BACKUP;$b=$env:WINOPT_SECURITY_BCD_BACKUP;New-Item -ItemType Directory -Path (Split-Path -Parent $r) -Force|Out-Null;$targets=@(@{Path='SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management';Names=@('MoveImages','EnableGdsMitigation','PerformMmioMitigation','RestrictIndirectBranchPrediction','EnableKvashadow','KvaOpt','DisableStibp','EnableRetpoline','DisableBranchPrediction','FeatureSettings','FeatureSettingsOverride','FeatureSettingsOverrideMask')},@{Path='SYSTEM\CurrentControlSet\Control\Session Manager\Kernel';Names=@('KernelSEHOPEnabled','DisableExceptionChainValidation','MitigationOptions','MitigationAuditOptions')},@{Path='SYSTEM\CurrentControlSet\Control\DeviceGuard';Names=@('EnableVirtualizationBasedSecurity','RequirePlatformSecurityFeatures','Locked')},@{Path='SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity';Names=@('Enabled','Locked','WasEnabledBy')},@{Path='SOFTWARE\Policies\Microsoft\Windows\DeviceGuard';Names=@('EnableVirtualizationBasedSecurity','RequirePlatformSecurityFeatures','HypervisorEnforcedCodeIntegrity','LsaCfgFlags')},@{Path='SOFTWARE\Policies\Microsoft\Windows\System';Names=@('RunAsPPL')},@{Path='SYSTEM\CurrentControlSet\Control\Lsa';Names=@('LsaCfgFlags','RunAsPPLBoot','RunAsPPL')},@{Path='SYSTEM\CurrentControlSet\Control\CI\Policy';Names=@('WHQLSettings')},@{Path='SYSTEM\CurrentControlSet\Control\CI\Config';Names=@('VulnerableDriverBlocklistEnable')});$base=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,[Microsoft.Win32.RegistryView]::Default);$lines=@('Windows Registry Editor Version 5.00','');foreach($x in $targets){$lines+=('[HKEY_LOCAL_MACHINE\'+$x.Path+']');$key=$base.OpenSubKey($x.Path,$false);foreach($n in $x.Names){$present=$key-and($key.GetValueNames()-contains$n);if(-not$present){$lines+=([char]34+$n+[char]34+'=-');continue};$kind=$key.GetValueKind($n);$value=$key.GetValue($n,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames);if($kind-eq[Microsoft.Win32.RegistryValueKind]::DWord){$lines+=('{0}=dword:{1:x8}'-f([char]34+$n+[char]34),[uint32]$value)}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::QWord){$lines+=('{0}=hex(b):{1}'-f([char]34+$n+[char]34),(([BitConverter]::GetBytes([uint64]$value)|ForEach-Object{$_.ToString('x2')})-join','))}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::Binary){$lines+=('{0}=hex:{1}'-f([char]34+$n+[char]34),(([byte[]]$value|ForEach-Object{$_.ToString('x2')})-join','))}else{$v=([string]$value).Replace('\','\\').Replace([string][char]34,'\'+[char]34);$lines+=([char]34+$n+[char]34+'='+[char]34+$v+[char]34)}};if($key){$key.Dispose()};$lines+=''};$base.Dispose();[IO.File]::WriteAllLines($r,$lines,[Text.Encoding]::Unicode);$bt=(& bcdedit.exe /enum '{current}' 2^>$null)-join[Environment]::NewLine;$v='__ABSENT__';if($bt-match'(?m)^\s*hypervisorlaunchtype\s+(\S+)'){$v=$Matches[1]};[IO.File]::WriteAllText($b,$v,[Text.Encoding]::ASCII);exit 0}catch{Remove-Item -LiteralPath @($env:WINOPT_SECURITY_BACKUP,$env:WINOPT_SECURITY_BCD_BACKUP) -Force -ErrorAction SilentlyContinue;exit 1}" >nul 2>&1
+exit /b !errorlevel!
+
+:RESTORE_SECURITY_BASELINE
+if not exist "%WINOPT_SECURITY_BACKUP%" if not exist "%WINOPT_SECURITY_BCD_BACKUP%" exit /b 2
+if not exist "%WINOPT_SECURITY_BACKUP%" exit /b 1
+if not exist "%WINOPT_SECURITY_BCD_BACKUP%" exit /b 1
+reg import "%WINOPT_SECURITY_BACKUP%" >nul 2>&1
+if !errorlevel! NEQ 0 exit /b 1
+set "WINOPT_BCD_VALUE="
+for /f "usebackq delims=" %%A in ("%WINOPT_SECURITY_BCD_BACKUP%") do set "WINOPT_BCD_VALUE=%%A"
+if not defined WINOPT_BCD_VALUE exit /b 1
+if /i "!WINOPT_BCD_VALUE!"=="__ABSENT__" (
+    bcdedit /deletevalue {current} hypervisorlaunchtype >nul 2>&1
+) else (
+    bcdedit /set {current} hypervisorlaunchtype !WINOPT_BCD_VALUE! >nul 2>&1
+)
+if !errorlevel! NEQ 0 exit /b 1
+del /f /q "%WINOPT_SECURITY_BACKUP%" "%WINOPT_SECURITY_BCD_BACKUP%" >nul 2>&1
+set "WINOPT_BCD_VALUE="
+exit /b 0
+
+:FTH_DISABLE
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$f=$env:WINOPT_FTH_BACKUP;$base=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,[Microsoft.Win32.RegistryView]::Default);$key=$base.OpenSubKey('SOFTWARE\Microsoft\FTH',$true);if(-not$key){$key=$base.CreateSubKey('SOFTWARE\Microsoft\FTH')};if(Test-Path -LiteralPath $f){$present=$key.GetValueNames()-contains'Enabled';if($present-and$key.GetValueKind('Enabled')-eq[Microsoft.Win32.RegistryValueKind]::DWord-and[int]$key.GetValue('Enabled')-eq 0){exit 0};exit 2};$present=$key.GetValueNames()-contains'Enabled';$state=[ordered]@{Present=$present;Kind='None';Value=$null};if($present){$kind=$key.GetValueKind('Enabled');$state.Kind=[string]$kind;$value=$key.GetValue('Enabled',$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames);if($kind-eq[Microsoft.Win32.RegistryValueKind]::Binary){$state.Value=[Convert]::ToBase64String([byte[]]$value)}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::MultiString){$state.Value=@($value)}else{$state.Value=$value}};[IO.File]::WriteAllText($f,($state|ConvertTo-Json -Depth 5),[Text.Encoding]::UTF8);$key.SetValue('Enabled',0,[Microsoft.Win32.RegistryValueKind]::DWord);if($key.GetValueKind('Enabled')-ne[Microsoft.Win32.RegistryValueKind]::DWord-or[int]$key.GetValue('Enabled')-ne 0){exit 1};exit 0}catch{exit 1}" >nul 2>&1
+exit /b !errorlevel!
+
+:FTH_RESTORE
+if not exist "%WINOPT_FTH_BACKUP%" exit /b 0
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$f=$env:WINOPT_FTH_BACKUP;$state=Get-Content -LiteralPath $f -Raw|ConvertFrom-Json;$base=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,[Microsoft.Win32.RegistryView]::Default);$key=$base.OpenSubKey('SOFTWARE\Microsoft\FTH',$true);$present=$key-and($key.GetValueNames()-contains'Enabled');if($present-and($key.GetValueKind('Enabled')-ne[Microsoft.Win32.RegistryValueKind]::DWord-or[int]$key.GetValue('Enabled')-ne 0)){exit 2};if($state.Present){if(-not$key){$key=$base.CreateSubKey('SOFTWARE\Microsoft\FTH')};$kind=[Microsoft.Win32.RegistryValueKind]::Parse([Microsoft.Win32.RegistryValueKind],[string]$state.Kind);$value=$state.Value;if($kind-eq[Microsoft.Win32.RegistryValueKind]::Binary){$value=[Convert]::FromBase64String([string]$state.Value)}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::DWord){$value=[uint32]$state.Value}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::QWord){$value=[uint64]$state.Value}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::MultiString){$value=@($state.Value)};$key.SetValue('Enabled',$value,$kind)}elseif($key-and$present){$key.DeleteValue('Enabled',$false)};Remove-Item -LiteralPath $f -Force -ErrorAction Stop;exit 0}catch{exit 1}" >nul 2>&1
+exit /b !errorlevel!
+
 :REMOVE_COPILOT_HOSTS_BLOCK
+call :BACKUP_HOSTS_BEFORE_CHANGE "%SystemRoot%\System32\drivers\etc\hosts"
+if !errorlevel! NEQ 0 (
+    echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Backup hosts impossible ; le fichier hosts reste inchange.%COLOR_RESET%
+    exit /b 1
+)
 powershell -NoProfile -Command "$ErrorActionPreference='Stop';$h=Join-Path $env:SystemRoot 'System32\drivers\etc\hosts';$item=$null;$attrs=$null;try{if(Test-Path -LiteralPath $h){$item=Get-Item -LiteralPath $h -Force -ErrorAction Stop;$attrs=$item.Attributes;$item.IsReadOnly=$false;$c=[IO.File]::ReadAllText($h);$s='# Copilot Block Start';$e='# Copilot Block End';$n=$c -replace ('(?s)\r?\n?'+[regex]::Escape($s)+'.*?'+[regex]::Escape($e)),'';if($n-ne$c){[IO.File]::WriteAllText($h,$n,[Text.Encoding]::ASCII)}};exit 0}catch{exit 1}finally{if($item-ne$null-and $attrs-ne$null){try{$item.Attributes=$attrs}catch{}}}" >nul 2>&1
 exit /b !errorlevel!
 
@@ -4513,11 +4609,21 @@ exit /b 0
 
 :DETECT_DIRECTX_JUNE2010
 set "DX_INSTALLED=0"
+REM XAudio2_7 seul ne prouve pas que le redist June 2010 est complet.
+REM Tester un noyau de DLL side-by-side dans chaque architecture permet au moins
+REM d'eviter de court-circuiter DXSETUP apres une installation manifestement partielle.
+set "DX_LEGACY_FILES=XAudio2_7.dll X3DAudio1_7.dll XAPOFX1_5.dll xactengine3_7.dll xinput1_3.dll D3DCompiler_43.dll D3DX9_43.dll D3DX10_43.dll D3DX11_43.dll"
 if defined ProgramFiles(x86) (
-    if exist "%SystemRoot%\System32\XAudio2_7.dll" if exist "%SystemRoot%\SysWOW64\XAudio2_7.dll" set "DX_INSTALLED=1"
+    set "DX_INSTALLED=1"
+    for %%F in (!DX_LEGACY_FILES!) do (
+        if not exist "%SystemRoot%\System32\%%F" set "DX_INSTALLED=0"
+        if not exist "%SystemRoot%\SysWOW64\%%F" set "DX_INSTALLED=0"
+    )
 ) else (
-    if exist "%SystemRoot%\System32\XAudio2_7.dll" set "DX_INSTALLED=1"
+    set "DX_INSTALLED=1"
+    for %%F in (!DX_LEGACY_FILES!) do if not exist "%SystemRoot%\System32\%%F" set "DX_INSTALLED=0"
 )
+set "DX_LEGACY_FILES="
 exit /b 0
 
 :CREATE_STR_STARTUP_SHORTCUT
@@ -4567,6 +4673,13 @@ if !errorlevel! NEQ 0 exit /b 1
 powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$eco=('%~1'-eq'1');$gaming=('%~2'-eq'0');$script:failed=$false;$managed=@('*FlowControl','*GreenGbe','*RscIPv6','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver','TxIntDelay','MIMOPowerSaveMode','uAPSDSupport','FatChannelIntolerant','*ReceiveBuffers','*TransmitBuffers','PendingReceives','PendingTransmits','ITR','*InterruptModeration');function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return};$p=$cache[$kw];$ok=$false;foreach($v in $vals){$valid=@($p.ValidRegistryValues);if($null-ne$p.ValidRegistryValues-and $valid.Count-gt 0-and $valid-notcontains[string]$v){continue};try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -AllProperties -NoRestart -ErrorAction Stop;$script:changed=$true;$ok=$true;break}catch{}};if(-not $ok){$script:failed=$true}};function SetMinP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};$nums=@();if($null-ne$p.NumericParameterMinValue-and $p.NumericParameterMaxValue-gt 0){$nums+=[int]$p.NumericParameterMinValue};$nums+=@($p.ValidRegistryValues|Where-Object{[string]$_-match'^\d+$'}|ForEach-Object{[int]$_});if($nums.Count){$v=(($nums|Measure-Object -Minimum).Minimum).ToString();SetP $a $kw @($v) $cache}};function ResetP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};try{if($p.DisplayName){$p|Reset-NetAdapterAdvancedProperty -NoRestart -ErrorAction Stop}else{$d=@($p.DefaultRegistryValue);if($d.Count-eq 0-or $null-eq $d[0]){return};Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $d -AllProperties -NoRestart -ErrorAction Stop};$script:changed=$true}catch{$script:failed=$true}};function SetF($get,$set,$n){$f=& $get -Name $n -ErrorAction SilentlyContinue;if($null-eq$f){return};try{& $set -Name $n -NoRestart -ErrorAction Stop;$script:changed=$true}catch{$script:failed=$true}};function SetPMFlags($n,$r,$cache,$ecoMode){$pm=$null;try{$pm=Get-NetAdapterPowerManagement -Name $n -ErrorAction Stop}catch{};$map=[ordered]@{'ArpOffload'='*PMARPOffload';'NSOffload'='*PMNSOffload';'WakeOnPattern'='*WakeOnPattern'};foreach($item in $map.GetEnumerator()){$param=$item.Key;$kw=$item.Value;$ndi=$null;if($r){$ndi=$r+'\Ndi\Params\'+$kw};$state=$null;if($pm){$state=$pm.PSObject.Properties[$param].Value};$supported=$cache.ContainsKey($kw)-or($ndi-and(Test-Path -LiteralPath $ndi))-or($state-and([string]$state-ne'Unsupported'));if(-not $supported){continue};$desired=if($ecoMode-and $param-ne'WakeOnPattern'){'Enabled'}else{'Disabled'};$target=if($desired-eq'Enabled'){'1'}else{'0'};$ok=$false;$args=@{Name=$n;NoRestart=$true;ErrorAction='Stop'};$args[$param]=$desired;try{Set-NetAdapterPowerManagement @args;$ok=$true;$script:changed=$true}catch{};if($ndi-and(Test-Path -LiteralPath $ndi)){$v=$null;try{$v=Get-ItemPropertyValue -LiteralPath $r -Name $kw -ErrorAction Stop}catch{};if([string]$v-ne$target){try{New-ItemProperty -LiteralPath $r -Name $kw -PropertyType String -Value $target -Force -ErrorAction Stop|Out-Null;$v=Get-ItemPropertyValue -LiteralPath $r -Name $kw -ErrorAction Stop;$ok=([string]$v-eq$target);$script:changed=$true}catch{$ok=$false}}else{$ok=$true}};if(-not $ok){$script:failed=$true}}};try{$adapters=@(Get-NetAdapter -Physical -ErrorAction Stop|Where-Object{$_.AdminStatus-eq'Up'})}catch{exit 1};foreach($adapter in $adapters){$script:changed=$false;$n=$adapter.Name;$props=@{};try{Get-NetAdapterAdvancedProperty -Name $n -AllProperties -ErrorAction Stop|ForEach-Object{if($_.RegistryKeyword){$props[$_.RegistryKeyword]=$_}}}catch{$script:failed=$true};$w=Get-CimInstance Win32_NetworkAdapter -ErrorAction SilentlyContinue|Where-Object{$_.PNPDeviceID-eq$adapter.PnPDeviceID}|Select-Object -First 1;$r=$null;if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k};if($eco){foreach($kw in $managed){ResetP $n $kw $props}}elseif(-not $gaming){foreach($kw in @('*RscIPv6','ITR','TxIntDelay','*InterruptModeration')){ResetP $n $kw $props}};if(($eco-or(-not $gaming))-and $r){Remove-ItemProperty -Path $r -Name 'ITR','TxIntDelay' -ErrorAction SilentlyContinue;$script:changed=$true};SetF 'Get-NetAdapterRss' 'Enable-NetAdapterRss' $n;if($eco-or(-not $gaming)){SetF 'Get-NetAdapterRsc' 'Enable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Enable-NetAdapterLso' $n}else{SetF 'Get-NetAdapterRsc' 'Disable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Disable-NetAdapterLso' $n};foreach($kw in @('*IPChecksumOffloadIPv4','*TCPChecksumOffloadIPv4','*TCPChecksumOffloadIPv6','*UDPChecksumOffloadIPv4','*UDPChecksumOffloadIPv6')){SetP $n $kw @('3') $props};if($eco){SetF 'Get-NetAdapterPowerManagement' 'Enable-NetAdapterPowerManagement' $n}else{SetF 'Get-NetAdapterPowerManagement' 'Disable-NetAdapterPowerManagement' $n;foreach($kw in @('*FlowControl','*GreenGbe','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver')){SetP $n $kw @('0') $props};if($gaming){SetP $n '*RscIPv6' @('0') $props;SetP $n '*InterruptModeration' @('1') $props;if($r){foreach($kw in @('ITR','TxIntDelay')){if(-not(Test-Path -LiteralPath ($r+'\Ndi\Params\'+$kw))){Remove-ItemProperty -LiteralPath $r -Name $kw -ErrorAction SilentlyContinue;$props.Remove($kw)|Out-Null;$script:changed=$true}}};foreach($kw in @('ITR','*InterruptModerationRate','InterruptModerationRate','RxIntDelay','TxIntDelay')){SetMinP $n $kw $props}};if($adapter.InterfaceDescription-match'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props;SetP $n 'uAPSDSupport' @('0') $props;SetP $n 'FatChannelIntolerant' @('0') $props};foreach($kw in @('*ReceiveBuffers','*TransmitBuffers')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,2048).ToString();SetP $n $kw @($v) $props}};foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString();SetP $n $kw @($v) $props}}};SetP $n '*InterruptModeration' @('1') $props;SetPMFlags $n $r $props $eco;if($script:changed){try{Restart-NetAdapter -Name $n -Confirm:$false -ErrorAction Stop}catch{$script:failed=$true}}};if($script:failed){exit 1};exit 0" >nul 2>&1
 exit /b !errorlevel!
 
+:SET_NIC_PROFILE_CONVERGENCE
+REM Passe de convergence : inclut les cartes physiques deconnectees/desactivees.
+REM Les commandes qui exigent une interface active sont sautees pour ne pas la reveiller ;
+REM les valeurs persistantes du pilote restent toutefois alignees avec le profil cible.
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$eco=('%~1'-eq'1');$gaming=('%~1'-eq'0'-and'%~2'-eq'0');try{$adapters=@(Get-NetAdapter -Physical -ErrorAction Stop)}catch{exit 1};foreach($a in $adapters){$up=($a.AdminStatus-eq'Up');$props=@{};try{Get-NetAdapterAdvancedProperty -Name $a.Name -AllProperties -ErrorAction Stop|ForEach-Object{if($_.RegistryKeyword){$props[$_.RegistryKeyword]=$_}}}catch{};function SetP($kw,$val){$p=$props[$kw];if(-not$p){return};$valid=@($p.ValidRegistryValues);if($null-ne$p.ValidRegistryValues-and$valid.Count-gt 0-and$valid-notcontains[string]$val){return};try{Set-NetAdapterAdvancedProperty -Name $a.Name -RegistryKeyword $kw -RegistryValue $val -AllProperties -NoRestart -ErrorAction Stop}catch{}};function ResetP($kw){$p=$props[$kw];if(-not$p){return};try{if($p.DisplayName){$p|Reset-NetAdapterAdvancedProperty -NoRestart -ErrorAction Stop}elseif($null-ne$p.DefaultRegistryValue){Set-NetAdapterAdvancedProperty -Name $a.Name -RegistryKeyword $kw -RegistryValue $p.DefaultRegistryValue -AllProperties -NoRestart -ErrorAction Stop}}catch{}};if($eco-or-not$gaming){foreach($kw in @('*RscIPv6','ITR','TxIntDelay','*InterruptModerationRate','InterruptModerationRate','RxIntDelay')){ResetP $kw}};if($eco){ResetP '*FlowControl'}else{SetP '*FlowControl' '0'};SetP '*InterruptModeration' '1';$w=Get-CimInstance Win32_NetworkAdapter -ErrorAction SilentlyContinue|Where-Object{$_.PNPDeviceID-eq$a.PnPDeviceID}|Select-Object -First 1;$r=$null;if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k};if($a.PnPDeviceID-match'^PCI\\VEN_10EC&'-and$r){if($gaming){Remove-ItemProperty -LiteralPath $r -Name 'ITR','TxIntDelay' -ErrorAction SilentlyContinue;New-ItemProperty -LiteralPath $r -Name 'IntMitiInterval' -PropertyType DWord -Value 0 -Force|Out-Null;New-ItemProperty -LiteralPath $r -Name 'InterruptModerationLevel' -PropertyType String -Value '0' -Force|Out-Null}else{Remove-ItemProperty -LiteralPath $r -Name 'ITR','TxIntDelay','IntMitiInterval','InterruptModerationLevel' -ErrorAction SilentlyContinue}};if($r){$target=if($eco){'1'}else{'0'};foreach($name in @('*PMARPOffload','*PMNSOffload','*WakeOnPattern')){$ndi=$r+'\Ndi\Params\'+$name;if(Test-Path -LiteralPath $ndi){$value=if($name-eq'*WakeOnPattern'){'0'}else{$target};New-ItemProperty -LiteralPath $r -Name $name -PropertyType String -Value $value -Force|Out-Null}}};if($up){if($eco-or-not$gaming){Enable-NetAdapterRsc -Name $a.Name -NoRestart -ErrorAction SilentlyContinue;Enable-NetAdapterLso -Name $a.Name -NoRestart -ErrorAction SilentlyContinue}else{Disable-NetAdapterRsc -Name $a.Name -NoRestart -ErrorAction SilentlyContinue;Disable-NetAdapterLso -Name $a.Name -NoRestart -ErrorAction SilentlyContinue};$args=@{Name=$a.Name;NoRestart=$true;ErrorAction='SilentlyContinue'};if($eco){$args['ArpOffload']='Enabled';$args['NSOffload']='Enabled';$args['WakeOnPattern']='Disabled'}else{$args['ArpOffload']='Disabled';$args['NSOffload']='Disabled';$args['WakeOnPattern']='Disabled'};Set-NetAdapterPowerManagement @args}};exit 0" >nul 2>&1
+exit /b !errorlevel!
+
 :CLEAN_LEGACY_NIC_OVERRIDES
 REM Nettoyage historique best effort : la sous-cle systeme Properties est protegee par Windows.
 powershell -NoProfile -Command "$root='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}';$names=@('PnPCapabilities','EEELinkAdvertisement','SipsEnabled','ULPMode','WakeOnLink','*ModernStandbyWoLMagicPacket','*SelectiveSuspend','EnablePME','EnableLLI','EnableDownShift');Get-ChildItem -LiteralPath $root -ErrorAction SilentlyContinue|Where-Object{$_.PSChildName-match'^\d{4}$'}|ForEach-Object{$p=$_.PSPath;foreach($name in $names){Remove-ItemProperty -LiteralPath $p -Name $name -ErrorAction SilentlyContinue}};exit 0" >nul 2>&1
@@ -4598,6 +4711,14 @@ powercfg /setactive SCHEME_CURRENT >nul 2>&1
 exit /b 0
 
 :RUN_REMOTE_PS
+set "REMOTE_PS_PROVIDER="
+if /i "%~1"=="https://get.activated.win" set "REMOTE_PS_PROVIDER=Microsoft Activation Scripts (MAS)"
+if /i "%~1"=="https://github.com/ChrisTitusTech/winutil/releases/latest/download/winutil.ps1" set "REMOTE_PS_PROVIDER=Chris Titus Tech WinUtil"
+if not defined REMOTE_PS_PROVIDER (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Source distante non autorisee ou non identifiee.%COLOR_RESET%
+    exit /b 1
+)
+echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Source distante autorisee : !REMOTE_PS_PROVIDER!.%COLOR_RESET%
 set "REMOTE_PS_FILE=%TEMP%\WindowsOptimizer_remote_%RANDOM%_%RANDOM%.ps1"
 powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri '%~1' -OutFile $env:REMOTE_PS_FILE -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $env:REMOTE_PS_FILE).Length -lt 500){exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
@@ -4611,7 +4732,9 @@ del /f /q "%REMOTE_PS_FILE%" >nul 2>&1
 set "REMOTE_PS_FILE="
 if "!REMOTE_PS_RC!"=="0" (
     set "REMOTE_PS_RC="
+    set "REMOTE_PS_PROVIDER="
     exit /b 0
 )
 set "REMOTE_PS_RC="
+set "REMOTE_PS_PROVIDER="
 exit /b 1

@@ -35,11 +35,11 @@ Ce script privilégie une configuration lisible et des profils explicites pour W
 ## 🚀 Démarrage rapide
 
 ```powershell
-irm "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1" | iex
+irm "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/238d9d3d0ad4097c316052b3ec1cdf18b02dec1d/launcher.ps1" | iex
 ```
 Collez cette commande dans **PowerShell non administrateur**. Le launcher valide la source officielle, demande l'élévation UAC, prépare le batch téléchargé puis le lance.
 
-> `irm | iex` exécute le contenu distant actuel de la branche `main`. Relisez le dépôt et ses changements avant exécution si vous avez besoin d'une version figée et auditée.
+> Le bootstrap est épinglé sur un commit Git immuable. Lors d'une nouvelle publication, remplacez volontairement le SHA dans cette commande et dans `launcher.ps1` après audit du contenu.
 
 ### Premier parcours
 
@@ -114,20 +114,20 @@ Exceptions réseau :
 
 | Mode | Sécurité VBS / HVCI | Anti-Cheats (Valorant / FACEIT) | Usage Recommandé |
 | :--- | :---: | :---: | :--- |
-| **1 - Défaut Windows** | ✅ Activé | ✅ Compatible | Base de sécurité Windows gérée par le script |
+| **1 - Défaut Windows** | ✅ Selon l'état Windows | ✅ Compatible | Snapshot restauré ; sinon overrides de l'outil retirés |
 | **2 - Gaming (Recommandé) ★** | ✅ Activé | ✅ Compatibilité élevée | Équilibre performances / sécurité pour tous types de jeux |
 | **3 - Performance Max ⚠️** | ❌ Désactivé | ⚠️ Selon les jeux | Gain maximal pour les machines dédiées exclusivement à la performance brute |
 
 > ### 💡 Vue d'ensemble des 3 modes
 >
 > * **Gaming (Recommandé ★)** : Conserve **VBS / HVCI** et **LSA Protection** (`RunAsPPL=2` sans verrou UEFI) pour limiter les conflits avec les anti-cheats modernes, laisse **CFG** à `NOTSET` (défaut Windows), désactive **SEHOP**, réduit les mitigations CPU et demande la désactivation de la blocklist.
-> * **Défaut Windows** : Réinitialise toutes les protections contre les exploits en supprimant `MitigationOptions` et `MitigationAuditOptions`. Applique la base VBS/HVCI, les mitigations CPU Microsoft, la LSA Protection (sans verrou UEFI) et la blocklist.
+> * **Défaut Windows** : restaure le snapshot capturé avant un profil de sécurité. Sans snapshot, il retire uniquement les overrides gérés par l'outil et laisse Windows, les pilotes et les stratégies décider de l'état effectif.
 > * **Performance Max ⚠️ (Déconseillé)** : Désactive VBS, HVCI et SEHOP, conserve CFG et **LSA Protection** (`RunAsPPL=2` sans verrou UEFI), réduit les mitigations CPU et demande la désactivation de la blocklist.
 
 > ### 🔍 Notes & Précisions techniques
 >
-> * **Champs modifiés** : les modes *Gaming* et *Performance Max* modifient uniquement CFG et SEHOP dans `MitigationOptions` pour préserver les autres mitigations de processus. *Défaut Windows* réinitialise l'intégralité du champ au comportement natif de Windows.
-> * **Mitigations CPU (Spectre/Meltdown)** : `0/3` correspond au mode *Défaut Windows* (mitigations Microsoft activées d'origine : `FeatureSettingsOverride=0`, `Mask=3`). `33554435/3` (0x2000003) correspond aux modes *Gaming* et *Perf Max* (mitigations réduites/désactivées pour libérer des performances processeur).
+> * **Champs modifiés** : les modes *Gaming* et *Performance Max* modifient uniquement CFG et SEHOP dans `MitigationOptions` pour préserver les autres mitigations de processus. *Défaut Windows* restaure les valeurs capturées ou retire les overrides de l'outil lorsqu'aucun snapshot n'existe.
+> * **Mitigations CPU (Spectre/Meltdown)** : `33554435/3` (0x2000003) correspond aux modes *Gaming* et *Perf Max*. Le mode *Défaut Windows* ne force plus `0/3` : il restaure l'état précédent ou laisse Windows gérer l'absence d'override.
 > * **Blocklist de pilotes** : *Gaming* conserve HVCI actif. Si HVCI, Smart App Control ou le mode S restent actifs, Windows peut continuer d'imposer la blocklist même si la désactivation a été demandée.
 > * **Application automatique** : dans **Tout optimiser**, la question *Protections Windows* applique directement les réglages *Défaut Windows* en usage Normal ou *Gaming* en usage Gaming. Elle ne demande pas de choisir un second mode de sécurité. *Performance Max* reste accessible séparément depuis le menu Sécurité.
 
@@ -176,10 +176,10 @@ R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester
 R : Performance Max applique `disabledynamictick=yes`, `useplatformtick=no`, supprime les éventuels overrides `useplatformclock`/`tscsyncpolicy` et désactive le périphérique HPET. Ce combo a produit un polling rate plus régulier dans MouseTester sur la configuration testée, mais Microsoft classe ces options BCD comme des réglages de débogage : le preset reste expérimental et aucun gain universel n'est garanti. Le profil Eco supprime les quatre overrides BCD et réactive HPET pour rendre la sélection des timers à Windows. Un redémarrage est nécessaire après le changement.
 
 **Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
-R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Gaming conserve VBS/HVCI, laisse CFG au défaut Windows, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist. HVCI peut néanmoins maintenir cette blocklist active. Performance Max désactive VBS/HVCI/SEHOP, laisse CFG au défaut Windows, réduit les mitigations CPU et demande aussi la désactivation de la blocklist. Défaut Windows réactive VBS/HVCI/SEHOP, les mitigations CPU et la blocklist, et laisse Credential Guard non configuré. Les trois modes de sécurité conservent LSA Protection avec `RunAsPPL=2` sans verrou UEFI, ne modifient pas les Kernel Shadow Stacks et suppriment la surcharge BCD `hypervisorlaunchtype` pour laisser Windows reprendre son comportement par défaut.
+R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Gaming conserve VBS/HVCI, laisse CFG au défaut Windows, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist. HVCI peut néanmoins maintenir cette blocklist active. Performance Max désactive VBS/HVCI/SEHOP, laisse CFG au défaut Windows, réduit les mitigations CPU et demande aussi la désactivation de la blocklist. Défaut Windows restaure le snapshot de sécurité ou retire les overrides de l'outil sans imposer une valeur brute universelle. Les trois modes suppriment la surcharge BCD `hypervisorlaunchtype` lorsqu'ils la gèrent ; les stratégies et verrous externes restent prioritaires.
 
 **Q : Changer plusieurs fois de mode de sécurité laisse-t-il les anciens réglages actifs ?**
-R : Non pour les réglages appartenant à l'option 8. Défaut Windows, Gaming et Performance Max appliquent chacun leur propre état complet : toute valeur gérée est écrite avec la valeur cible ou supprimée si elle ne doit pas exister dans ce mode. Ainsi, Gaming → Défaut Windows, Défaut Windows → Performance Max et toutes les autres transitions demandent le même état final que l'application directe du mode choisi. Une stratégie d'entreprise ou un verrou UEFI peut cependant réimposer une valeur extérieure au script.
+R : Le premier passage Gaming ou Performance Max capture les valeurs ciblées et la valeur BCD avant modification. Défaut Windows réimporte ensuite ce snapshot de façon ciblée ; sans snapshot, il retire seulement les overrides connus de l'outil. Une stratégie d'entreprise ou un verrou UEFI peut cependant réimposer une valeur extérieure au script.
 
 **Q : Performance Max désactive-t-il toutes les protections ?**
 R : Non. Performance Max désactive VBS, HVCI, SEHOP et Credential Guard local/policy, laisse CFG à `NOTSET` (dont le défaut Windows effectif est ON), demande la désactivation de la blocklist, réduit les mitigations CPU, mais conserve LSA Protection avec `RunAsPPL=2` sans verrou UEFI et laisse les Kernel Shadow Stacks inchangées. Smart App Control, le mode S ou une stratégie peuvent maintenir la blocklist active. La valeur BCD `hypervisorlaunchtype` est supprimée (`deletevalue`). Une ancienne configuration Credential Guard verrouillée en UEFI peut nécessiter une procédure avec confirmation physique pour retirer ce verrou.
@@ -224,7 +224,7 @@ R : Un redémarrage est recommandé après un parcours complet. Il est nécessai
 ### 🛡️ Sécurité & fiabilité
 
 **Q : Comment les téléchargements distants sont-ils vérifiés ?**
-R : `irm | iex`, MAS et WinUtil utilisent du contenu distant susceptible d'évoluer. Le launcher contrôle l'hôte, le format et la structure minimale du batch, mais n'utilise pas de hash ou de signature embarquée. Visual C++ et DirectX sont contrôlés par taille et signature Authenticode Microsoft avant exécution. Les outils du dépôt (NVIDIA Profile Inspector, SetTimerResolution) sont contrôlés surtout par chemin, taille et compatibilité, sans validation Authenticode systématique.
+R : Le launcher exige désormais un commit SHA-1 complet du dépôt officiel au lieu d'une branche mutable. MAS et WinUtil restent des outils externes explicitement sélectionnés, limités à leurs deux URLs autorisées. Visual C++ et DirectX sont contrôlés par taille et signature Authenticode Microsoft avant exécution. Les outils du dépôt (NVIDIA Profile Inspector, SetTimerResolution) sont contrôlés surtout par chemin, taille et compatibilité, sans validation Authenticode systématique.
 
 **Q : Certains outils sont-ils exécutés automatiquement ?**
 R : NVIDIA Profile Inspector et son profil peuvent être exécutés automatiquement en Gaming sur un GPU NVIDIA compatible. SetTimerResolution peut être installé, ajouté au démarrage et lancé en MaxPerf. La configuration O&O, les modèles de `Game Configs\` et les autres outils Timer & Interrupt ne sont pas lancés automatiquement par le batch actuel.

@@ -1,5 +1,6 @@
 param(
-    [string]$BaseUrl = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main"
+    # Keep the bootstrap immutable: update this SHA deliberately when publishing a new release.
+    [string]$BaseUrl = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/238d9d3d0ad4097c316052b3ec1cdf18b02dec1d"
 )
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -13,9 +14,10 @@ try {
 }
 if ($baseUri.Scheme -ne "https" -or
     $baseUri.Host -ne "raw.githubusercontent.com" -or !$baseUri.IsDefaultPort -or
-    $baseUri.UserInfo -or $baseUri.Query -or $baseUri.Fragment -or $segments.Count -lt 3 -or
-    $segments[0] -ne "kaylerberserk" -or $segments[1] -ne "WindowsOptimizer") {
-    Write-Host "[ERREUR] La source doit etre une branche du depot officiel WindowsOptimizer sur raw.githubusercontent.com." -ForegroundColor Red
+    $baseUri.UserInfo -or $baseUri.Query -or $baseUri.Fragment -or $segments.Count -ne 3 -or
+    $segments[0] -ne "kaylerberserk" -or $segments[1] -ne "WindowsOptimizer" -or
+    $segments[2] -notmatch '^[0-9a-fA-F]{40}$') {
+    Write-Host "[ERREUR] La source doit etre un commit SHA-1 complet du depot officiel WindowsOptimizer." -ForegroundColor Red
     exit 1
 }
 $BaseUrl = $baseUri.AbsoluteUri.TrimEnd("/")
