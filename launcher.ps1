@@ -1,9 +1,11 @@
 param(
-    # Keep the bootstrap immutable: update this SHA deliberately when publishing a new release.
-    [string]$BaseUrl = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/238d9d3d0ad4097c316052b3ec1cdf18b02dec1d"
+    # Bootstrap immuable : mettre ce SHA a jour volontairement lors d'une publication.
+    [string]$BaseUrl = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/17216b76e71a4c5aecaaa9e4f6ce074a724e49cf",
+    [switch]$VerifyOnly
 )
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+$ProgressPreference = "SilentlyContinue"
 try {
     $baseUri = [Uri]$BaseUrl
     if (!$baseUri.IsAbsoluteUri) { throw "URI relative" }
@@ -21,7 +23,7 @@ if ($baseUri.Scheme -ne "https" -or
     exit 1
 }
 $BaseUrl = $baseUri.AbsoluteUri.TrimEnd("/")
-if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if (!$VerifyOnly -and !([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     $ps = if (Get-Command pwsh -ErrorAction SilentlyContinue) { "pwsh" } else { "powershell" }
     $baseUrlData = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($BaseUrl))
     if ($PSCommandPath -and (Test-Path -LiteralPath $PSCommandPath)) {
@@ -30,22 +32,33 @@ if (!([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]:
 `$ErrorActionPreference = 'Stop'
 `$baseUrl = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$baseUrlData'))
 `$scriptPath = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$scriptPathData'))
-try { & `$scriptPath -BaseUrl `$baseUrl } catch { exit 1 }
+try {
+    & `$scriptPath -BaseUrl `$baseUrl
+} catch {
+    Write-Host ("[ERREUR] Echec du launcher admin : " + `$_.Exception.Message) -ForegroundColor Red
+    exit 1
+}
 "@
     } else {
         $childScript = @"
 `$ErrorActionPreference = 'Stop'
 `$baseUrl = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$baseUrlData'))
 try {
-    `$launcher = Invoke-RestMethod (`$baseUrl + '/launcher.ps1')
+    `$launcher = Invoke-RestMethod -Uri (`$baseUrl + '/launcher.ps1') -TimeoutSec 60 -ErrorAction Stop
     & ([scriptblock]::Create(`$launcher)) -BaseUrl `$baseUrl
-} catch { exit 1 }
+} catch {
+    Write-Host ("[ERREUR] Echec du bootstrap distant : " + `$_.Exception.Message) -ForegroundColor Red
+    exit 1
+}
 "@
     }
     $encodedCommand = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($childScript))
     $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", $encodedCommand)
     try {
         $process = Start-Process -FilePath $ps -ArgumentList $arguments -Verb RunAs -Wait -PassThru -ErrorAction Stop
+        if ($process.ExitCode -ne 0) {
+            Write-Host "[ERREUR] Le launcher administrateur s'est termine avec le code $($process.ExitCode)." -ForegroundColor Red
+        }
         exit $process.ExitCode
     } catch {
         Write-Host "[ERREUR] Elevation administrateur annulee ou impossible." -ForegroundColor Red
@@ -57,12 +70,15 @@ $downloaded = $false
 $localCmd = if ($PSScriptRoot) { Join-Path $PSScriptRoot "All in One.cmd" } else { $null }
 if ($localCmd -and (Test-Path -LiteralPath $localCmd)) {
     $scriptPath = $localCmd
+    $scriptOrigin = $localCmd
 } else {
     $scriptPath = Join-Path $env:TEMP ("WindowsOptimizer_aio_{0}.cmd" -f [guid]::NewGuid().ToString("N"))
+    $scriptOrigin = "$BaseUrl/All%20in%20One.cmd"
     try {
-        irm "$BaseUrl/All%20in%20One.cmd" -o $scriptPath -ErrorAction Stop
+        Invoke-RestMethod -Uri "$BaseUrl/All%20in%20One.cmd" -OutFile $scriptPath -TimeoutSec 60 -ErrorAction Stop
         $downloaded = $true
     } catch {
+        Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
         Write-Host "[ERREUR] Echec du telechargement du script : $($_.Exception.Message)" -ForegroundColor Red
         Read-Host "Appuyez sur Entree pour quitter"
         exit 1
@@ -123,8 +139,26 @@ if ($firstLine -notmatch '^@echo off\s*$' -or $scriptContent.Length -lt 100000 -
     exit 1
 }
 
+if ($VerifyOnly) {
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+        $hash = ($sha256.ComputeHash([Text.Encoding]::ASCII.GetBytes($scriptContent)) |
+            ForEach-Object { $_.ToString("x2") }) -join ""
+    } finally {
+        $sha256.Dispose()
+    }
+    Write-Host "[OK] Launcher et batch valides." -ForegroundColor Green
+    Write-Host "     Batch : $scriptOrigin"
+    Write-Host "     Racine de publication : $BaseUrl"
+    Write-Host "     SHA-256 du batch prepare : $hash"
+    if ($downloaded) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
+    exit 0
+}
+
 $exitCode = 1
 try {
+    # Le batch utilise la meme publication immuable pour ses ressources optionnelles.
+    $env:WINOPT_RELEASE_BASE_URL = $BaseUrl
     $quote = [char]34
     $cmdArguments = "/d /e:on /v:off /s /c $quote$quote$scriptPath$quote$quote"
     $process = Start-Process -FilePath $env:ComSpec -ArgumentList $cmdArguments -Wait -PassThru -NoNewWindow -ErrorAction Stop
