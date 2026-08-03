@@ -4063,12 +4063,12 @@ REM  Initialiser la barre de progression (26 etapes - caches de perf conserves)
 set /a "CLEAN_TOTAL=26"
 set /a "CLEAN_STEP=0"
 set /a "CLEAN_WARNINGS=0"
-set "CLEAN_SCRIPT_PATH=%~f0"
+REM CLEAN_SCRIPT_PATH supprime : utiliser $env:WINOPT_SELF_BACKUP_SOURCE (def ligne 6, delayed OFF) qui preserve le point exclam du chemin
 
 REM  ETAPE 1 - Fichiers temporaires utilisateur (ameliore)
 set /a "CLEAN_STEP+=1"
 call :PROGRESS_BAR %CLEAN_STEP% %CLEAN_TOTAL% "Fichiers temporaires utilisateur"
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$self=[IO.Path]::GetFullPath($env:CLEAN_SCRIPT_PATH);Get-ChildItem -LiteralPath $env:TEMP -Force|Where-Object{$p=[IO.Path]::GetFullPath($_.FullName);$p-ne$self-and-not $self.StartsWith($p+'\',[StringComparison]::OrdinalIgnoreCase)}|Remove-Item -Recurse -Force -ErrorAction SilentlyContinue;exit 0" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$self=[IO.Path]::GetFullPath($env:WINOPT_SELF_BACKUP_SOURCE);Get-ChildItem -LiteralPath $env:TEMP -Force|Where-Object{$p=[IO.Path]::GetFullPath($_.FullName);$p-ne$self-and-not $self.StartsWith($p+'\',[StringComparison]::OrdinalIgnoreCase)}|Remove-Item -Recurse -Force -ErrorAction SilentlyContinue;exit 0" >nul 2>&1
 
 REM  ETAPE 2 - Fichiers temporaires Windows (ameliore)
 set /a "CLEAN_STEP+=1"
@@ -4327,7 +4327,7 @@ if not defined SPACE_FREED_GB (
 
 set "CLEAN_STEP="
 set "CLEAN_TOTAL="
-set "CLEAN_SCRIPT_PATH="
+REM CLEAN_SCRIPT_PATH supprime (cf. ligne 4066)
 
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
