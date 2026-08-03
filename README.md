@@ -35,10 +35,9 @@ Ce script privilégie une configuration lisible et des profils explicites pour W
 ## 🚀 Démarrage rapide
 
 ```powershell
-$release = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/17216b76e71a4c5aecaaa9e4f6ce074a724e49cf"
-& ([scriptblock]::Create([string](irm "$release/launcher.ps1" -TimeoutSec 30 -ErrorAction Stop))) -BaseUrl $release
+irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/17216b76e71a4c5aecaaa9e4f6ce074a724e49cf/launcher.ps1 | iex
 ```
-Collez cette commande dans **PowerShell non administrateur**. Le launcher valide la source officielle, demande l'élévation UAC, télécharge le batch avec un délai maximal explicite, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin.
+Collez cette commande dans **PowerShell non administrateur**. Le launcher (téléchargé sur ce commit immuable) valide la source officielle, demande l'élévation UAC, télécharge le batch référencé par son SHA interne, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin.
 
 Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demander l'UAC ni exécuter l'optimiseur :
 
@@ -46,7 +45,7 @@ Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demand
 .\launcher.ps1 -VerifyOnly
 ```
 
-> La variable `$release` épingle le launcher, le batch et leurs ressources sur un même commit Git immuable. Lors d'une nouvelle publication, remplacez volontairement ce SHA et le SHA par défaut de `launcher.ps1` après audit du contenu.
+> L'URL épingle le **launcher** sur un commit Git immuable du dépôt officiel ; le **batch** est téléchargé depuis le SHA par défaut embarqué dans ce launcher. Les deux doivent désigner le même commit à chaque publication. Pour contrôler la chaîne sans l'exécuter : téléchargez `launcher.ps1` depuis un commit récent (avec `-VerifyOnly`), puis lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la racine de publication et le SHA-256 du batch préparé.
 
 ### Premier parcours
 
@@ -171,7 +170,7 @@ Exceptions réseau :
 
 **Q : La commande `irm` ne démarre pas le launcher ?**
 
-R : Exécutez-la dans **Windows PowerShell** ou **PowerShell**, pas dans `cmd.exe`. La commande épinglée utilise désormais `-ErrorAction Stop` et un délai de 30 secondes pour afficher immédiatement une erreur de réseau ou d'URL. Depuis un clone, lancez `.\launcher.ps1 -VerifyOnly` pour contrôler le launcher et le batch sans UAC ni modification système.
+R : Exécutez-la dans **Windows PowerShell** ou **PowerShell**, pas dans `cmd.exe`. En cas d'erreur réseau ou d'URL, la commande affiche immédiatement l'erreur de `Invoke-RestMethod`. Depuis un clone, lancez `.\launcher.ps1 -VerifyOnly` pour contrôler le launcher et le batch sans UAC ni modification système.
 
 **Q : Est-ce que ce script peut provoquer une incompatibilité ?**
 R : Oui, comme tout outil qui modifie des stratégies, services, pilotes ou paramètres réseau. Créez d'abord un point de restauration, choisissez le profil Normal/Eco en cas de doute et évitez les options de sécurité ou de désinstallation dont vous n'avez pas besoin.
