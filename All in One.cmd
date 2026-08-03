@@ -1699,14 +1699,14 @@ if "!HAS_NVIDIA!"=="1" (
 
         REM Utilisation de Windows\Temp car le %%TEMP%% utilisateur peut etre sur un RamDisk ou lecteur non mappe en Admin
         set "NPI_DIR=%SystemRoot%\Temp\NPI_%RANDOM%_%RANDOM%"
-        set "NPI_EXE_SRC=!WINOPT_SOURCE_DIR!Tools\NVIDIA Inspector\nvidiaProfileInspector.exe"
-        set "NPI_PROFILE_SRC=!WINOPT_SOURCE_DIR!Tools\NVIDIA Inspector\Kaylers_profile.nip"
+        REM Copie locale via PowerShell (env WINOPT_SOURCE_DIR, cf. 7.10) : contourne expansion differee de cmd
+        REM NPI_EXE_SRC et NPI_PROFILE_SRC ne sont plus definis ici : copies via PowerShell ci-dessous
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
 
         echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de NVIDIA Profile Inspector et du profil...%COLOR_RESET%
         REM Priorite aux fichiers locaux livres avec le script, telechargement GitHub en secours.
-        if exist "!NPI_EXE_SRC!" copy /Y "!NPI_EXE_SRC!" "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
-        if exist "!NPI_PROFILE_SRC!" copy /Y "!NPI_PROFILE_SRC!" "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+        powershell -NoProfile -Command "try{$b=Join-Path $env:WINOPT_SOURCE_DIR 'Tools\NVIDIA Inspector';$d=$env:NPI_DIR;$e=Join-Path $d 'nvidiaProfileInspector.exe';$p=Join-Path $d 'Kaylers_profile.nip';if(-not([IO.File]::Exists($e)){$s=Join-Path $b 'nvidiaProfileInspector.exe';if([IO.File]::Exists($s)){Copy-Item -LiteralPath $s -Destination $e -Force}};if(-not([IO.File]::Exists($p)){$s2=Join-Path $b 'Kaylers_profile.nip';if([IO.File]::Exists($s2)){Copy-Item -LiteralPath $s2 -Destination $p -Force}}}catch{}"
+        REM Copie via PowerShell ci-dessus ; telechargement GitHub en secours
         if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" curl.exe -fsSL --retry 2 --connect-timeout 15 "!WINOPT_RELEASE_BASE_URL!/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe" -o "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
         if not exist "!NPI_DIR!\Kaylers_profile.nip" curl.exe -fsSL --retry 2 --connect-timeout 15 "!WINOPT_RELEASE_BASE_URL!/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip" -o "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
 
@@ -1757,13 +1757,13 @@ if "!HAS_NVIDIA!"=="1" (
         set "NPI_CLI_SUPPORTED="
     ) else (
         echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de la restauration du profil GPU...%COLOR_RESET%
-        set "NPI_EXE_SRC=!WINOPT_SOURCE_DIR!Tools\NVIDIA Inspector\nvidiaProfileInspector.exe"
-        set "NPI_PROFILE_SRC=!WINOPT_SOURCE_DIR!Tools\NVIDIA Inspector\Kaylers_profile.nip"
+        REM Copie locale via PowerShell (env WINOPT_SOURCE_DIR, cf. 7.10) : contourne expansion differee de cmd
+        REM NPI_EXE_SRC et NPI_PROFILE_SRC ne sont plus definis ici : copies via PowerShell ci-dessous
         REM Le launcher distant ne telecharge que le batch : recuperer aussi les deux fichiers NPI.
         set "NPI_DIR=%SystemRoot%\Temp\NPI_restore_%RANDOM%_%RANDOM%"
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
-        if exist "!NPI_EXE_SRC!" copy /Y "!NPI_EXE_SRC!" "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
-        if exist "!NPI_PROFILE_SRC!" copy /Y "!NPI_PROFILE_SRC!" "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
+        powershell -NoProfile -Command "try{$b=Join-Path $env:WINOPT_SOURCE_DIR 'Tools\NVIDIA Inspector';$d=$env:NPI_DIR;$e=Join-Path $d 'nvidiaProfileInspector.exe';$p=Join-Path $d 'Kaylers_profile.nip';if(-not([IO.File]::Exists($e)){$s=Join-Path $b 'nvidiaProfileInspector.exe';if([IO.File]::Exists($s)){Copy-Item -LiteralPath $s -Destination $e -Force}};if(-not([IO.File]::Exists($p)){$s2=Join-Path $b 'Kaylers_profile.nip';if([IO.File]::Exists($s2)){Copy-Item -LiteralPath $s2 -Destination $p -Force}}}catch{}"
+        REM Copie via PowerShell ci-dessus ; telechargement GitHub en secours
         if not exist "!NPI_DIR!\nvidiaProfileInspector.exe" curl.exe -fsSL --retry 2 --connect-timeout 15 "!WINOPT_RELEASE_BASE_URL!/Tools/NVIDIA%%20Inspector/nvidiaProfileInspector.exe" -o "!NPI_DIR!\nvidiaProfileInspector.exe" >nul 2>&1
         if not exist "!NPI_DIR!\Kaylers_profile.nip" curl.exe -fsSL --retry 2 --connect-timeout 15 "!WINOPT_RELEASE_BASE_URL!/Tools/NVIDIA%%20Inspector/Kaylers_profile.nip" -o "!NPI_DIR!\Kaylers_profile.nip" >nul 2>&1
         set "NPI_EXE_SRC=!NPI_DIR!\nvidiaProfileInspector.exe"
@@ -2421,7 +2421,6 @@ echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTime
 set "STR_DIR=%ProgramFiles%\SetTimerResolution"
 set "STR_OLD_DIR=%ProgramFiles%\OptimizerAllInOne"
 set "STR_EXE=%STR_DIR%\SetTimerResolution.exe"
-set "STR_SRC=!WINOPT_SOURCE_DIR!Tools\Timer & Interrupt\SetTimerResolution.exe"
 set "STR_STARTUP_LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
 REM  Le dossier de destination doit exister AVANT toute copie/telechargement (sinon echec)
 if not exist "%STR_DIR%" mkdir "%STR_DIR%" >nul 2>&1
@@ -2431,8 +2430,10 @@ if exist "%STR_EXE%" for %%A in ("%STR_EXE%") do if %%~zA LSS 10000 del /f /q "%
 if exist "%STR_EXE%" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %STR_DIR%%COLOR_RESET%
 ) else (
-    REM Priorite a la copie locale, puis meme racine de publication immuable que le launcher.
-    if exist "%STR_SRC%" copy /Y "%STR_SRC%" "%STR_EXE%" >nul 2>&1
+    REM Copie locale via $env:WINOPT_SOURCE_DIR : la valeur de %~dp0 n'est pas deformee
+    REM par l'expansion differee de cmd.exe quand le chemin contient '!' ou '&'.
+    REM En execution distante (sans dossier Tools local), le telechargement sert de secours.
+    powershell -NoProfile -Command "try{$src=Join-Path $env:WINOPT_SOURCE_DIR 'Tools\Timer & Interrupt\SetTimerResolution.exe';$dst=$env:STR_EXE;if([IO.File]::Exists($src)-and -not([IO.File]::Exists($dst))){Copy-Item -LiteralPath $src -Destination $dst -Force};if([IO.File]::Exists($dst)-and (Get-Item -LiteralPath $dst).Length -lt 10000){Remove-Item -LiteralPath $dst -Force;exit 2};if(-not([IO.File]::Exists($dst))){exit 1};exit 0}catch{exit 1}"
     if exist "%STR_EXE%" for %%A in ("%STR_EXE%") do if %%~zA LSS 10000 del /f /q "%STR_EXE%" >nul 2>&1
     if not exist "%STR_EXE%" powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f='%STR_EXE%'; $u=$env:WINOPT_RELEASE_BASE_URL+'/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe'; Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 10000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { Remove-Item -LiteralPath '%STR_EXE%' -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
     if exist "%STR_EXE%" (
