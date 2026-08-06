@@ -1,6 +1,6 @@
 param(
-    # Bootstrap immuable : mettre ce SHA a jour volontairement lors d'une publication.
-    [string]$BaseUrl = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/17216b76e71a4c5aecaaa9e4f6ce074a724e49cf",
+    # Source officielle : branche main (toujours la derniere publication) ou commit SHA-1.
+    [string]$BaseUrl = "https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main",
     [switch]$VerifyOnly
 )
 
@@ -18,8 +18,8 @@ if ($baseUri.Scheme -ne "https" -or
     $baseUri.Host -ne "raw.githubusercontent.com" -or !$baseUri.IsDefaultPort -or
     $baseUri.UserInfo -or $baseUri.Query -or $baseUri.Fragment -or $segments.Count -ne 3 -or
     $segments[0] -ne "kaylerberserk" -or $segments[1] -ne "WindowsOptimizer" -or
-    $segments[2] -notmatch '^[0-9a-fA-F]{40}$') {
-    Write-Host "[ERREUR] La source doit etre un commit SHA-1 complet du depot officiel WindowsOptimizer." -ForegroundColor Red
+    $segments[2] -notmatch '^(main|[0-9a-fA-F]{40})$') {
+    Write-Host "[ERREUR] La source doit etre la branche 'main' ou un commit SHA-1 complet du depot officiel WindowsOptimizer." -ForegroundColor Red
     exit 1
 }
 $BaseUrl = $baseUri.AbsoluteUri.TrimEnd("/")

@@ -35,9 +35,9 @@ Ce script privilégie une configuration lisible et des profils explicites pour W
 ## 🚀 Démarrage rapide
 
 ```powershell
-irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/17216b76e71a4c5aecaaa9e4f6ce074a724e49cf/launcher.ps1 | iex
+irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1 | iex
 ```
-Collez cette commande dans **PowerShell non administrateur**. Le launcher (téléchargé sur ce commit immuable) valide la source officielle, demande l'élévation UAC, télécharge le batch référencé par son SHA interne, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin.
+Collez cette commande dans **PowerShell non administrateur**. Le launcher valide la source officielle, demande l'élévation UAC, télécharge la **dernière version** du batch depuis la branche `main`, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin : chaque relance récupère donc la dernière publication.
 
 Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demander l'UAC ni exécuter l'optimiseur :
 
@@ -45,7 +45,7 @@ Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demand
 .\launcher.ps1 -VerifyOnly
 ```
 
-> L'URL épingle le **launcher** sur un commit Git immuable du dépôt officiel ; le **batch** est téléchargé depuis le SHA par défaut embarqué dans ce launcher. Les deux doivent désigner le même commit à chaque publication. Pour contrôler la chaîne sans l'exécuter : téléchargez `launcher.ps1` depuis un commit récent (avec `-VerifyOnly`), puis lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la racine de publication et le SHA-256 du batch préparé.
+> Le launcher et le batch proviennent toujours de la branche `main` du dépôt officiel : une nouvelle publication est récupérée automatiquement au prochain lancement. Pour contrôler la chaîne sans l'exécuter : téléchargez `launcher.ps1`, puis lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la source et le SHA-256 du batch préparé.
 
 ### Premier parcours
 
@@ -238,7 +238,7 @@ R : Un redémarrage est recommandé après un parcours complet. Il est nécessai
 ### 🛡️ Sécurité & fiabilité
 
 **Q : Comment les téléchargements distants sont-ils vérifiés ?**
-R : Le launcher exige un commit SHA-1 complet du dépôt officiel au lieu d'une branche mutable, impose HTTPS, un délai de téléchargement, le format ASCII/CRLF et des marqueurs internes du batch. Son mode `-VerifyOnly` teste la chaîne sans élévation ni modification système. NVIDIA Profile Inspector, son profil et SetTimerResolution utilisent la même racine de publication immuable. MAS et WinUtil restent des outils externes explicitement sélectionnés, limités à leurs deux URLs autorisées. Visual C++ et DirectX sont contrôlés par taille et signature Authenticode Microsoft avant exécution. Les outils du dépôt sont contrôlés surtout par source, chemin, taille et compatibilité, sans validation Authenticode systématique.
+R : Le launcher n'accepte que le dépôt officiel WindowsOptimizer (branche `main` ou commit SHA-1 explicite), impose HTTPS, un délai de téléchargement, le format ASCII/CRLF et des marqueurs internes du batch. Son mode `-VerifyOnly` teste la chaîne sans élévation ni modification système. NVIDIA Profile Inspector, son profil et SetTimerResolution utilisent la même racine de publication. MAS et WinUtil restent des outils externes explicitement sélectionnés, limités à leurs deux URLs autorisées. Visual C++ et DirectX sont contrôlés par taille et signature Authenticode Microsoft avant exécution. Les outils du dépôt sont contrôlés surtout par source, chemin, taille et compatibilité, sans validation Authenticode systématique.
 
 **Q : Certains outils sont-ils exécutés automatiquement ?**
 R : NVIDIA Profile Inspector et son profil peuvent être exécutés automatiquement en Gaming sur un GPU NVIDIA compatible. SetTimerResolution peut être installé, ajouté au démarrage et lancé en MaxPerf. La configuration O&O, les modèles de `Game Configs\` et les autres outils Timer & Interrupt ne sont pas lancés automatiquement par le batch actuel.
