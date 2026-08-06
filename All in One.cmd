@@ -46,7 +46,7 @@ cls
 cd /d "%SystemDrive%"
 
 :: Activer les sequences d'echappement ANSI pour les couleurs
-reg add HKCU\Console /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
+reg add "HKCU\Console" /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul 2>&1
 
 :: Definir le titre de la console
 title Script d'Optimisation Windows - All in One
@@ -1699,7 +1699,7 @@ if "!HAS_NVIDIA!"=="1" (
 
         REM Utilisation de Windows\Temp car le %%TEMP%% utilisateur peut etre sur un RamDisk ou lecteur non mappe en Admin
         set "NPI_DIR=%SystemRoot%\Temp\NPI_%RANDOM%_%RANDOM%"
-        REM Copie locale via PowerShell (env WINOPT_SOURCE_DIR, cf. 7.10) : contourne expansion differee de cmd
+        REM Copie locale via PowerShell - env WINOPT_SOURCE_DIR, cf 7.10 - contourne expansion differee de cmd
         REM NPI_EXE_SRC et NPI_PROFILE_SRC ne sont plus definis ici : copies via PowerShell ci-dessous
         if not exist "!NPI_DIR!" mkdir "!NPI_DIR!" >nul 2>&1
 
@@ -1757,7 +1757,7 @@ if "!HAS_NVIDIA!"=="1" (
         set "NPI_CLI_SUPPORTED="
     ) else (
         echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Preparation de la restauration du profil GPU...%COLOR_RESET%
-        REM Copie locale via PowerShell (env WINOPT_SOURCE_DIR, cf. 7.10) : contourne expansion differee de cmd
+        REM Copie locale via PowerShell - env WINOPT_SOURCE_DIR, cf 7.10 - contourne expansion differee de cmd
         REM NPI_EXE_SRC et NPI_PROFILE_SRC ne sont plus definis ici : copies via PowerShell ci-dessous
         REM Le launcher distant ne telecharge que le batch : recuperer aussi les deux fichiers NPI.
         set "NPI_DIR=%SystemRoot%\Temp\NPI_restore_%RANDOM%_%RANDOM%"
@@ -1912,8 +1912,8 @@ if "!PROFIL_USAGE!"=="0" (
     netsh int ipv4 set global loopbacklargemtu=disabled >nul 2>&1
     netsh int ipv6 set global loopbacklargemtu=disabled >nul 2>&1
 ) else (
-    REM Suppression -> retour au defaut Windows (1024). Les datagrammes UDP > 1024 octets
-    REM empruntent alors le chemin lent (pended I/O). C'est le comportement normal attendu.
+    REM Suppression -> retour au defaut Windows - 1024. Les datagrammes UDP superieurs a 1024 octets
+    REM empruntent alors le chemin lent - pended I/O. C'est le comportement normal attendu.
     reg delete "HKLM\SYSTEM\CurrentControlSet\Services\AFD\Parameters" /v FastSendDatagramThreshold /f >nul 2>&1
     netsh int ipv4 set global loopbacklargemtu=enabled >nul 2>&1
     netsh int ipv6 set global loopbacklargemtu=enabled >nul 2>&1
@@ -2123,11 +2123,11 @@ if "!KEEP_MOUSE_ACCEL!"=="1" (
         reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "0" /f >nul 2>&1
         echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Acceleration souris desactivee - Mouvement 1:1 actif%COLOR_RESET%
     ) else (
-        REM Acceleration souris conservee desactivee : choix de l'utilisateur (accel OFF sur sa machine).
+        REM Acceleration souris conservee desactivee : choix de l'utilisateur - accel OFF sur sa machine.
         reg add "HKCU\Control Panel\Mouse" /v "MouseSpeed" /t REG_SZ /d "0" /f >nul 2>&1
         reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold1" /t REG_SZ /d "0" /f >nul 2>&1
         reg add "HKCU\Control Panel\Mouse" /v "MouseThreshold2" /t REG_SZ /d "0" /f >nul 2>&1
-        echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Acceleration souris conservee desactivee (choix utilisateur)%COLOR_RESET%
+        echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Acceleration souris conservee desactivee - choix utilisateur%COLOR_RESET%
     )
 )
 if "!PROFIL_USAGE!"=="0" reg add "HKCU\Control Panel\Mouse" /v "MouseDelay" /t REG_SZ /d "0" /f >nul 2>&1
@@ -2279,7 +2279,7 @@ if "!AIO_MODE!"=="1" if "!AIO_POWER_PRESELECTED!"=="1" set "POWER_PLAN_ALREADY_A
 if "!POWER_PLAN_ALREADY_ACTIVE!"=="1" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Plan Ultimate Performance deja actif pour Tout optimiser%COLOR_RESET%
 ) else (
-    REM Probe par GUID (fiable quelle que soit la locale Windows)
+    REM Probe par GUID - fiable quelle que soit la locale Windows
     for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
     if not defined TARGET_GUID (
         REM Plan duplique par une execution precedente GUID custom 99999999-...
@@ -2432,7 +2432,7 @@ if exist "%STR_EXE%" (
 ) else (
     REM Copie locale via $env:WINOPT_SOURCE_DIR : la valeur de %~dp0 n'est pas deformee
     REM par l'expansion differee de cmd.exe quand le chemin contient '!' ou '&'.
-    REM En execution distante (sans dossier Tools local), le telechargement sert de secours.
+    REM En execution distante - sans dossier Tools local -, le telechargement sert de secours.
     powershell -NoProfile -Command "try{$src=Join-Path $env:WINOPT_SOURCE_DIR 'Tools\Timer & Interrupt\SetTimerResolution.exe';$dst=$env:STR_EXE;if([IO.File]::Exists($src)-and -not([IO.File]::Exists($dst))){Copy-Item -LiteralPath $src -Destination $dst -Force};if([IO.File]::Exists($dst)-and (Get-Item -LiteralPath $dst).Length -lt 10000){Remove-Item -LiteralPath $dst -Force;exit 2};if(-not([IO.File]::Exists($dst))){exit 1};exit 0}catch{exit 1}"
     if exist "%STR_EXE%" for %%A in ("%STR_EXE%") do if %%~zA LSS 10000 del /f /q "%STR_EXE%" >nul 2>&1
     if not exist "%STR_EXE%" powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f='%STR_EXE%'; $u=$env:WINOPT_RELEASE_BASE_URL+'/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe'; Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 10000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { Remove-Item -LiteralPath '%STR_EXE%' -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
@@ -2885,7 +2885,7 @@ exit /b 0
 
 :SET_CFG_NOTSET_SEHOP_OFF
 REM Efface seulement CFG, desactive SEHOP et preserve toutes les autres mitigations.
-powershell -NoProfile -Command "$p='HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel';[byte[]]$b=(Get-ItemProperty $p -EA 0).MitigationOptions;if(!$b){$b=New-Object byte[] 24};$b[5]=$b[5]-band 252;$b[9]=$b[9]-band 252;$b[0]=($b[0]-band 207)-bor 32;Set-ItemProperty $p MitigationOptions $b -EA Stop" >nul 2>&1
+powershell -NoProfile -Command "$p='HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Kernel';[byte[]]$b=(Get-ItemProperty $p -EA 0).MitigationOptions;if(-not $b){$b=New-Object byte[] 24};$b[5]=$b[5]-band 252;$b[9]=$b[9]-band 252;$b[0]=($b[0]-band 207)-bor 32;Set-ItemProperty $p MitigationOptions $b -EA Stop" >nul 2>&1
 exit /b %errorlevel%
 
 REM =================================================================================
@@ -4559,10 +4559,10 @@ echo.
 if "!APPX_RESULT_OK!"=="0" (
     echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Le bilan de suppression n'a pas pu etre etabli.%COLOR_RESET%
 ) else if "!APPX_RC!"=="0" (
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%!APPX_REMOVED! application(s) traitee(s) ; !APPX_MISSING! deja absente(s).%COLOR_RESET%
+    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%!APPX_REMOVED! application traitee ; !APPX_MISSING! deja absente.%COLOR_RESET%
 ) else (
-    echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%!APPX_FAILED! application(s) non supprimee(s) completement.%COLOR_RESET%
-    echo %COLOR_WHITE%!APPX_REMOVED! traitee(s) ; !APPX_MISSING! deja absente(s).%COLOR_RESET%
+    echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%!APPX_FAILED! application non supprimee completement.%COLOR_RESET%
+    echo %COLOR_WHITE%!APPX_REMOVED! traitee ; !APPX_MISSING! deja absente.%COLOR_RESET%
 )
 set "APPX_RESULT_FILE="
 set "APPX_REMOVED="
@@ -4848,7 +4848,7 @@ REM  Eco (1) : restaure la gestion d'energie USB (annule les surcharges MaxPerf)
 REM  Source unique pour la section 5.8 et les branches USB MaxPerf/Eco de la section 7.
 :SET_USB_POWER
 if "%~1"=="1" (
-    REM Eco : restaurer la gestion d'energie USB (desactive les surcharges MaxPerf)
+    REM Eco : restaurer la gestion d'energie USB - desactive les surcharges MaxPerf
     powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue'; $usb=(Get-PNPDevice -Class USB -ErrorAction SilentlyContinue).InstanceId; Get-CimInstance -ClassName MSPower_DeviceEnable -Namespace root\wmi -Filter 'Enable=false' -ErrorAction SilentlyContinue | Where-Object { $_.InstanceName -replace '_0$' -in $usb } | Set-CimInstance -Property @{Enable = $true} -ErrorAction SilentlyContinue" >nul 2>&1
     call :SET_POWERCFG_ACDC 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 1
     call :SET_POWERCFG_ACDC 2a737441-1930-4402-8d77-b2bebba308a3 d4e98f31-5ffe-4ce1-be31-1b38b384c009 2
