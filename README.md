@@ -66,7 +66,7 @@ L'option **[O] Tout optimiser** repose sur **deux axes indépendants** qui défi
 
 Le parcours automatique enchaîne ensuite les sections sans nouvelle question et affiche un résumé final. Les prérequis, téléchargements, installateurs et confirmations destructives conservent leurs contrôles dédiés.
 
-Les sections granulaires reprennent la même logique, mais ne demandent que l'axe réellement utile : par exemple **Mémoire** demande l'énergie, **GPU/Système/Input** demandent l'usage et **Réseau** demande les deux. Le menu **Protections Sécurité** propose séparément trois niveaux explicites.
+Les sections granulaires reprennent la même logique : **Mémoire** et **Réseau** demandent les deux axes, tandis que **Disques/GPU/Système/Input** demandent l'usage. Le menu **Protections Sécurité** propose séparément trois niveaux explicites.
 
 > Les mentions **stock mesuré** correspondent à l'installation propre Windows 11 25H2 build `26200.8037` utilisée comme référence pour cet audit. Les états dépendants d'un pilote ou d'un périphérique, notamment MSI, sont sauvegardés puis restaurés individuellement au lieu d'être généralisés à tous les PC.
 >
@@ -77,16 +77,16 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=3000 et maxsynretransmissions=2 (= valeurs Windows documentées), Tcp1323Opts=3, BBR2 sur les 5 templates compatibles, TCP Pacing + ECN, heuristics WSH/forcews demandés actifs, RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, Interrupt Moderation ON avec délais pilote au minimum annoncé, Rx/Tx buffers jusqu'à 2048 selon le pilote. En Eco : Nagle/DelACK natifs, RSC/LSO ON. |
-| **[2]** | **NORMAL** | Pile TCP rendue au stock Windows 25H2 mesuré (heuristics désactivées, initialRTO=1000, maxsynretransmissions=4, cubic, pacing OFF, ECN OFF), VRR natif, veille GPU préservée, Nagle/DelACK natifs, SystemResponsiveness=20, accélération souris conservée désactivée (choix utilisateur) et Power Management NIC restauré au stock mesuré (ARP/NS offload et Wake on Pattern ON = 1/1/1). Les valeurs MSI des périphériques sont restaurées depuis leur état capturé, sans supprimer les `MSISupported=1` déjà fournis par les pilotes. Les valeurs NVIDIA modifiées par le preset Gaming sont restaurées de façon ciblée, y compris depuis le launcher distant. |
+| **[1]** | **GAMING** | Low Latency GPU (MaxFrameLatency=1), VRR OFF, Auto HDR OFF, Nagle/DelACK OFF per-interface, initialRTO=3000 et maxsynretransmissions=2 (= valeurs Windows documentées), Tcp1323Opts=3, BBR2 sur les 5 templates compatibles, TCP Pacing + ECN, ForceWS actif (WSH n'est plus utilisé par Windows), RssBaseCpu=1, QoS Fortnite DSCP 46, DisablePagefileEncryption, accélération souris OFF, Win8 Scaling. En MaxPerf : RSC/LSO OFF, Interrupt Moderation ON avec délais pilote au minimum annoncé, Rx/Tx buffers jusqu'à 2048 selon le pilote. En Eco : Nagle/DelACK natifs, RSC/LSO ON. |
+| **[2]** | **NORMAL** | Pile TCP rendue au stock Windows 25H2 mesuré (ForceWS au défaut système, initialRTO=1000, maxsynretransmissions=4, cubic, pacing OFF, ECN OFF), VRR natif, veille GPU préservée, Nagle/DelACK natifs, SystemResponsiveness=20, accélération souris conservée désactivée (choix utilisateur) et Power Management NIC restauré au stock mesuré (ARP/NS offload et Wake on Pattern ON = 1/1/1). Les valeurs MSI des périphériques sont restaurées depuis leur état capturé, sans supprimer les `MSISupported=1` déjà fournis par les pilotes. Les valeurs NVIDIA modifiées par le preset Gaming sont restaurées de façon ciblée, y compris depuis le launcher distant. |
 
 #### Axe 2 — Énergie (`PROFIL_POWER`)
 > *Pilote **l'énergie, le niveau de tuning NIC et le plan d'alimentation**.*
 
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
-| **[1]** | **ECO** | Plan Équilibré (plans OEM/personnalisés conservés), hibernation, veille hybride et démarrage rapide réactivés comme sur le PC stock mesuré (HiberbootEnabled=1), RSC/LSO/checksum ON, gestion d'énergie NIC activée, propriétés pilote modifiées par MaxPerf restaurées, ARP Offload / NS Offload ON et Wake on Pattern OFF si pris en charge, compression mémoire active. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec délais pilote au minimum annoncé en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, ARP Offload / NS Offload / Wake on Pattern OFF si pris en charge, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`disabledynamictick=yes`, `useplatformtick=no`, HPET désactivé), compression mémoire OFF (RAM > 8 Go), économies d'énergie ciblées. |
+| **[1]** | **ECO** | Plan Équilibré (plans OEM/personnalisés conservés), hibernation et veille hybride disponibles, démarrage rapide réactivé comme au défaut Windows (HiberbootEnabled=1), RSC/LSO/checksum ON, gestion d'énergie NIC activée, propriétés pilote modifiées par MaxPerf restaurées, ARP Offload / NS Offload ON et Wake on Pattern OFF si pris en charge, compression mémoire active. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec délais pilote exposés au minimum annoncé en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, ARP Offload / NS Offload / Wake on Pattern / Selective Suspend OFF si pris en charge, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`disabledynamictick=yes`, `useplatformtick=no`, HPET désactivé), compression mémoire OFF (RAM > 8 Go), économies d'énergie ciblées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — Nagle/DelACK revient au comportement Windows natif (batterie avant tout), tandis qu'initialRTO=3000 et maxsynretransmissions=2 restent appliqués par l'axe Gaming ; les optimisations GPU/input/CPU restent agressives.
@@ -95,7 +95,7 @@ Les sections granulaires reprennent la même logique, mais ne demandent que l'ax
 
 | Combinaison | Comportement principal |
 |---|---|
-| **Gaming + MaxPerf** | Réglages de latence les plus agressifs : Nagle/DelACK et RSC/LSO coupés, Interrupt Moderation active avec les délais exposés réglés au minimum annoncé par le pilote. Sur Realtek, le script applique aussi le niveau `Low` et l'intervalle `0` définis par l'INF du pilote. |
+| **Gaming + MaxPerf** | Réglages de latence les plus agressifs : Nagle/DelACK et RSC/LSO coupés, Interrupt Moderation active avec les délais exposés réglés au minimum annoncé par le pilote. Sur Realtek, le script applique aussi le niveau `Low` (`InterruptModerationLevel=0`) et l'intervalle `IntMitiInterval=0`. |
 | **Gaming + Eco** | Réglages gaming GPU/input, mais comportement réseau natif pour Nagle/DelACK et offloads conservés afin de privilégier autonomie et stabilité. |
 | **Normal + MaxPerf** | Plan et énergie MaxPerf sans les réglages réseau gaming agressifs ; RSC/LSO et propriétés de latence exclusives sont restaurés. |
 | **Normal + Eco** | Configuration la plus conservatrice : comportement réseau natif, gestion d'énergie active et plan Équilibré. |
@@ -108,16 +108,16 @@ Chaque réglage est principalement piloté par **un seul axe**, sauf les excepti
 Exceptions réseau :
 - **RSC/LSO/RscIPv6** : coupés uniquement en **GAMING + MAX PERF** (préservent débit/stabilité en Normal/Eco).
 - **initialRTO / maxsynretransmissions** : 3000 ms / 2 en Gaming ; 1000 ms / 4 en Normal, conformément à l'état stock mesuré. `initialRTO` ne règle pas le RTO des paquets après connexion.
-- **Congestion / heuristics** : Gaming demande BBR2 sur Internet, InternetCustom, Datacenter, DatacenterCustom et Compat avec `wsh=enabled forcews=enabled`. Normal restaure `cubic` et les heuristics désactivées. Le loopback Large MTU est désactivé en Gaming et réactivé en Normal.
+- **Congestion / heuristics** : Gaming demande BBR2 sur Internet, InternetCustom, Datacenter, DatacenterCustom et Compat avec `forcews=enabled`. Normal restaure `cubic` et `forcews=default`. Le paramètre WSH n'est plus utilisé par Windows. Le loopback Large MTU est désactivé en Gaming et réactivé en Normal.
 - **Nagle/DelACK** : agressif en Gaming+MaxPerf, natif Windows en Eco et en Normal+MaxPerf.
 
 ### ⚙️ Optimisations Granulaires
 
 - **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie.
-- **[2] Mémoire** : Ajustement de la gestion RAM et de la compression mémoire selon le profil d'énergie.
+- **[2] Mémoire** : Ajustement de la gestion RAM et de la compression mémoire selon l'énergie, avec Prefetch piloté par l'usage.
 - **[3] Disques** : TRIM et maintenance Windows conservés ; chemins longs activés en Gaming et rendus à `LongPathsEnabled=0` en Normal, comme sur le stock mesuré.
 - **[4] GPU** : Configuration des priorités graphiques et des options de latence prises en charge par le pilote.
-- **[5] Réseau** : pile TCP agressive en Gaming (BBR2, Pacing, ECN, MSI) et stock Windows mesuré en Normal (cubic, Pacing OFF, ECN OFF, heuristics désactivées, RTO 1000/SYN 4), puis tuning fin de la carte selon le profil (Eco : RSC/LSO/checksum, Interrupt Moderation et ARP/NS Offload ON ; Normal : propriétés pilote et Power Management restaurés au stock mesuré ; MaxPerf : EEE/GreenGbe/PacketCoalescing et ARP/NS Offload OFF, RSC/LSO OFF en Gaming, délais pilote au minimum annoncé, Rx/Tx buffers jusqu'à 2048 selon le pilote).
+- **[5] Réseau** : pile TCP agressive en Gaming (BBR2, Pacing, ECN, MSI) et stock Windows mesuré en Normal (cubic, Pacing OFF, ECN OFF, ForceWS au défaut système, RTO 1000/SYN 4), puis tuning fin de la carte selon le profil (Eco : RSC/LSO/checksum, Interrupt Moderation et ARP/NS Offload ON ; Normal : propriétés pilote et Power Management restaurés au stock mesuré ; MaxPerf : EEE/GreenGbe/PacketCoalescing et ARP/NS Offload OFF, RSC/LSO OFF en Gaming, délais pilote au minimum annoncé, Rx/Tx buffers jusqu'à 2048 selon le pilote).
 - **[6] Input** : Ajustement de la réponse clavier/souris, des files d'entrée et du mode MSI des contrôleurs compatibles.
 - **[7] Énergie** : Gestion des plans d'alimentation et déblocage de l'Ultimate Performance, avec choix d'usage pour appliquer le bon tuning NIC.
 - **[8] Sécurité** : Choix entre 3 modes pour VBS/HVCI/CFG/SEHOP, mitigations processeur, LSA/Credential Guard, hyperviseur BCD et liste de pilotes vulnérables.

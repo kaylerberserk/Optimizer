@@ -611,11 +611,13 @@ call :OPTIMISATIONS_GPU
 goto :MENU_PRINCIPAL
 
 :DO_DISQUES
+call :CHOISIR_PROFILS "CONFIGURATION PROFILS : DISQUES" "USAGE"
+if !errorlevel! NEQ 0 goto :MENU_PRINCIPAL
 call :OPTIMISATIONS_DISQUES
 goto :MENU_PRINCIPAL
 
 :DO_MEMOIRE
-call :CHOISIR_PROFILS "CONFIGURATION PROFILS : MEMOIRE" "POWER"
+call :CHOISIR_PROFILS "CONFIGURATION PROFILS : MEMOIRE" "BOTH"
 if !errorlevel! NEQ 0 goto :MENU_PRINCIPAL
 call :OPTIMISATIONS_MEMOIRE
 goto :MENU_PRINCIPAL
@@ -842,7 +844,14 @@ REM Preselection silencieuse uniquement : la SECTION 7 reste executee dans l'ord
 REM Les sections precedentes qui ecrivent dans SCHEME_CURRENT ciblent ainsi le bon plan.
 set "AIO_POWER_PRESELECTED=0"
 call :SELECT_TARGET_POWER_SCHEME !PROFIL_POWER!
-if !errorlevel! EQU 0 set "AIO_POWER_PRESELECTED=1"
+if !errorlevel! NEQ 0 (
+    echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible d'activer le plan d'alimentation cible. Aucune optimisation n'a ete appliquee.%COLOR_RESET%
+    set "SKIP_PAUSE=0"
+    set "AIO_MODE=0"
+    set "AIO_POWER_PRESELECTED="
+    goto :MENU_PRINCIPAL
+)
+set "AIO_POWER_PRESELECTED=1"
 call :INSTALLER_VISUAL_REDIST
 call :OPTIMISATIONS_SYSTEME
 call :OPTIMISATIONS_MEMOIRE
@@ -1493,6 +1502,7 @@ call :FINISH_ACTION "Reglages memoire" "traites"
 exit /b 0
 
 :OPTIMISATIONS_DISQUES
+call :INIT_PROFILS
 call :SCREEN_HEADER " SECTION 3 : OPTIMISATIONS DISQUES ET STOCKAGE"
 echo %COLOR_WHITE%  Cette section conserve le TRIM et la maintenance Windows,%COLOR_RESET%
 echo %COLOR_WHITE%  puis adapte les chemins longs au profil choisi.%COLOR_RESET%
@@ -1859,11 +1869,12 @@ REM minRto se configure uniquement avec 'set supplemental' ; 'set global' ne pre
 REM initialRTO=3000ms et maxsynretransmissions=2 = valeurs Windows documentees pour l'etablissement TCP (SYN).
 REM initialRTO accepte 300-3000ms et ne regle pas le RTO des paquets une fois la connexion etablie.
 if "!PROFIL_USAGE!"=="0" (
-    netsh int tcp set heuristics wsh=enabled forcews=enabled >nul 2>&1
+    REM Depuis Windows 11 24H2/25H2, WSH n'est plus utilise. ForceWS reste supporte.
+    netsh int tcp set heuristics forcews=enabled >nul 2>&1
     netsh int tcp set global rss=enabled initialrto=3000 nonsackrttresiliency=disabled maxsynretransmissions=2 >nul 2>&1
 ) else (
-    REM Valeurs live stock 25H2 : heuristiques desactivees, RTO 1000 ms, SYN 4.
-    netsh int tcp set heuristics wsh=disabled forcews=disabled >nul 2>&1
+    REM ForceWS=default restaure le defaut systeme (active). WSH n'a plus d'effet.
+    netsh int tcp set heuristics forcews=default >nul 2>&1
     netsh int tcp set global rss=enabled initialrto=1000 nonsackrttresiliency=disabled maxsynretransmissions=4 >nul 2>&1
 )
 if "!PROFIL_POWER!"=="0" (
@@ -2273,24 +2284,18 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 
 REM  7.1 - Activation du plan Ultimate Performance
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation du plan Ultimate Performance...%COLOR_RESET%
-set "TARGET_GUID="
 set "POWER_PLAN_ALREADY_ACTIVE=0"
 if "!AIO_MODE!"=="1" if "!AIO_POWER_PRESELECTED!"=="1" set "POWER_PLAN_ALREADY_ACTIVE=1"
 if "!POWER_PLAN_ALREADY_ACTIVE!"=="1" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Plan Ultimate Performance deja actif pour Tout optimiser%COLOR_RESET%
 ) else (
-    REM Probe par GUID - fiable quelle que soit la locale Windows
-    for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "e9a42b02-d5df-448d-aa00-03f14749eb61"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
-    if not defined TARGET_GUID (
-        REM Plan duplique par une execution precedente GUID custom 99999999-...
-        for /f "tokens=2 delims=:()" %%G in ('powercfg -list 2^>nul ^| findstr /i "99999999-9999-9999-9999-999999999999"') do (set "TARGET_GUID=%%G" & set "TARGET_GUID=!TARGET_GUID: =!")
+    call :SELECT_TARGET_POWER_SCHEME 0
+    if !errorlevel! NEQ 0 (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible de creer ou d'activer le plan Ultimate Performance.%COLOR_RESET%
+        set "POWER_PLAN_ALREADY_ACTIVE="
+        exit /b 1
     )
-    if not defined TARGET_GUID (
-        powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 99999999-9999-9999-9999-999999999999 >nul 2>&1
-        set "TARGET_GUID=99999999-9999-9999-9999-999999999999"
-    )
-    powercfg /setactive !TARGET_GUID! >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Activation du plan Ultimate Performance demandee%COLOR_RESET%
+    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Plan Ultimate Performance active et verifie.%COLOR_RESET%
 )
 set "POWER_PLAN_ALREADY_ACTIVE="
 
@@ -2532,7 +2537,6 @@ if not "!AIO_MODE!"=="1" (
 REM  Appliquer l'ensemble des modifications du plan d'alimentation en une seule fois
 powercfg /S SCHEME_CURRENT >nul 2>&1
 
-set "TARGET_GUID="
 set "STR_EXE="
 set "STR_OLD_DIR="
 set "STR_STARTUP_LNK="
@@ -2557,8 +2561,13 @@ if "!AIO_MODE!"=="1" if "!AIO_POWER_PRESELECTED!"=="1" set "POWER_PLAN_ALREADY_A
 if "!POWER_PLAN_ALREADY_ACTIVE!"=="1" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre deja actif pour Tout optimiser.%COLOR_RESET%
 ) else (
-    powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Activation du plan Equilibre demandee%COLOR_RESET%
+    call :SELECT_TARGET_POWER_SCHEME 1
+    if !errorlevel! NEQ 0 (
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Impossible d'activer le plan Equilibre.%COLOR_RESET%
+        set "POWER_PLAN_ALREADY_ACTIVE="
+        exit /b 1
+    )
+    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Plan Equilibre active et verifie.%COLOR_RESET%
 )
 set "POWER_PLAN_ALREADY_ACTIVE="
 REM Le plan Ultimate duplique est conserve : il peut etre reutilise sans proliferer les GUID.
@@ -2566,7 +2575,7 @@ REM Le plan Ultimate duplique est conserve : il peut etre reutilise sans prolife
 REM  7.1 - Demarrage rapide (Fast Startup)
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration du demarrage rapide au stock Windows...%COLOR_RESET%
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power" /v HiberbootEnabled /t REG_DWORD /d 1 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Demarrage rapide reactive comme sur le stock Windows 25H2 mesure.%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Demarrage rapide reactive comme au defaut Windows.%COLOR_RESET%
 
 REM  7.2 - Hibernation
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Retour de l'hibernation au stock Windows...%COLOR_RESET%
@@ -4436,12 +4445,13 @@ echo %STYLE_BOLD%%COLOR_WHITE% INSTALLATION DE DIRECTX RUNTIME JUNE 2010%COLOR_R
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 echo.
 call :INSTALLER_DIRECTX
+set "DX_SECTION_RESULT=!errorlevel!"
 
 if "!SKIP_PAUSE!"=="0" (
     echo.
     pause
 )
-exit /b 0
+exit /b !DX_SECTION_RESULT!
 
 :INSTALLER_DIRECTX
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Verification de l'installation de DirectX...%COLOR_RESET%
@@ -4676,9 +4686,12 @@ powershell -NoLogo -NoProfile -Command "Get-ChildItem 'HKLM:\SYSTEM\CurrentContr
 exit /b
 
 :SET_POWERCFG_ACDC
+set "POWERCFG_ACDC_FAILED=0"
 powercfg /setacvalueindex SCHEME_CURRENT %~1 %~2 %~3 >nul 2>&1
+if errorlevel 1 set "POWERCFG_ACDC_FAILED=1"
 powercfg /setdcvalueindex SCHEME_CURRENT %~1 %~2 %~3 >nul 2>&1
-exit /b 0
+if errorlevel 1 set "POWERCFG_ACDC_FAILED=1"
+exit /b !POWERCFG_ACDC_FAILED!
 
 :SELECT_TARGET_POWER_SCHEME
 REM Selection silencieuse pour TOUT OPTIMISER. Aucun autre reglage de la section 7 n'est execute ici.
@@ -4821,11 +4834,11 @@ REM  Toutes les modifications sont groupees avant un unique redemarrage de chaqu
 REM  Source unique de verite pour la section 5.7 et la convergence reseau manuelle de la section 7.
 :SET_NIC_PROFILE
 REM Ne supprime pas de proprietes driver non gerees : elles peuvent etre stock OEM.
-REM  Realtek : l'INF officiel du pilote definit InterruptModerationLevel=0 (Low)
+REM  Realtek : conserver les overrides cibles InterruptModerationLevel=0 (Low)
 REM  et IntMitiInterval=0. Ne pas reutiliser l'ancien ITR=200 non declare par le pilote.
 powershell -NoProfile -Command "$ErrorActionPreference='Stop';$gaming=('%~1'-eq'0'-and'%~2'-eq'0');$adapters=@(Get-NetAdapter -Physical|Where-Object{$_.AdminStatus-eq'Up'-and$_.PnPDeviceID-match'^PCI\\VEN_10EC&'});foreach($a in $adapters){$w=Get-CimInstance Win32_NetworkAdapter|Where-Object{$_.PNPDeviceID-eq$a.PnPDeviceID}|Select-Object -First 1;if(-not$w){continue};$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k;if($gaming){Remove-ItemProperty -LiteralPath $r -Name 'ITR','TxIntDelay' -ErrorAction SilentlyContinue;New-ItemProperty -LiteralPath $r -Name 'IntMitiInterval' -PropertyType DWord -Value 0 -Force|Out-Null;New-ItemProperty -LiteralPath $r -Name 'InterruptModerationLevel' -PropertyType String -Value '0' -Force|Out-Null}else{Remove-ItemProperty -LiteralPath $r -Name 'ITR','TxIntDelay','IntMitiInterval','InterruptModerationLevel' -ErrorAction SilentlyContinue}};exit 0" >nul 2>&1
 if !errorlevel! NEQ 0 exit /b 1
-powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$eco=('%~1'-eq'1');$gaming=('%~2'-eq'0');$script:failed=$false;$managed=@('*FlowControl','*GreenGbe','*RscIPv6','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver','TxIntDelay','MIMOPowerSaveMode','uAPSDSupport','FatChannelIntolerant','*ReceiveBuffers','*TransmitBuffers','PendingReceives','PendingTransmits','ITR','*InterruptModeration');function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return};$p=$cache[$kw];$ok=$false;foreach($v in $vals){$valid=@($p.ValidRegistryValues);if($null-ne$p.ValidRegistryValues-and $valid.Count-gt 0-and $valid-notcontains[string]$v){continue};try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -AllProperties -NoRestart -ErrorAction Stop;$script:changed=$true;$ok=$true;break}catch{}};if(-not $ok){$script:failed=$true}};function SetMinP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};$nums=@();if($null-ne$p.NumericParameterMinValue-and $p.NumericParameterMaxValue-gt 0){$nums+=[int]$p.NumericParameterMinValue};$nums+=@($p.ValidRegistryValues|Where-Object{[string]$_-match'^\d+$'}|ForEach-Object{[int]$_});if($nums.Count){$v=(($nums|Measure-Object -Minimum).Minimum).ToString();SetP $a $kw @($v) $cache}};function ResetP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};try{if($p.DisplayName){$p|Reset-NetAdapterAdvancedProperty -NoRestart -ErrorAction Stop}else{$d=@($p.DefaultRegistryValue);if($d.Count-eq 0-or $null-eq $d[0]){return};Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $d -AllProperties -NoRestart -ErrorAction Stop};$script:changed=$true}catch{$script:failed=$true}};function SetF($get,$set,$n){$f=& $get -Name $n -ErrorAction SilentlyContinue;if($null-eq$f){return};try{& $set -Name $n -NoRestart -ErrorAction Stop;$script:changed=$true}catch{$script:failed=$true}};function SetPMFlags($n,$r,$cache,$ecoMode,$gamingMode){$pm=$null;try{$pm=Get-NetAdapterPowerManagement -Name $n -ErrorAction Stop}catch{};$map=[ordered]@{'ArpOffload'='*PMARPOffload';'NSOffload'='*PMNSOffload';'WakeOnPattern'='*WakeOnPattern'};foreach($item in $map.GetEnumerator()){$param=$item.Key;$kw=$item.Value;$ndi=$null;if($r){$ndi=$r+'\Ndi\Params\'+$kw};$state=$null;if($pm){$state=$pm.PSObject.Properties[$param].Value};$supported=$cache.ContainsKey($kw)-or($ndi-and(Test-Path -LiteralPath $ndi))-or($state-and([string]$state-ne'Unsupported'));if(-not $supported){continue};$desired=if($gamingMode){'Disabled'}elseif($ecoMode-and $param-eq'WakeOnPattern'){'Disabled'}else{'Enabled'};$target=if($desired-eq'Enabled'){'1'}else{'0'};$ok=$false;$args=@{Name=$n;NoRestart=$true;ErrorAction='Stop'};$args[$param]=$desired;try{Set-NetAdapterPowerManagement @args;$ok=$true;$script:changed=$true}catch{};if($ndi-and(Test-Path -LiteralPath $ndi)){$v=$null;try{$v=Get-ItemPropertyValue -LiteralPath $r -Name $kw -ErrorAction Stop}catch{};if([string]$v-ne$target){try{New-ItemProperty -LiteralPath $r -Name $kw -PropertyType String -Value $target -Force -ErrorAction Stop|Out-Null;$v=Get-ItemPropertyValue -LiteralPath $r -Name $kw -ErrorAction Stop;$ok=([string]$v-eq$target);$script:changed=$true}catch{$ok=$false}}else{$ok=$true}};if(-not $ok){$script:failed=$true}}};try{$adapters=@(Get-NetAdapter -Physical -ErrorAction Stop|Where-Object{$_.AdminStatus-eq'Up'})}catch{exit 1};foreach($adapter in $adapters){$script:changed=$false;$n=$adapter.Name;$props=@{};try{Get-NetAdapterAdvancedProperty -Name $n -AllProperties -ErrorAction Stop|ForEach-Object{if($_.RegistryKeyword){$props[$_.RegistryKeyword]=$_}}}catch{$script:failed=$true};$w=Get-CimInstance Win32_NetworkAdapter -ErrorAction SilentlyContinue|Where-Object{$_.PNPDeviceID-eq$adapter.PnPDeviceID}|Select-Object -First 1;$r=$null;if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k};if($eco){foreach($kw in $managed){ResetP $n $kw $props}}elseif(-not $gaming){foreach($kw in @('*RscIPv6','ITR','TxIntDelay','*InterruptModeration')){ResetP $n $kw $props}};if(($eco-or(-not $gaming))-and $r){Remove-ItemProperty -Path $r -Name 'ITR','TxIntDelay' -ErrorAction SilentlyContinue;$script:changed=$true};SetF 'Get-NetAdapterRss' 'Enable-NetAdapterRss' $n;if($eco-or(-not $gaming)){SetF 'Get-NetAdapterRsc' 'Enable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Enable-NetAdapterLso' $n}else{SetF 'Get-NetAdapterRsc' 'Disable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Disable-NetAdapterLso' $n};foreach($kw in @('*IPChecksumOffloadIPv4','*TCPChecksumOffloadIPv4','*TCPChecksumOffloadIPv6','*UDPChecksumOffloadIPv4','*UDPChecksumOffloadIPv6')){SetP $n $kw @('3') $props};if($eco){SetF 'Get-NetAdapterPowerManagement' 'Enable-NetAdapterPowerManagement' $n}elseif($gaming){SetF 'Get-NetAdapterPowerManagement' 'Disable-NetAdapterPowerManagement' $n;foreach($kw in @('*FlowControl','*GreenGbe','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver')){SetP $n $kw @('0') $props};SetP $n '*RscIPv6' @('0') $props;SetP $n '*InterruptModeration' @('1') $props;if($r){foreach($kw in @('ITR','TxIntDelay')){if(-not(Test-Path -LiteralPath ($r+'\Ndi\Params\'+$kw))){Remove-ItemProperty -LiteralPath $r -Name $kw -ErrorAction SilentlyContinue;$props.Remove($kw)|Out-Null;$script:changed=$true}}};foreach($kw in @('ITR','*InterruptModerationRate','InterruptModerationRate','RxIntDelay','TxIntDelay')){SetMinP $n $kw $props}else{foreach($kw in @('*FlowControl','*GreenGbe','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver')){ResetP $n $kw $props}};if($adapter.InterfaceDescription-match'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props;SetP $n 'uAPSDSupport' @('0') $props;SetP $n 'FatChannelIntolerant' @('0') $props};foreach($kw in @('*ReceiveBuffers','*TransmitBuffers')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,2048).ToString();SetP $n $kw @($v) $props}};foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString();SetP $n $kw @($v) $props}}};SetP $n '*InterruptModeration' @('1') $props;SetPMFlags $n $r $props $eco $gaming;if($script:changed){try{Restart-NetAdapter -Name $n -Confirm:$false -ErrorAction Stop}catch{$script:failed=$true}}};if($script:failed){exit 1};exit 0" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='SilentlyContinue';$eco=('%~1'-eq'1');$gaming=('%~1'-eq'0'-and'%~2'-eq'0');$script:failed=$false;$managed=@('*FlowControl','*GreenGbe','*RscIPv6','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver','TxIntDelay','MIMOPowerSaveMode','uAPSDSupport','FatChannelIntolerant','*ReceiveBuffers','*TransmitBuffers','PendingReceives','PendingTransmits','ITR','*InterruptModeration');function SetP($a,$kw,$vals,$cache){if(-not $cache.ContainsKey($kw)){return};$p=$cache[$kw];$ok=$false;foreach($v in $vals){$valid=@($p.ValidRegistryValues);if($null-ne$p.ValidRegistryValues-and $valid.Count-gt 0-and $valid-notcontains[string]$v){continue};try{Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $v -AllProperties -NoRestart -ErrorAction Stop;$script:changed=$true;$ok=$true;break}catch{}};if(-not $ok){$script:failed=$true}};function SetMinP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};$nums=@();if($null-ne$p.NumericParameterMinValue-and $p.NumericParameterMaxValue-gt 0){$nums+=[int]$p.NumericParameterMinValue};$nums+=@($p.ValidRegistryValues|Where-Object{[string]$_-match'^\d+$'}|ForEach-Object{[int]$_});if($nums.Count){$v=(($nums|Measure-Object -Minimum).Minimum).ToString();SetP $a $kw @($v) $cache}};function ResetP($a,$kw,$cache){$p=$cache[$kw];if(-not $p){return};try{if($p.DisplayName){$p|Reset-NetAdapterAdvancedProperty -NoRestart -ErrorAction Stop}else{$d=@($p.DefaultRegistryValue);if($d.Count-eq 0-or $null-eq $d[0]){return};Set-NetAdapterAdvancedProperty -Name $a -RegistryKeyword $kw -RegistryValue $d -AllProperties -NoRestart -ErrorAction Stop};$script:changed=$true}catch{$script:failed=$true}};function SetF($get,$set,$n){$f=& $get -Name $n -ErrorAction SilentlyContinue;if($null-eq$f){return};try{& $set -Name $n -NoRestart -ErrorAction Stop;$script:changed=$true}catch{$script:failed=$true}};function SetPMFlags($n,$r,$cache,$ecoMode,$gamingMode){$pm=$null;try{$pm=Get-NetAdapterPowerManagement -Name $n -ErrorAction Stop}catch{};$map=[ordered]@{'ArpOffload'='*PMARPOffload';'NSOffload'='*PMNSOffload';'WakeOnPattern'='*WakeOnPattern';'SelectiveSuspend'='*SelectiveSuspend'};foreach($item in $map.GetEnumerator()){$param=$item.Key;$kw=$item.Value;$ndi=$null;if($r){$ndi=$r+'\Ndi\Params\'+$kw};$state=$null;if($pm){$state=$pm.PSObject.Properties[$param].Value};$supported=$cache.ContainsKey($kw)-or($ndi-and(Test-Path -LiteralPath $ndi))-or($state-and([string]$state-ne'Unsupported'));if(-not $supported){continue};$desired=if($gamingMode){'Disabled'}elseif($ecoMode-and $param-eq'WakeOnPattern'){'Disabled'}else{'Enabled'};$target=if($desired-eq'Enabled'){'1'}else{'0'};$ok=$false;$args=@{Name=$n;NoRestart=$true;ErrorAction='Stop'};$args[$param]=$desired;try{Set-NetAdapterPowerManagement @args;$ok=$true;$script:changed=$true}catch{};if($ndi-and(Test-Path -LiteralPath $ndi)){$v=$null;try{$v=Get-ItemPropertyValue -LiteralPath $r -Name $kw -ErrorAction Stop}catch{};if([string]$v-ne$target){try{New-ItemProperty -LiteralPath $r -Name $kw -PropertyType String -Value $target -Force -ErrorAction Stop|Out-Null;$v=Get-ItemPropertyValue -LiteralPath $r -Name $kw -ErrorAction Stop;$ok=([string]$v-eq$target);$script:changed=$true}catch{$ok=$false}}else{$ok=$true}};if(-not $ok){$script:failed=$true}}};try{$adapters=@(Get-NetAdapter -Physical -ErrorAction Stop|Where-Object{$_.AdminStatus-eq'Up'})}catch{exit 1};foreach($adapter in $adapters){$script:changed=$false;$n=$adapter.Name;$props=@{};try{Get-NetAdapterAdvancedProperty -Name $n -AllProperties -ErrorAction Stop|ForEach-Object{if($_.RegistryKeyword){$props[$_.RegistryKeyword]=$_}}}catch{$script:failed=$true};$w=Get-CimInstance Win32_NetworkAdapter -ErrorAction SilentlyContinue|Where-Object{$_.PNPDeviceID-eq$adapter.PnPDeviceID}|Select-Object -First 1;$r=$null;if($w){$k='{0:0000}'-f[int]$w.DeviceID;$r='HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4D36E972-E325-11CE-BFC1-08002bE10318}\'+$k};if($eco){foreach($kw in $managed){ResetP $n $kw $props}}elseif(-not $gaming){foreach($kw in @('*RscIPv6','ITR','TxIntDelay','*InterruptModeration')){ResetP $n $kw $props}};if(($eco-or(-not $gaming))-and $r){Remove-ItemProperty -Path $r -Name 'ITR','TxIntDelay' -ErrorAction SilentlyContinue;$script:changed=$true};SetF 'Get-NetAdapterRss' 'Enable-NetAdapterRss' $n;if($eco-or(-not $gaming)){SetF 'Get-NetAdapterRsc' 'Enable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Enable-NetAdapterLso' $n}else{SetF 'Get-NetAdapterRsc' 'Disable-NetAdapterRsc' $n;SetF 'Get-NetAdapterLso' 'Disable-NetAdapterLso' $n};foreach($kw in @('*IPChecksumOffloadIPv4','*TCPChecksumOffloadIPv4','*TCPChecksumOffloadIPv6','*UDPChecksumOffloadIPv4','*UDPChecksumOffloadIPv6')){SetP $n $kw @('3') $props};if($eco){SetF 'Get-NetAdapterPowerManagement' 'Enable-NetAdapterPowerManagement' $n}elseif($gaming){SetF 'Get-NetAdapterPowerManagement' 'Disable-NetAdapterPowerManagement' $n;foreach($kw in @('*FlowControl','*GreenGbe','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver')){SetP $n $kw @('0') $props};SetP $n '*RscIPv6' @('0') $props;SetP $n '*InterruptModeration' @('1') $props;if($r){foreach($kw in @('ITR','TxIntDelay')){if(-not(Test-Path -LiteralPath ($r+'\Ndi\Params\'+$kw))){Remove-ItemProperty -LiteralPath $r -Name $kw -ErrorAction SilentlyContinue;$props.Remove($kw)|Out-Null;$script:changed=$true}}};foreach($kw in @('ITR','*InterruptModerationRate','InterruptModerationRate','RxIntDelay','TxIntDelay')){SetMinP $n $kw $props};if($adapter.InterfaceDescription-match'Intel|Wireless|Wi-Fi|802\.11'){SetP $n 'MIMOPowerSaveMode' @('3') $props;SetP $n 'uAPSDSupport' @('0') $props;SetP $n 'FatChannelIntolerant' @('0') $props};foreach($kw in @('*ReceiveBuffers','*TransmitBuffers')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,2048).ToString();SetP $n $kw @($v) $props}};foreach($kw in @('PendingReceives','PendingTransmits')){$p=$props[$kw];if($p-and $p.NumericParameterMaxValue-gt 0){$v=[math]::Min([int]$p.NumericParameterMaxValue,64).ToString();SetP $n $kw @($v) $props}}}else{foreach($kw in @('*FlowControl','*GreenGbe','*PacketCoalescing','EnableExtraPowerSaving','*EEE','AdvancedEEE','EnableGreenEthernet','PowerSavingMode','GigaLite','ReduceSpeedOnPowerDown','*WakeOnMagicPacket','S5WakeOnLan','*ShutdownLinkSpeed','S3S4WolLinkSpeed','EnableDynamicPowerGating','AutoPowerSaveModeEnabled','EnableConnectedPowerGating','*NicAutoPowerSaver')){ResetP $n $kw $props}};SetP $n '*InterruptModeration' @('1') $props;SetPMFlags $n $r $props $eco $gaming;if($script:changed){try{Restart-NetAdapter -Name $n -Confirm:$false -ErrorAction Stop}catch{$script:failed=$true}}};if($script:failed){exit 1};exit 0" >nul 2>&1
 exit /b !errorlevel!
 
 :SET_NIC_PROFILE_CONVERGENCE
