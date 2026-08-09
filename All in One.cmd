@@ -2421,10 +2421,8 @@ bcdedit /deletevalue useplatformclock >nul 2>&1
 bcdedit /set disabledynamictick yes >nul 2>&1
 bcdedit /set useplatformtick no >nul 2>&1
 bcdedit /deletevalue tscsyncpolicy >nul 2>&1
-REM Get-PnpDevice -InstanceId n'accepte pas les jokers : filtrer l'identifiant reel avant de desactiver HPET.
-powershell -NoProfile -Command "Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'ACPI\PNP0103\*' -and $_.Status -eq 'OK' } | Disable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Preset timer Performance max demande.%COLOR_RESET%
-echo %COLOR_WHITE%Dynamic Tick coupe, Platform Tick non force et HPET desactive.%COLOR_RESET%
+echo %COLOR_WHITE%Dynamic Tick coupe, Platform Tick non force et HPET conserve actif.%COLOR_RESET%
 
 REM  7.10 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTimerResolution...%COLOR_RESET%
