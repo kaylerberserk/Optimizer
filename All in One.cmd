@@ -1037,8 +1037,8 @@ reg add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\Inpr
 REM  Windows 11 22H2+ : masque toute la section Recommandations du menu Demarrer.
 REM  Contrairement a Start_TrackDocs=0, cette politique ne coupe pas les fichiers recents de l'Explorateur ni les Jump Lists.
 reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideRecommendedSection /t REG_DWORD /d 1 /f >nul 2>&1
-REM  Windows 11 24H2 + KB5067036 : retire les blocs de categories et utilise la grille simple.
-reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideCategoryView /t REG_DWORD /d 1 /f >nul 2>&1
+REM  Windows 11 : supprime entierement la section Tout, au lieu de remplacer les categories par une grille.
+reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoStartMenuMorePrograms /t REG_DWORD /d 1 /f >nul 2>&1
 REM  ShowFrequent - Cache des fichiers recents (ne desactive PAS l'indexation Windows)
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v ShowFrequent /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v DesktopProcess /t REG_DWORD /d 1 /f >nul 2>&1

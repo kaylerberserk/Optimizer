@@ -113,7 +113,7 @@ Exceptions réseau :
 
 ### ⚙️ Optimisations Granulaires
 
-- **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie. Sous Windows 11, la section « Recommandations » est masquée sans désactiver les fichiers récents de l’Explorateur ni les Jump Lists ; à partir de 24H2 avec KB5067036, les blocs de catégories sont également retirés au profit de la grille simple.
+- **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie. Sous Windows 11, les sections « Recommandations » et « Tout » sont masquées pour ne conserver que les applications épinglées ; la recherche Windows reste disponible et les fichiers récents de l’Explorateur ainsi que les Jump Lists ne sont pas désactivés.
 - **[2] Mémoire** : Ajustement de la gestion RAM et de la compression mémoire selon l'énergie, avec Prefetch piloté par l'usage.
 - **[3] Disques** : TRIM et maintenance Windows conservés ; chemins longs activés en Gaming et rendus à `LongPathsEnabled=0` en Normal, comme sur le stock mesuré.
 - **[4] GPU** : Configuration des priorités graphiques et des options de latence prises en charge par le pilote.
