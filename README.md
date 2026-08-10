@@ -86,12 +86,13 @@ Les sections granulaires reprennent la même logique : **Mémoire** et **Réseau
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
 | **[1]** | **ECO** | Plan Équilibré (plans OEM/personnalisés conservés), hibernation et veille hybride disponibles, démarrage rapide réactivé comme au défaut Windows (HiberbootEnabled=1), RSC/LSO/checksum ON, gestion d'énergie NIC activée, propriétés pilote modifiées par MaxPerf restaurées, ARP Offload / NS Offload ON et Wake on Pattern OFF si pris en charge, compression mémoire active. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec délais pilote exposés au minimum annoncé en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, ARP Offload / NS Offload / Wake on Pattern / Selective Suspend OFF si pris en charge, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`disabledynamictick=yes`, `useplatformtick=no`) sans désactiver HPET, compression mémoire OFF (RAM > 8 Go), économies d'énergie ciblées. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec délais pilote exposés au minimum annoncé en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, ARP Offload / NS Offload / Wake on Pattern / Selective Suspend OFF si pris en charge, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`useplatformtick=yes`) sans couper le Dynamic Tick ni désactiver HPET, compression mémoire OFF (RAM > 8 Go), économies d'énergie ciblées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — Nagle/DelACK revient au comportement Windows natif (batterie avant tout), tandis qu'initialRTO=3000 et maxsynretransmissions=2 restent appliqués par l'axe Gaming ; les optimisations GPU/input/CPU restent agressives.
 >
 > Les quatre combinaisons sont convergentes : changer de profil annule explicitement les réglages exclusifs laissés par le profil précédent.
+> Le changement manuel Eco/Performance Max resynchronise aussi `DisablePagingExecutive`, FTH et la compression mémoire. La passe de convergence réseau renvoie désormais une erreur lorsqu'une carte ne peut pas appliquer ses propriétés.
 
 | Combinaison | Comportement principal |
 |---|---|
@@ -154,7 +155,7 @@ Exceptions réseau :
 
 | Touche | Fonction | Description |
 |:---:|---|---|
-| **[1]** | **Windows Defender** | Activation ou désactivation étendue de Defender (temps réel, cloud, ASR, SmartScreen, services et pilotes associés). |
+| **[1]** | **Windows Defender** | Activation ou désactivation étendue. La réactivation conserve les règles ASR et CFA existantes, réactive les protections principales et signale un état final partiel. |
 | **[2]** | **UAC** | Gestion fine des notifications du Contrôle de Compte Utilisateur. |
 | **[3]** | **Animations** | Choix entre une interface visuelle riche ou ultra-réactive. |
 | **[4]** | **IA & Widgets** | Activation ou désactivation de Copilot et des Widgets sur Windows 11. Recall dépend de la version/édition de Windows et peut être absent ou non pris en charge. |
@@ -187,7 +188,7 @@ R : Oui pour les profils principaux : Gaming/Normal et Performance Max/Eco rempl
 R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester par une latence ou une stabilité plus régulière ; aucun gain de FPS n'est garanti.
 
 **Q : Que fait le preset timer de Performance Max ?**
-R : Performance Max applique `disabledynamictick=yes`, `useplatformtick=no` et supprime les éventuels overrides `useplatformclock`/`tscsyncpolicy`, sans désactiver le périphérique HPET. Ce combo BCD a produit un polling rate plus régulier dans MouseTester sur la configuration testée, mais Microsoft classe ces options comme des réglages de débogage : le preset reste expérimental et aucun gain universel n'est garanti. Le profil Eco supprime les quatre overrides BCD et réactive HPET s'il avait été désactivé par une ancienne version du script, afin de rendre la sélection des timers à Windows. Un redémarrage est nécessaire après le changement.
+R : Performance Max applique `useplatformtick=yes` et supprime les éventuels overrides `useplatformclock`/`tscsyncpolicy`, sans couper le Dynamic Tick et sans désactiver le périphérique HPET. Ce combo BCD vise un polling rate plus régulier (observé dans MouseTester sur la configuration testée), mais Microsoft classe ces options comme des réglages de débogage : le preset reste expérimental et aucun gain universel n'est garanti. Le profil Eco supprime les overrides BCD `useplatformclock`/`useplatformtick`/`disabledynamictick`/`tscsyncpolicy` et réactive HPET s'il avait été désactivé par une ancienne version du script, afin de rendre la sélection des timers à Windows. Un redémarrage est nécessaire après le changement.
 
 **Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
 R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Gaming conserve VBS/HVCI, laisse CFG au défaut Windows, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist. HVCI peut néanmoins maintenir cette blocklist active. Performance Max désactive VBS/HVCI/SEHOP, laisse CFG au défaut Windows, réduit les mitigations CPU et demande aussi la désactivation de la blocklist. Défaut Windows restaure le snapshot de sécurité ou applique la base stock 25H2 mesurée sans snapshot. Les trois modes suppriment la surcharge BCD `hypervisorlaunchtype` lorsqu'ils la gèrent ; les stratégies et verrous externes restent prioritaires.
