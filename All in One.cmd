@@ -2478,6 +2478,7 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%GPU optimise%COLOR_RESET%
 
 REM  7.18 - Convergence reseau du profil Energie (parcours manuel uniquement)
 REM  TOUT_OPTIMISER a deja applique la meme matrice dans la section Reseau.
+set "NIC_PROFILE_ERROR=0"
 if not "!AIO_MODE!"=="1" (
     echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Synchronisation du profil reseau avec Performance max...%COLOR_RESET%
     if "!PROFIL_USAGE!"=="0" (
@@ -2489,12 +2490,16 @@ if not "!AIO_MODE!"=="1" (
     )
     call :SET_NIC_PROFILE 0 !PROFIL_USAGE!
     if !errorlevel! NEQ 0 (
+        set "NIC_PROFILE_ERROR=1"
         echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Synchronisation reseau appliquee partiellement.%COLOR_RESET%
     ) else (
         echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Synchronisation avec Performance max demandee.%COLOR_RESET%
     )
     call :SET_NIC_PROFILE_CONVERGENCE 0 !PROFIL_USAGE!
-    if !errorlevel! NEQ 0 echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%La convergence des cartes reseau reste partielle.%COLOR_RESET%
+    if !errorlevel! NEQ 0 (
+        set "NIC_PROFILE_ERROR=1"
+        echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%La convergence des cartes reseau reste partielle.%COLOR_RESET%
+    )
 )
 
 REM  Appliquer l'ensemble des modifications du plan d'alimentation en une seule fois
@@ -2504,6 +2509,8 @@ set "STR_EXE="
 set "STR_OLD_DIR="
 set "STR_STARTUP_LNK="
 set "ENERGY_SECTION_RC=0"
+if "!NIC_PROFILE_ERROR!"=="1" set "ENERGY_SECTION_RC=1"
+set "NIC_PROFILE_ERROR="
 if not "!AIO_MODE!"=="1" (
     call :SET_MEMORY_POWER_PROFILE
     if !errorlevel! NEQ 0 set "ENERGY_SECTION_RC=1"
@@ -2646,7 +2653,6 @@ if "!NIC_ECO_PROFILE_ERROR!"=="1" (
 ) else (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages d'economie de la carte reseau demandes%COLOR_RESET%
 )
-set "NIC_ECO_PROFILE_ERROR="
 
 REM  7.12 - Visibilite des parametres processeur dans le panneau
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Restauration de la visibilite des parametres processeur...%COLOR_RESET%
@@ -2712,6 +2718,8 @@ REM  7.22 - Les surcharges de l'optimiseur ont ete annulees sans toucher aux aut
 
 set "STR_STARTUP_LNK="
 set "ENERGY_SECTION_RC=0"
+if "!NIC_ECO_PROFILE_ERROR!"=="1" set "ENERGY_SECTION_RC=1"
+set "NIC_ECO_PROFILE_ERROR="
 if not "!AIO_MODE!"=="1" (
     call :SET_MEMORY_POWER_PROFILE
     if !errorlevel! NEQ 0 set "ENERGY_SECTION_RC=1"
@@ -4569,7 +4577,7 @@ exit /b !WINOPT_HOSTS_BACKUP_RC!
 if exist "%WINOPT_SECURITY_BACKUP%" if exist "%WINOPT_SECURITY_BCD_BACKUP%" exit /b 0
 if exist "%WINOPT_SECURITY_BACKUP%" exit /b 1
 if exist "%WINOPT_SECURITY_BCD_BACKUP%" exit /b 1
-powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$r=$env:WINOPT_SECURITY_BACKUP;$b=$env:WINOPT_SECURITY_BCD_BACKUP;New-Item -ItemType Directory -Path (Split-Path -Parent $r) -Force|Out-Null;$targets=@(@{Path='SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management';Names=@('MoveImages','EnableGdsMitigation','PerformMmioMitigation','RestrictIndirectBranchPrediction','EnableKvashadow','KvaOpt','DisableStibp','EnableRetpoline','DisableBranchPrediction','FeatureSettings','FeatureSettingsOverride','FeatureSettingsOverrideMask')},@{Path='SYSTEM\CurrentControlSet\Control\Session Manager\Kernel';Names=@('KernelSEHOPEnabled','DisableExceptionChainValidation','MitigationOptions','MitigationAuditOptions')},@{Path='SYSTEM\CurrentControlSet\Control\DeviceGuard';Names=@('EnableVirtualizationBasedSecurity','RequirePlatformSecurityFeatures','Locked')},@{Path='SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity';Names=@('Enabled','Locked','WasEnabledBy')},@{Path='SOFTWARE\Policies\Microsoft\Windows\DeviceGuard';Names=@('EnableVirtualizationBasedSecurity','RequirePlatformSecurityFeatures','HypervisorEnforcedCodeIntegrity','LsaCfgFlags')},@{Path='SOFTWARE\Policies\Microsoft\Windows\System';Names=@('RunAsPPL')},@{Path='SYSTEM\CurrentControlSet\Control\Lsa';Names=@('LsaCfgFlags','RunAsPPLBoot','RunAsPPL')},@{Path='SYSTEM\CurrentControlSet\Control\CI\Policy';Names=@('WHQLSettings')},@{Path='SYSTEM\CurrentControlSet\Control\CI\Config';Names=@('VulnerableDriverBlocklistEnable')});$base=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,[Microsoft.Win32.RegistryView]::Default);$lines=@('Windows Registry Editor Version 5.00','');foreach($x in $targets){$lines+=('[HKEY_LOCAL_MACHINE\'+$x.Path+']');$key=$base.OpenSubKey($x.Path,$false);foreach($n in $x.Names){$present=$key-and($key.GetValueNames()-contains$n);if(-not$present){$lines+=([char]34+$n+[char]34+'=-');continue};$kind=$key.GetValueKind($n);$value=$key.GetValue($n,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames);if($kind-eq[Microsoft.Win32.RegistryValueKind]::DWord){$lines+=('{0}=dword:{1:x8}'-f([char]34+$n+[char]34),[uint32]$value)}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::QWord){$lines+=('{0}=hex(b):{1}'-f([char]34+$n+[char]34),(([BitConverter]::GetBytes([uint64]$value)|ForEach-Object{$_.ToString('x2')})-join','))}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::Binary){$lines+=('{0}=hex:{1}'-f([char]34+$n+[char]34),(([byte[]]$value|ForEach-Object{$_.ToString('x2')})-join','))}else{$v=([string]$value).Replace('\','\\').Replace([string][char]34,'\'+[char]34);$lines+=([char]34+$n+[char]34+'='+[char]34+$v+[char]34)}};if($key){$key.Dispose()};$lines+=''};$base.Dispose();[IO.File]::WriteAllLines($r,$lines,[Text.Encoding]::Unicode);$bt=(& bcdedit.exe /enum '{current}' 2^>$null)-join[Environment]::NewLine;$v='__ABSENT__';if($bt-match'(?m)^\s*hypervisorlaunchtype\s+(\S+)'){$v=$Matches[1]};[IO.File]::WriteAllText($b,$v,[Text.Encoding]::ASCII);exit 0}catch{Remove-Item -LiteralPath @($env:WINOPT_SECURITY_BACKUP,$env:WINOPT_SECURITY_BCD_BACKUP) -Force -ErrorAction SilentlyContinue;exit 1}" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$r=$env:WINOPT_SECURITY_BACKUP;$b=$env:WINOPT_SECURITY_BCD_BACKUP;New-Item -ItemType Directory -Path (Split-Path -Parent $r) -Force|Out-Null;$targets=@(@{Path='SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management';Names=@('MoveImages','EnableGdsMitigation','PerformMmioMitigation','RestrictIndirectBranchPrediction','EnableKvashadow','KvaOpt','DisableStibp','EnableRetpoline','DisableBranchPrediction','FeatureSettings','FeatureSettingsOverride','FeatureSettingsOverrideMask')},@{Path='SYSTEM\CurrentControlSet\Control\Session Manager\Kernel';Names=@('KernelSEHOPEnabled','DisableExceptionChainValidation','MitigationOptions','MitigationAuditOptions')},@{Path='SYSTEM\CurrentControlSet\Control\DeviceGuard';Names=@('EnableVirtualizationBasedSecurity','RequirePlatformSecurityFeatures','Locked')},@{Path='SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity';Names=@('Enabled','Locked','WasEnabledBy')},@{Path='SOFTWARE\Policies\Microsoft\Windows\DeviceGuard';Names=@('EnableVirtualizationBasedSecurity','RequirePlatformSecurityFeatures','HypervisorEnforcedCodeIntegrity','LsaCfgFlags')},@{Path='SOFTWARE\Policies\Microsoft\Windows\System';Names=@('RunAsPPL')},@{Path='SYSTEM\CurrentControlSet\Control\Lsa';Names=@('LsaCfgFlags','RunAsPPLBoot','RunAsPPL')},@{Path='SYSTEM\CurrentControlSet\Control\CI\Policy';Names=@('WHQLSettings')},@{Path='SYSTEM\CurrentControlSet\Control\CI\Config';Names=@('VulnerableDriverBlocklistEnable')});$base=[Microsoft.Win32.RegistryKey]::OpenBaseKey([Microsoft.Win32.RegistryHive]::LocalMachine,[Microsoft.Win32.RegistryView]::Default);$lines=@('Windows Registry Editor Version 5.00','');foreach($x in $targets){$lines+=('[HKEY_LOCAL_MACHINE\'+$x.Path+']');$key=$base.OpenSubKey($x.Path,$false);foreach($n in $x.Names){$present=$key-and($key.GetValueNames()-contains$n);if(-not$present){$lines+=([char]34+$n+[char]34+'=-');continue};$kind=$key.GetValueKind($n);$value=$key.GetValue($n,$null,[Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames);if($kind-eq[Microsoft.Win32.RegistryValueKind]::DWord){$lines+=('{0}=dword:{1:x8}'-f([char]34+$n+[char]34),[uint32]$value)}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::QWord){$lines+=('{0}=hex(b):{1}'-f([char]34+$n+[char]34),(([BitConverter]::GetBytes([uint64]$value)|ForEach-Object{$_.ToString('x2')})-join','))}elseif($kind-eq[Microsoft.Win32.RegistryValueKind]::Binary){$lines+=('{0}=hex:{1}'-f([char]34+$n+[char]34),(([byte[]]$value|ForEach-Object{$_.ToString('x2')})-join','))}else{$v=([string]$value).Replace('\','\\').Replace([string][char]34,'\'+[char]34);$lines+=([char]34+$n+[char]34+'='+[char]34+$v+[char]34)}};if($key){$key.Dispose()};$lines+=''};$base.Dispose();[IO.File]::WriteAllLines($r,$lines,[Text.Encoding]::Unicode);$bt=(& bcdedit.exe /enum '{current}' 2>$null)-join[Environment]::NewLine;$v='__ABSENT__';if($bt-match'(?m)^\s*hypervisorlaunchtype\s+(\S+)'){$v=$Matches[1]};[IO.File]::WriteAllText($b,$v,[Text.Encoding]::ASCII);exit 0}catch{Remove-Item -LiteralPath @($env:WINOPT_SECURITY_BACKUP,$env:WINOPT_SECURITY_BCD_BACKUP) -Force -ErrorAction SilentlyContinue;exit 1}" >nul 2>&1
 exit /b !errorlevel!
 
 :RESTORE_SECURITY_BASELINE
