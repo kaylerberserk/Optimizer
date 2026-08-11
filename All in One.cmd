@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 if not defined WINOPT_SOURCE_DIR set "WINOPT_SOURCE_DIR=%~dp0"
-if not defined WINOPT_RELEASE_BASE_URL set "WINOPT_RELEASE_BASE_URL=https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main"
+if not defined WINOPT_RELEASE_BASE_URL set "WINOPT_RELEASE_BASE_URL=https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/c0eb61baa99308b6c6ff085323eee6efa81ecc6d"
 set "WINOPT_SELF=%~f0"
 set "WINOPT_SELF_BACKUP_SOURCE=%~f0"
 
@@ -320,6 +320,11 @@ set "IS_GAMING_ECO=0"
 if "!PROFIL_USAGE!"=="0" (
     if "!PROFIL_POWER!"=="1" set "IS_GAMING_ECO=1"
 )
+exit /b 0
+
+:RESET_BCD_TIMER_OVERRIDES
+REM Les overrides de diagnostic des timers sont supprimes pour tous les profils.
+for %%B in (useplatformclock useplatformtick tscsyncpolicy) do bcdedit /deletevalue %%B >nul 2>&1
 exit /b 0
 
 :CHOISIR_PROFILS
@@ -989,6 +994,11 @@ if "!PROFIL_USAGE!"=="0" (
 )
 echo.
 
+REM  1.0 - Surcharges BCD des timers : suppression pour tous les profils.
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Suppression des surcharges BCD de diagnostic des timers...%COLOR_RESET%
+call :RESET_BCD_TIMER_OVERRIDES
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Horloges platform et synchronisation TSC rendues a Windows.%COLOR_RESET%
+
 REM  1.1 - Priorites CPU et planification
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reglage de la reactivite du systeme...%COLOR_RESET%
 if "!PROFIL_USAGE!"=="0" (
@@ -1033,11 +1043,15 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "S
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Chat" /v ChatIcon /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /ve /t REG_SZ /d "" /f >nul 2>&1
-REM  Windows 11 22H2+ : masque toute la section Recommandations du menu Demarrer.
-REM  Contrairement a Start_TrackDocs=0, cette politique ne coupe pas les fichiers recents de l'Explorateur ni les Jump Lists.
-reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideRecommendedSection /t REG_DWORD /d 1 /f >nul 2>&1
-REM  Windows 11 : supprime entierement la section Tout, au lieu de remplacer les categories par une grille.
-reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoStartMenuMorePrograms /t REG_DWORD /d 1 /f >nul 2>&1
+REM  Gaming masque Recommandations et Tout ; Normal supprime les politiques pour revenir au defaut Windows.
+if "!PROFIL_USAGE!"=="0" (
+    reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideRecommendedSection /t REG_DWORD /d 1 /f >nul 2>&1
+    reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoStartMenuMorePrograms /t REG_DWORD /d 1 /f >nul 2>&1
+) else (
+    reg delete "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideRecommendedSection /f >nul 2>&1
+    reg delete "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideCategoryView /f >nul 2>&1
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoStartMenuMorePrograms /f >nul 2>&1
+)
 REM  ShowFrequent - Cache des fichiers recents (ne desactive PAS l'indexation Windows)
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v ShowFrequent /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer" /v DesktopProcess /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2377,12 +2391,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /t RE
 reg add "HKLM\SYSTEM\ControlSet001\Control" /v CoalescingTimerInterval /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 0 /f >nul 2>&1
 REM Preset timer MaxPerf experimental : polling rate MouseTester observe plus regulier sur la config testee, resultat materiel-dependent.
-REM Ces options BCD restent des reglages de diagnostic sans gain universel garanti.
-bcdedit /deletevalue useplatformclock >nul 2>&1
-bcdedit /set useplatformtick yes >nul 2>&1
-bcdedit /deletevalue tscsyncpolicy >nul 2>&1
+REM Les trois suppressions BCD sont communes a tous les profils ; MaxPerf ajoute uniquement ce reglage.
+call :RESET_BCD_TIMER_OVERRIDES
+bcdedit /set disabledynamictick yes >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Preset timer Performance max demande.%COLOR_RESET%
-echo %COLOR_WHITE%Dynamic Tick laisse au defaut Windows, Platform Tick force et HPET conserve actif.%COLOR_RESET%
+echo %COLOR_WHITE%Dynamic Tick coupe ; les autres choix de timer restent geres par Windows et HPET est conserve actif.%COLOR_RESET%
 
 REM  7.10 - Installation SetTimerResolution
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Configuration de SetTimerResolution...%COLOR_RESET%
@@ -2578,8 +2591,9 @@ reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v Coalescing
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg delete "HKLM\SYSTEM\ControlSet001\Control" /v CoalescingTimerInterval /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Power" /v EnergyEstimationEnabled /t REG_DWORD /d 1 /f >nul 2>&1
-REM  Supprime les surcharges BCD de diagnostic et rend la gestion des horloges a Windows.
-for %%B in (useplatformclock useplatformtick disabledynamictick tscsyncpolicy) do bcdedit /deletevalue %%B >nul 2>&1
+REM  Supprime les surcharges BCD communes ; Eco retire aussi le choix Dynamic Tick de MaxPerf.
+call :RESET_BCD_TIMER_OVERRIDES
+bcdedit /deletevalue disabledynamictick >nul 2>&1
 REM  Reactive HPET s'il avait ete desactive par une ancienne version du script.
 powershell -NoProfile -Command "Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'ACPI\PNP0103\*' -and $_.Problem -eq 22 } | Enable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing, BCD des timers et HPET rendus a Windows.%COLOR_RESET%

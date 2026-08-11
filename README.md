@@ -35,9 +35,9 @@ Ce script privilégie une configuration lisible et des profils explicites pour W
 ## 🚀 Démarrage rapide
 
 ```powershell
-irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1 | iex
+irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/c0eb61baa99308b6c6ff085323eee6efa81ecc6d/launcher.ps1 | iex
 ```
-Collez cette commande dans **PowerShell non administrateur**. Le launcher valide la source officielle, demande l'élévation UAC, télécharge la **dernière version** du batch depuis la branche `main`, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin : chaque relance récupère donc la dernière publication.
+Collez cette commande dans **PowerShell non administrateur**. Le launcher épinglé valide la source officielle, demande l'élévation UAC, télécharge le batch du même commit immuable, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin.
 
 Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demander l'UAC ni exécuter l'optimiseur :
 
@@ -45,7 +45,7 @@ Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demand
 .\launcher.ps1 -VerifyOnly
 ```
 
-> Le launcher et le batch proviennent toujours de la branche `main` du dépôt officiel : une nouvelle publication est récupérée automatiquement au prochain lancement. Pour contrôler la chaîne sans l'exécuter : téléchargez `launcher.ps1`, puis lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la source et le SHA-256 du batch préparé.
+> Le launcher et le batch proviennent du même commit Git immuable. Le SHA doit être mis à jour volontairement lors d'une publication. Pour contrôler la chaîne sans l'exécuter, lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la source et le SHA-256 du batch préparé.
 
 ### Premier parcours
 
@@ -86,7 +86,7 @@ Les sections granulaires reprennent la même logique : **Mémoire** et **Réseau
 | Choix | Profil | Réglages clés |
 |:---:|:---:|---|
 | **[1]** | **ECO** | Plan Équilibré (plans OEM/personnalisés conservés), hibernation et veille hybride disponibles, démarrage rapide réactivé comme au défaut Windows (HiberbootEnabled=1), RSC/LSO/checksum ON, gestion d'énergie NIC activée, propriétés pilote modifiées par MaxPerf restaurées, ARP Offload / NS Offload ON et Wake on Pattern OFF si pris en charge, compression mémoire active. |
-| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec délais pilote exposés au minimum annoncé en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, ARP Offload / NS Offload / Wake on Pattern / Selective Suspend OFF si pris en charge, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`useplatformtick=yes`) sans couper le Dynamic Tick ni désactiver HPET, compression mémoire OFF (RAM > 8 Go), économies d'énergie ciblées. |
+| **[2]** | **MAX PERF** | Plan Ultimate Performance, RSC/LSO OFF en Gaming (restaurés en Normal/Eco), Interrupt Moderation ON avec délais pilote exposés au minimum annoncé en Gaming, RscIPv6 OFF en Gaming+MaxPerf, Flow Control OFF, EEE/GigaLite/GreenGbe/PacketCoalescing OFF, ARP Offload / NS Offload / Wake on Pattern / Selective Suspend OFF si pris en charge, Power Management NIC OFF, ReceiveBuffers/TransmitBuffers jusqu'à 2048 selon le pilote, gestion énergie HID/USB désactivée sans forçage global ACPI/PCI, preset timer expérimental (`disabledynamictick=yes`) ; `useplatformclock`/`useplatformtick`/`tscsyncpolicy` sont supprimés pour tous les profils, sans désactiver HPET, compression mémoire OFF (RAM > 8 Go), économies d'énergie ciblées. |
 
 > **Sur PC fixe comme portable** : les deux questions sont posées, pour permettre un desktop silencieux/économe ou un laptop branché en **MAX PERF**.
 > **Sur PC portable** : la combinaison **GAMING + ECO** est autorisée avec un avertissement — Nagle/DelACK revient au comportement Windows natif (batterie avant tout), tandis qu'initialRTO=3000 et maxsynretransmissions=2 restent appliqués par l'axe Gaming ; les optimisations GPU/input/CPU restent agressives.
@@ -114,7 +114,7 @@ Exceptions réseau :
 
 ### ⚙️ Optimisations Granulaires
 
-- **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie. Sous Windows 11, les sections « Recommandations » et « Tout » sont masquées pour ne conserver que les applications épinglées ; la recherche Windows reste disponible et les fichiers récents de l’Explorateur ainsi que les Jump Lists ne sont pas désactivés.
+- **[1] Système** : Optimisation du noyau (Kernel), de la planification CPU et suppression de la télémétrie. Sous Windows 11, Gaming masque « Recommandations » et « Tout » ; Normal supprime ces politiques pour revenir au comportement Windows. La recherche, les fichiers récents de l’Explorateur et les Jump Lists restent disponibles.
 - **[2] Mémoire** : Ajustement de la gestion RAM et de la compression mémoire selon l'énergie, avec Prefetch piloté par l'usage.
 - **[3] Disques** : TRIM et maintenance Windows conservés ; chemins longs activés en Gaming et rendus à `LongPathsEnabled=0` en Normal, comme sur le stock mesuré.
 - **[4] GPU** : Configuration des priorités graphiques et des options de latence prises en charge par le pilote.
@@ -188,7 +188,7 @@ R : Oui pour les profils principaux : Gaming/Normal et Performance Max/Eco rempl
 R : Le gain varie selon le matériel et la charge. Il peut surtout se manifester par une latence ou une stabilité plus régulière ; aucun gain de FPS n'est garanti.
 
 **Q : Que fait le preset timer de Performance Max ?**
-R : Performance Max applique `useplatformtick=yes` et supprime les éventuels overrides `useplatformclock`/`tscsyncpolicy`, sans couper le Dynamic Tick et sans désactiver le périphérique HPET. Ce combo BCD vise un polling rate plus régulier (observé dans MouseTester sur la configuration testée), mais Microsoft classe ces options comme des réglages de débogage : le preset reste expérimental et aucun gain universel n'est garanti. Le profil Eco supprime les overrides BCD `useplatformclock`/`useplatformtick`/`disabledynamictick`/`tscsyncpolicy` et réactive HPET s'il avait été désactivé par une ancienne version du script, afin de rendre la sélection des timers à Windows. Un redémarrage est nécessaire après le changement.
+R : Tous les profils suppriment les overrides BCD `useplatformclock`/`useplatformtick`/`tscsyncpolicy`. Performance Max ajoute `disabledynamictick=yes`, tandis qu'Eco supprime aussi cet override et réactive HPET s'il avait été désactivé par une ancienne version du script. Microsoft classe ces options comme des réglages de débogage : le preset reste expérimental et aucun gain universel n'est garanti. Un redémarrage est nécessaire après le changement.
 
 **Q : Pourquoi modifier les mitigations Spectre/Meltdown (Option 8) ?**
 R : Certaines protections ajoutent une charge selon le processeur et la charge de travail. Gaming conserve VBS/HVCI, laisse CFG au défaut Windows, désactive SEHOP, réduit les mitigations CPU et demande la désactivation de la blocklist. HVCI peut néanmoins maintenir cette blocklist active. Performance Max désactive VBS/HVCI/SEHOP, laisse CFG au défaut Windows, réduit les mitigations CPU et demande aussi la désactivation de la blocklist. Défaut Windows restaure le snapshot de sécurité ou applique la base stock 25H2 mesurée sans snapshot. Les trois modes suppriment la surcharge BCD `hypervisorlaunchtype` lorsqu'ils la gèrent ; les stratégies et verrous externes restent prioritaires.
