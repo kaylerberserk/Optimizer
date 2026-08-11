@@ -35,9 +35,9 @@ Ce script privilégie une configuration lisible et des profils explicites pour W
 ## 🚀 Démarrage rapide
 
 ```powershell
-irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/c0eb61baa99308b6c6ff085323eee6efa81ecc6d/launcher.ps1 | iex
+irm https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main/launcher.ps1 | iex
 ```
-Collez cette commande dans **PowerShell non administrateur**. Le launcher épinglé valide la source officielle, demande l'élévation UAC, télécharge le batch du même commit immuable, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin.
+Collez cette commande dans **PowerShell non administrateur**. Le launcher valide la source officielle, demande l'élévation UAC, télécharge la dernière version du batch depuis la branche `main`, le normalise en CRLF puis le lance. Le fichier temporaire est supprimé à la fin.
 
 Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demander l'UAC ni exécuter l'optimiseur :
 
@@ -45,7 +45,7 @@ Depuis un clone local, vous pouvez vérifier le launcher et le batch sans demand
 .\launcher.ps1 -VerifyOnly
 ```
 
-> Le launcher et le batch proviennent du même commit Git immuable. Le SHA doit être mis à jour volontairement lors d'une publication. Pour contrôler la chaîne sans l'exécuter, lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la source et le SHA-256 du batch préparé.
+> Le launcher et le batch proviennent de la branche `main` du dépôt officiel. Une nouvelle publication est récupérée au prochain lancement. Pour contrôler la chaîne sans l'exécuter, lancez `.\launcher.ps1 -VerifyOnly` : il rapporte la source et le SHA-256 du batch préparé.
 
 ### Premier parcours
 

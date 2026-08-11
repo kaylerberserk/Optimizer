@@ -18,6 +18,7 @@ desktop.ini
 *.lnk
 
 # Agent workflows
+AGENTS.md
 .agent/
 .agents/
 .opencode/

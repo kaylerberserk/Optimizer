@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions DisableDelayedExpansion
 if not defined WINOPT_SOURCE_DIR set "WINOPT_SOURCE_DIR=%~dp0"
-if not defined WINOPT_RELEASE_BASE_URL set "WINOPT_RELEASE_BASE_URL=https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/c0eb61baa99308b6c6ff085323eee6efa81ecc6d"
+if not defined WINOPT_RELEASE_BASE_URL set "WINOPT_RELEASE_BASE_URL=https://raw.githubusercontent.com/kaylerberserk/WindowsOptimizer/main"
 set "WINOPT_SELF=%~f0"
 set "WINOPT_SELF_BACKUP_SOURCE=%~f0"
 
