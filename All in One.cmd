@@ -524,6 +524,17 @@ echo %COLOR_CYAN%---------------------------------------------------------------
 echo.
 exit /b 0
 
+:: Pied standard d'un sous-menu : %~1 = menu de retour, %~2 = invite, %~3 = choix autorises.
+:SUBMENU_CHOICE
+echo.
+echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu %~1%COLOR_RESET%
+echo.
+echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
+echo.
+<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%%~2%COLOR_RESET%"
+call :AZCHOICE %~3
+exit /b !errorlevel!
+
 :: Lecture d'une entree menu via choice.exe (silencieux : pas d'ecran de la liste).
 :AZCHOICE
 choice /c %~1 /n
@@ -656,13 +667,7 @@ echo %COLOR_YELLOW%[7]%COLOR_RESET% %COLOR_GREEN%Installer les runtimes Visual C
 echo.
 echo %STYLE_BOLD%%COLOR_BLUE%--- APPLICATIONS ET NETTOYAGE ---%COLOR_RESET%
 echo %COLOR_YELLOW%[8]%COLOR_RESET% %COLOR_RED%Supprimer les applications Windows inutiles%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-8, M] : %COLOR_RESET%"
-call :AZCHOICE 12345678M
+call :SUBMENU_CHOICE "principal" "Choisissez une option [1-8, M] : " 12345678M
 REM  Gestion des choix (EQU = egalite stricte, ordre sans importance)
 if !errorlevel! EQU 9 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 8  goto :SUPPRIMER_BLOATWARES
@@ -2228,13 +2233,7 @@ echo %COLOR_WHITE%    Plus de performances, mais plus de chauffe et de consommat
 echo.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Performance max demandera ensuite l'usage Gaming ou Normal%COLOR_RESET%
 echo %COLOR_WHITE%pour adapter aussi la carte reseau.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu principal%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M] : %COLOR_RESET%"
-call :AZCHOICE 12M
+call :SUBMENU_CHOICE "principal" "Choisissez une option [1, 2, M] : " 12M
 if !errorlevel! EQU 3 goto :MENU_PRINCIPAL
 if !errorlevel! EQU 2 goto :DO_DESACTIVER_ECONOMIES
 if !errorlevel! EQU 1 goto :DO_RESTAURER_ECONOMIES
@@ -2908,12 +2907,7 @@ echo %COLOR_WHITE%    Conserve les protections utiles aux anti-cheats modernes.%
 echo.
 echo %COLOR_YELLOW%[3]%COLOR_RESET% %COLOR_RED%PERFORMANCE MAX%COLOR_RESET%  %COLOR_RED%DECONSEILLE%COLOR_RESET%
 echo %COLOR_WHITE%    Reduit davantage la securite et peut bloquer des anti-cheats.%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu Gestion Windows%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-3, M] : %COLOR_RESET%"
-call :AZCHOICE 123M
+call :SUBMENU_CHOICE "Gestion Windows" "Choisissez une option [1-3, M] : " 123M
 if !errorlevel! EQU 4 goto :PROTECTIONS_RETURN
 if !errorlevel! EQU 3 goto :PROTECTIONS_PERF_MAX
 if !errorlevel! EQU 2 goto :PROTECTIONS_GAMING
@@ -3033,13 +3027,7 @@ echo %COLOR_WHITE%  Dans ce cas, certaines actions du script seront bloquees.%CO
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%REACTIVER DEFENDER%COLOR_RESET% : Antivirus et SmartScreen
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%DESACTIVER DEFENDER%COLOR_RESET% : Protection fortement reduite
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu Gestion Windows%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M] : %COLOR_RESET%"
-call :AZCHOICE 12M
+call :SUBMENU_CHOICE "Gestion Windows" "Choisissez une option [1, 2, M] : " 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_DEFENDER_SECTION
@@ -3184,13 +3172,7 @@ echo %COLOR_WHITE%  Le desactiver supprime ces confirmations pour toutes les app
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer UAC : confirmations administrateur%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver UAC : moins de confirmations%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu Gestion Windows%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M] : %COLOR_RESET%"
-call :AZCHOICE 12M
+call :SUBMENU_CHOICE "Gestion Windows" "Choisissez une option [1, 2, M] : " 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_UAC_SECTION
@@ -3249,13 +3231,7 @@ echo %COLOR_WHITE%  mais moins fluide visuellement.%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[1]%COLOR_RESET% %COLOR_GREEN%Activer les animations Windows : interface standard%COLOR_RESET%
 echo %COLOR_YELLOW%[2]%COLOR_RESET% %COLOR_RED%Desactiver les animations Windows : interface plus rapide%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu Gestion Windows%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1, 2, M] : %COLOR_RESET%"
-call :AZCHOICE 12M
+call :SUBMENU_CHOICE "Gestion Windows" "Choisissez une option [1, 2, M] : " 12M
 if !errorlevel! EQU 3 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 2 (
   call :DESACTIVER_ANIMATIONS_SECTION
@@ -3364,13 +3340,7 @@ echo %COLOR_YELLOW%[5]%COLOR_RESET% %COLOR_GREEN%Activer : Recall%COLOR_RESET%
 echo %COLOR_YELLOW%[6]%COLOR_RESET% %COLOR_RED%Desactiver : Recall%COLOR_RESET%
 echo.
 echo %COLOR_YELLOW%[D]%COLOR_RESET% %COLOR_RED%Desactiver Copilot, Widgets et Recall%COLOR_RESET%
-echo.
-echo %COLOR_YELLOW%[M]%COLOR_RESET% %COLOR_CYAN%Retour au menu Gestion Windows%COLOR_RESET%
-echo.
-echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
-echo.
-<nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez une option [1-6, D, M] : %COLOR_RESET%"
-call :AZCHOICE 123456DM
+call :SUBMENU_CHOICE "Gestion Windows" "Choisissez une option [1-6, D, M] : " 123456DM
 if !errorlevel! EQU 8 goto :MENU_GESTION_WINDOWS
 if !errorlevel! EQU 7 goto :MENU_IA_OPTION_8_GATE
 if !errorlevel! EQU 6 goto :MENU_IA_OPTION_6_GATE
