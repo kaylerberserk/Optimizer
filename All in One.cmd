@@ -1048,7 +1048,10 @@ reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v "S
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Chat" /v ChatIcon /t REG_DWORD /d 3 /f >nul 2>&1
 reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v DisableSearchBoxSuggestions /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\InprocServer32" /ve /t REG_SZ /d "" /f >nul 2>&1
-REM  Gaming masque Recommandations et Tout ; Normal supprime les politiques pour revenir au defaut Windows.
+REM  Windows 11 : desactiver les suggestions et les applications recemment ajoutees dans tous les profils.
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v Start_IrisRecommendations /t REG_DWORD /d 0 /f >nul 2>&1
+reg add "HKCU\Software\Microsoft\Windows\CurrentVersion\Start" /v ShowRecentList /t REG_DWORD /d 0 /f >nul 2>&1
+REM  Gaming masque aussi Recommandations et Tout ; Normal supprime ces politiques.
 if "!PROFIL_USAGE!"=="0" (
     reg add "HKCU\SOFTWARE\Policies\Microsoft\Windows\Explorer" /v HideRecommendedSection /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer" /v NoStartMenuMorePrograms /t REG_DWORD /d 1 /f >nul 2>&1
@@ -2402,6 +2405,7 @@ set "STR_DIR=%ProgramFiles%\SetTimerResolution"
 set "STR_OLD_DIR=%ProgramFiles%\OptimizerAllInOne"
 set "STR_EXE=%STR_DIR%\SetTimerResolution.exe"
 set "STR_STARTUP_LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
+set "STR_TIMER_ERROR=0"
 REM  Le dossier de destination doit exister AVANT toute copie/telechargement (sinon echec)
 if not exist "%STR_DIR%" mkdir "%STR_DIR%" >nul 2>&1
 if not exist "%STR_EXE%" if exist "%STR_OLD_DIR%\SetTimerResolution.exe" move /Y "%STR_OLD_DIR%\SetTimerResolution.exe" "%STR_EXE%" >nul 2>&1
@@ -2410,31 +2414,36 @@ if exist "%STR_EXE%" for %%A in ("%STR_EXE%") do if %%~zA LSS 10000 del /f /q "%
 if exist "%STR_EXE%" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution deja installe dans %STR_DIR%%COLOR_RESET%
 ) else (
-    REM Copie locale via $env:WINOPT_SOURCE_DIR : la valeur de %~dp0 n'est pas deformee
-    REM par l'expansion differee de cmd.exe quand le chemin contient '!' ou '&'.
-    REM En execution distante - sans dossier Tools local -, le telechargement sert de secours.
-    powershell -NoProfile -Command "try{$src=Join-Path $env:WINOPT_SOURCE_DIR 'Tools\Timer & Interrupt\SetTimerResolution.exe';$dst=$env:STR_EXE;if([IO.File]::Exists($src)-and -not([IO.File]::Exists($dst))){Copy-Item -LiteralPath $src -Destination $dst -Force};if([IO.File]::Exists($dst)-and (Get-Item -LiteralPath $dst).Length -lt 10000){Remove-Item -LiteralPath $dst -Force;exit 2};if(-not([IO.File]::Exists($dst))){exit 1};exit 0}catch{exit 1}"
-    if exist "%STR_EXE%" for %%A in ("%STR_EXE%") do if %%~zA LSS 10000 del /f /q "%STR_EXE%" >nul 2>&1
-    if not exist "%STR_EXE%" powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; try { $f='%STR_EXE%'; $u=$env:WINOPT_RELEASE_BASE_URL+'/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe'; Invoke-WebRequest -Uri $u -OutFile $f -UseBasicParsing -TimeoutSec 60 -ErrorAction Stop; if((Get-Item -LiteralPath $f).Length -lt 10000){Remove-Item -LiteralPath $f -Force; exit 2}; exit 0 } catch { Remove-Item -LiteralPath '%STR_EXE%' -Force -ErrorAction SilentlyContinue; exit 1 }" >nul 2>&1
-    if exist "%STR_EXE%" (
+    call :INSTALL_STR_BINARY
+    if !errorlevel! EQU 0 (
         echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution installe dans %STR_DIR%%COLOR_RESET%
     ) else (
-        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution non installe ; les autres reglages continuent.%COLOR_RESET%
+        set "STR_TIMER_ERROR=1"
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution non installe ; le timer automatique est indisponible.%COLOR_RESET%
     )
 )
 if exist "%STR_EXE%" (
     taskkill /F /IM SetTimerResolution.exe >nul 2>&1
+    call :REMOVE_STR_AUTOSTART_TASK
     call :CREATE_STR_STARTUP_SHORTCUT
     if !errorlevel! EQU 0 (
         echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Raccourci SetTimerResolution configure au demarrage.%COLOR_RESET%
     ) else (
-        echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Raccourci de demarrage non cree ; le lancement continue.%COLOR_RESET%
+        set "STR_TIMER_ERROR=1"
+        echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%Raccourci de demarrage non cree.%COLOR_RESET%
     )
     start "" /D "%STR_DIR%" "%STR_EXE%" --resolution 5070 --no-console >nul 2>&1
     set "STR_START_RC=!errorlevel!"
     if "!STR_START_RC!"=="0" (
         echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Lancement de SetTimerResolution demande avec une resolution de 5070.%COLOR_RESET%
+        timeout /t 1 /nobreak >nul
+        powershell -NoProfile -Command "if (@(Get-Process -Name SetTimerResolution -ErrorAction SilentlyContinue).Count -gt 0) { exit 0 } else { exit 1 }" >nul 2>&1
+        if !errorlevel! NEQ 0 (
+            set "STR_TIMER_ERROR=1"
+            echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution ne tourne pas apres le lancement.%COLOR_RESET%
+        )
     ) else (
+        set "STR_TIMER_ERROR=1"
         echo %COLOR_RED%[ERREUR]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution n'a pas pu etre lance.%COLOR_RESET%
     )
     set "STR_START_RC="
@@ -2521,6 +2530,8 @@ set "STR_EXE="
 set "STR_OLD_DIR="
 set "STR_STARTUP_LNK="
 set "ENERGY_SECTION_RC=0"
+if "!STR_TIMER_ERROR!"=="1" set "ENERGY_SECTION_RC=1"
+set "STR_TIMER_ERROR="
 if "!NIC_PROFILE_ERROR!"=="1" set "ENERGY_SECTION_RC=1"
 set "NIC_PROFILE_ERROR="
 if not "!AIO_MODE!"=="1" (
@@ -2597,20 +2608,17 @@ REM  Reactive HPET s'il avait ete desactive par une ancienne version du script.
 powershell -NoProfile -Command "Get-PnpDevice -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -like 'ACPI\PNP0103\*' -and $_.Problem -eq 22 } | Enable-PnpDevice -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Timer Coalescing, BCD des timers et HPET rendus a Windows.%COLOR_RESET%
 
-REM  7.5 - SetTimerResolution du demarrage
-echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Suppression de SetTimerResolution du demarrage...%COLOR_RESET%
+REM  7.5 - SetTimerResolution de la connexion
+echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Suppression de SetTimerResolution de la connexion...%COLOR_RESET%
+call :REMOVE_STR_AUTOSTART_TASK
 taskkill /f /im SetTimerResolution.exe >nul 2>&1
 if exist "%ProgramFiles%\SetTimerResolution\SetTimerResolution.exe" del /f /q "%ProgramFiles%\SetTimerResolution\SetTimerResolution.exe" >nul 2>&1
 if exist "%ProgramFiles%\OptimizerAllInOne\SetTimerResolution.exe" del /f /q "%ProgramFiles%\OptimizerAllInOne\SetTimerResolution.exe" >nul 2>&1
 if exist "%ProgramFiles%\SetTimerResolution" rmdir "%ProgramFiles%\SetTimerResolution" >nul 2>&1
 if exist "%ProgramFiles%\OptimizerAllInOne" rmdir "%ProgramFiles%\OptimizerAllInOne" >nul 2>&1
 set "STR_STARTUP_LNK=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\SetTimerResolution.exe - Raccourci.lnk"
-if exist "%STR_STARTUP_LNK%" (
-    del "%STR_STARTUP_LNK%" /f /q >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Raccourci SetTimerResolution supprime du demarrage%COLOR_RESET%
-) else (
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%SetTimerResolution n'etait pas dans le demarrage%COLOR_RESET%
-)
+if exist "%STR_STARTUP_LNK%" del /f /q "%STR_STARTUP_LNK%" >nul 2>&1
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Autolancement SetTimerResolution supprime.%COLOR_RESET%
 
 REM  7.6 - Restaurer Intel Thread Director (visibilite panneau)
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Windows peut a nouveau regler la repartition des taches.%COLOR_RESET%
@@ -4760,9 +4768,57 @@ if defined ProgramFiles(x86) (
 set "DX_LEGACY_FILES="
 exit /b 0
 
-:CREATE_STR_STARTUP_SHORTCUT
-powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut($env:STR_STARTUP_LNK);$s.TargetPath=$env:STR_EXE;$s.Arguments='--resolution 5070 --no-console';$s.WorkingDirectory=$env:STR_DIR;$s.Description='SetTimerResolution - WindowsOptimizer';$s.Save();$v=$w.CreateShortcut($env:STR_STARTUP_LNK);if(-not(Test-Path -LiteralPath $env:STR_STARTUP_LNK)-or$v.TargetPath-ne$env:STR_EXE){exit 1};exit 0}catch{exit 1}" >nul 2>&1
+:INSTALL_STR_BINARY
+set "STR_TMP=%STR_DIR%\SetTimerResolution.exe.download"
+set "STR_DOWNLOAD_URL=%WINOPT_RELEASE_BASE_URL%/Tools/Timer%%20%%26%%20Interrupt/SetTimerResolution.exe"
+if exist "%STR_TMP%" del /f /q "%STR_TMP%" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$src=Join-Path $env:WINOPT_SOURCE_DIR 'Tools\Timer & Interrupt\SetTimerResolution.exe';if([IO.File]::Exists($src)){Copy-Item -LiteralPath $src -Destination $env:STR_TMP -Force;exit 0};exit 1}catch{exit 1}" >nul 2>&1
+call :VALIDATE_STR_BINARY
+if !errorlevel! EQU 0 goto :INSTALL_STR_COMMIT
+if exist "%STR_TMP%" del /f /q "%STR_TMP%" >nul 2>&1
+where curl.exe >nul 2>&1
+if !errorlevel! NEQ 0 goto :INSTALL_STR_BITS
+curl.exe --fail --location --retry 3 --retry-delay 2 --connect-timeout 15 --max-time 45 --silent --show-error --output "%STR_TMP%" "%STR_DOWNLOAD_URL%"
+call :VALIDATE_STR_BINARY
+if !errorlevel! EQU 0 goto :INSTALL_STR_COMMIT
+if exist "%STR_TMP%" del /f /q "%STR_TMP%" >nul 2>&1
+:INSTALL_STR_BITS
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{Import-Module BitsTransfer -ErrorAction Stop;Start-BitsTransfer -Source $env:STR_DOWNLOAD_URL -Destination $env:STR_TMP -Priority Foreground -RetryInterval 60 -RetryTimeout 60 -ErrorAction Stop;exit 0}catch{Write-Host ('BITS: '+$_.Exception.Message);exit 1}"
+call :VALIDATE_STR_BINARY
+if !errorlevel! EQU 0 goto :INSTALL_STR_COMMIT
+if exist "%STR_TMP%" del /f /q "%STR_TMP%" >nul 2>&1
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;Invoke-WebRequest -Uri $env:STR_DOWNLOAD_URL -OutFile $env:STR_TMP -UseBasicParsing -TimeoutSec 45 -ErrorAction Stop;exit 0}catch{Write-Host ('PowerShell: '+$_.Exception.Message);exit 1}"
+call :VALIDATE_STR_BINARY
+if !errorlevel! EQU 0 goto :INSTALL_STR_COMMIT
+:INSTALL_STR_FAILURE
+if exist "%STR_TMP%" del /f /q "%STR_TMP%" >nul 2>&1
+if exist "%STR_DIR%" rmdir "%STR_DIR%" >nul 2>&1
+echo [ERREUR] SetTimerResolution : telechargement impossible avec curl, BITS et PowerShell.
+set "STR_TMP="
+set "STR_DOWNLOAD_URL="
+exit /b 1
+:INSTALL_STR_COMMIT
+move /Y "%STR_TMP%" "%STR_EXE%" >nul 2>&1
+if not exist "%STR_EXE%" goto :INSTALL_STR_FAILURE
+set "STR_TMP="
+set "STR_DOWNLOAD_URL="
+exit /b 0
+
+:VALIDATE_STR_BINARY
+if not exist "%STR_TMP%" exit /b 1
+for %%A in ("%STR_TMP%") do if %%~zA LSS 10000 exit /b 1
+powershell -NoProfile -Command "$p=$env:STR_TMP;try{$b=[IO.File]::ReadAllBytes($p);if($b.Length -lt 10000 -or $b[0] -ne 77 -or $b[1] -ne 90){exit 1};$o=[BitConverter]::ToInt32($b,60);if($o -lt 64 -or $o+4 -gt $b.Length -or $b[$o] -ne 80 -or $b[$o+1] -ne 69 -or $b[$o+2] -ne 0 -or $b[$o+3] -ne 0){exit 1};exit 0}catch{exit 1}" >nul 2>&1
 exit /b !errorlevel!
+
+:CREATE_STR_STARTUP_SHORTCUT
+powershell -NoProfile -Command "$ErrorActionPreference='Stop';try{$d=Split-Path -Parent $env:STR_STARTUP_LNK;New-Item -ItemType Directory -Path $d -Force|Out-Null;$w=New-Object -ComObject WScript.Shell;$s=$w.CreateShortcut($env:STR_STARTUP_LNK);$s.TargetPath=$env:STR_EXE;$s.Arguments='--resolution 5070 --no-console';$s.WorkingDirectory=$env:STR_DIR;$s.Description='SetTimerResolution - WindowsOptimizer';$s.Save();$v=$w.CreateShortcut($env:STR_STARTUP_LNK);if(-not (Test-Path -LiteralPath $env:STR_STARTUP_LNK) -or $v.TargetPath -ne $env:STR_EXE -or $v.Arguments -ne '--resolution 5070 --no-console'){exit 1};exit 0}catch{exit 1}" >nul 2>&1
+exit /b !errorlevel!
+
+:REMOVE_STR_AUTOSTART_TASK
+set "STR_TASK_NAME=WindowsOptimizer SetTimerResolution"
+powershell -NoProfile -Command "Unregister-ScheduledTask -TaskName $env:STR_TASK_NAME -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
+set "STR_TASK_NAME="
+exit /b 0
 
 :RUN_EDGE_UNINSTALLER
 pushd "%~1" >nul 2>&1

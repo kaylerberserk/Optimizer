@@ -7,7 +7,11 @@ param(
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 $ProgressPreference = "SilentlyContinue"
 function Stop-Launcher([string]$Message, [switch]$Cleanup, [switch]$NoPause) {
-    if ($Cleanup -and $scriptPath) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
+    if ($Cleanup -and $scriptRoot -and (Test-Path -LiteralPath $scriptRoot)) {
+        Remove-Item -LiteralPath $scriptRoot -Recurse -Force -ErrorAction SilentlyContinue
+    } elseif ($Cleanup -and $scriptPath) {
+        Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
+    }
     Write-Host "[ERREUR] $Message" -ForegroundColor Red
     if (!$NoPause -and !$VerifyOnly) { Read-Host "Appuyez sur Entree pour quitter" }
     exit 1
@@ -29,7 +33,16 @@ if ($baseUri.Scheme -ne "https" -or
 }
 $BaseUrl = $baseUri.AbsoluteUri.TrimEnd("/")
 
-$scriptPath = Join-Path $env:TEMP ("WindowsOptimizer_aio_{0}.cmd" -f [guid]::NewGuid().ToString("N"))
+$runId = [guid]::NewGuid().ToString("N")
+$scriptRoot = Join-Path $env:TEMP ("WindowsOptimizer_aio_{0}" -f $runId)
+$scriptPath = Join-Path $scriptRoot "All in One.cmd"
+$timerDir = Join-Path $scriptRoot "Tools\Timer & Interrupt"
+$timerPath = Join-Path $timerDir "SetTimerResolution.exe"
+try {
+    New-Item -ItemType Directory -Path $timerDir -Force -ErrorAction Stop | Out-Null
+} catch {
+    Stop-Launcher "Impossible de preparer le dossier temporaire du launcher : $($_.Exception.Message)" -Cleanup
+}
 $scriptOrigin = "$BaseUrl/All%20in%20One.cmd"
 try {
     Invoke-RestMethod -Uri $scriptOrigin -OutFile $scriptPath -TimeoutSec 60 -ErrorAction Stop
@@ -86,8 +99,28 @@ if ($VerifyOnly) {
     Write-Host "     Batch : $scriptOrigin"
     Write-Host "     Racine de publication : $BaseUrl"
     Write-Host "     SHA-256 du batch prepare : $hash"
-    Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $scriptRoot -Recurse -Force -ErrorAction SilentlyContinue
     exit 0
+}
+
+# Precharger le timer avant l'elevation : un proxy ou une session utilisateur peut
+# ne pas etre disponible dans le processus RunAs. Le batch garde ses propres secours.
+$timerTemp = "$timerPath.download"
+$timerOrigin = "$BaseUrl/Tools/Timer%20%26%20Interrupt/SetTimerResolution.exe"
+try {
+    Invoke-WebRequest -Uri $timerOrigin -OutFile $timerTemp -UseBasicParsing -TimeoutSec 45 -ErrorAction Stop
+    $timerBytes = [IO.File]::ReadAllBytes($timerTemp)
+    $peOffset = [BitConverter]::ToInt32($timerBytes, 60)
+    if ($timerBytes.Length -lt 10000 -or $timerBytes[0] -ne 77 -or $timerBytes[1] -ne 90 -or
+        $peOffset -lt 64 -or $peOffset + 4 -gt $timerBytes.Length -or
+        $timerBytes[$peOffset] -ne 80 -or $timerBytes[$peOffset + 1] -ne 69 -or
+        $timerBytes[$peOffset + 2] -ne 0 -or $timerBytes[$peOffset + 3] -ne 0) {
+        throw "binaire PE invalide"
+    }
+    Move-Item -LiteralPath $timerTemp -Destination $timerPath -Force -ErrorAction Stop
+} catch {
+    Remove-Item -LiteralPath $timerTemp -Force -ErrorAction SilentlyContinue
+    Write-Host "[INFO] Prechargement de SetTimerResolution impossible ; le batch tentera curl, BITS puis PowerShell." -ForegroundColor Yellow
 }
 
 $exitCode = 1
@@ -113,6 +146,6 @@ try {
 } catch {
     Write-Host "[ERREUR] Lancement administrateur annule ou impossible : $($_.Exception.Message)" -ForegroundColor Red
 } finally {
-    Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $scriptRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
 exit $exitCode
