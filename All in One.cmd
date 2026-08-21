@@ -1339,10 +1339,12 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages de confidentialite a
 REM  1.9 - Navigateurs
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Optimisation navigateurs...%COLOR_RESET%
 REM  Microsoft Edge
+REM  DoH mode "allow" : chiffre le DNS quand Cloudflare est joignable, repli DNS normal sinon
+REM  ("secure" interdirait tout repli et casse les reseaux filtres/proxy d'entreprise).
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Edge" /v HideFirstRunExperience /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v StartupBoostEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d secure /f >nul 2>&1
+reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsMode /t REG_SZ /d allow /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v DnsOverHttpsTemplates /t REG_SZ /d "https://cloudflare-dns.com/dns-query" /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Microsoft\Edge" /v UserFeedbackAllowed /t REG_DWORD /d 0 /f >nul 2>&1
@@ -1353,7 +1355,7 @@ reg add "HKCU\Software\Policies\Microsoft\Edge" /v NewTabPagePrerenderEnabled /t
 
 REM  Google Chrome
 reg add "HKCU\Software\Policies\Google\Chrome" /v QuicAllowed /t REG_DWORD /d 1 /f >nul 2>&1
-reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d secure /f >nul 2>&1
+reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsMode /t REG_SZ /d allow /f >nul 2>&1
 reg add "HKCU\Software\Policies\Google\Chrome" /v DnsOverHttpsTemplates /t REG_SZ /d "https://cloudflare-dns.com/dns-query" /f >nul 2>&1
 reg add "HKCU\Software\Policies\Google\Chrome" /v HardwareAccelerationModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
 reg add "HKCU\Software\Policies\Google\Chrome" /v BackgroundModeEnabled /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1373,8 +1375,23 @@ echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Mises a jour Windows telechar
 
 REM  1.12 - Blocage des pubs Store dans la recherche
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Blocage des recommandations Store dans la recherche...%COLOR_RESET%
-icacls "%LocalAppData%\Packages\Microsoft.WindowsStore_8wekyb3d8bbwe\LocalState\store.db" /deny Everyone:F >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Pubs Store bloquees dans la recherche%COLOR_RESET%
+set "STORE_DB=%LocalAppData%\Packages\Microsoft.WindowsStore_8wekyb3d8bbwe\LocalState\store.db"
+if exist "!STORE_DB!" (
+    REM  SID *S-1-1-0 = groupe "Tout le monde" : independant de la langue Windows.
+    REM  ("Everyone" echoue sur un Windows francais : erreur 1332, refus jamais pose.)
+    REM  Retirer un eventuel refus identique avant de le reposer rend l'operation idempotente ;
+    REM  pour revenir en arriere manuellement : icacls "<chemin vers store.db>" /remove:d *S-1-1-0
+    icacls "!STORE_DB!" /remove:d *S-1-1-0 >nul 2>&1
+    icacls "!STORE_DB!" /deny *S-1-1-0:F >nul 2>&1
+    if !errorlevel! EQU 0 (
+        echo %COLOR_GREEN%[OK]%COLOR_RESET% %COLOR_WHITE%Pubs Store bloquees dans la recherche%COLOR_RESET%
+    ) else (
+        echo %COLOR_YELLOW%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Blocage des pubs Store non applique ; le script continue.%COLOR_RESET%
+    )
+) else (
+    echo %COLOR_CYAN%[IGNORE]%COLOR_RESET% %COLOR_WHITE%Base du Store absente ; rien a bloquer.%COLOR_RESET%
+)
+set "STORE_DB="
 
 REM  1.13 - Affichage du code erreur BSoD
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Activation de l'affichage des codes erreur BSoD...%COLOR_RESET%
@@ -1419,16 +1436,6 @@ if "!PROFIL_USAGE!"=="0" (
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Planification des coeurs reglee pour le profil Normal%COLOR_RESET%
 )
 
-REM  1.18 - DisablePagefileEncryption (tweak Gaming teste ; suppression de la surcharge en Normal)
-if "!PROFIL_USAGE!"=="0" (
-    echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Desactivation du chiffrement du fichier d'echange en mode GAMING...%COLOR_RESET%
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /t REG_DWORD /d 1 /f >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Chiffrement du fichier d'echange desactive en mode GAMING%COLOR_RESET%
-) else (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management" /v "DisablePagefileEncryption" /f >nul 2>&1
-    echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglage du chiffrement du fichier d'echange retire en mode NORMAL%COLOR_RESET%
-)
-
 call :FINISH_ACTION "Reglages systeme" "traites"
 exit /b 0
 
@@ -1463,7 +1470,7 @@ echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Configuration de Prefetc
 if "!PROFIL_USAGE!"=="0" (
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableBoottrace /t REG_DWORD /d 0 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v SfTracingState /t REG_DWORD /d 0 /f >nul 2>&1
-    REM Activer Superfetch et Prefetcher pour chargement rapide en mode Gaming.
+    REM Activer Superfetch ; Prefetcher=1 = prefetch applications uniquement (boot prefetch laisse au stock).
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnableSuperfetch /t REG_DWORD /d 1 /f >nul 2>&1
     reg add "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" /v EnablePrefetcher /t REG_DWORD /d 1 /f >nul 2>&1
 ) else (
@@ -2550,6 +2557,7 @@ echo %COLOR_WHITE%  Les surcharges du mode Performance max sont supprimees.%COLO
 echo.
 echo %COLOR_CYAN%---------------------------------------------------------------------------------%COLOR_RESET%
 
+REM  Numerotation 7.x locale a cette branche : le mode Performance max possede sa propre sequence.
 REM  7.0 - Activer Equilibre sans effacer les plans OEM/personnalises.
 REM  PowerRestoreDefaultPowerSchemes est volontairement exclu : l'API supprime TOUS les plans courants.
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Les plans personnalises sont conserves.%COLOR_RESET%
@@ -4020,7 +4028,7 @@ REM  Initialiser la barre de progression (26 etapes - caches de perf conserves)
 set /a "CLEAN_TOTAL=26"
 set /a "CLEAN_STEP=0"
 set /a "CLEAN_WARNINGS=0"
-REM CLEAN_SCRIPT_PATH supprime : utiliser $env:WINOPT_SELF_BACKUP_SOURCE (def ligne 6, delayed OFF) qui preserve le point exclam du chemin
+REM CLEAN_SCRIPT_PATH supprime : utiliser $env:WINOPT_SELF_BACKUP_SOURCE (defini en tete du script, delayed OFF) qui preserve le point exclam du chemin
 
 REM  ETAPE 1 - Fichiers temporaires utilisateur (ameliore)
 set /a "CLEAN_STEP+=1"
@@ -4284,7 +4292,7 @@ if not defined SPACE_FREED_GB (
 
 set "CLEAN_STEP="
 set "CLEAN_TOTAL="
-REM CLEAN_SCRIPT_PATH supprime (cf. ligne 4066)
+REM CLEAN_SCRIPT_PATH supprime : voir le commentaire de l'ETAPE 1 (WINOPT_SELF_BACKUP_SOURCE)
 
 echo.
 echo %COLOR_CYAN%=================================================================================%COLOR_RESET%
