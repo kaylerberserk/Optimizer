@@ -353,6 +353,11 @@ if !errorlevel! LSS 1 (
     set "PROFILE_PROMPT="
     exit /b 1
 )
+if !errorlevel! GTR 3 (
+    REM choice.exe en echec (255) : aucune optimisation sans choix explicite.
+    set "PROFILE_PROMPT="
+    exit /b 1
+)
 if !errorlevel! EQU 3 (
     set "PROFILE_PROMPT="
     exit /b 1
@@ -384,6 +389,11 @@ echo.
 <nul set /p ="%STYLE_BOLD%%COLOR_YELLOW%Choisissez l'energie [1=Eco / 2=Performance max / M=Retour] : %COLOR_RESET%"
 call :AZCHOICE 12M
 if !errorlevel! LSS 1 (
+    set "PROFILE_PROMPT="
+    exit /b 1
+)
+if !errorlevel! GTR 3 (
+    REM choice.exe en echec (255) : aucune optimisation sans choix explicite.
     set "PROFILE_PROMPT="
     exit /b 1
 )
@@ -1313,8 +1323,8 @@ reg add "HKCR\*\shell\runas\command" /ve /t REG_SZ /d "cmd.exe /c takeown /f \"%
 reg add "HKCR\*\shell\runas" /v "IsolatedCommand" /t REG_SZ /d "cmd.exe /c takeown /f \"%%1\" && icacls \"%%1\" /grant administrators:F" /f >nul 2>&1
 reg add "HKCR\Directory\shell\runas" /ve /t REG_SZ /d "Devenir Proprietaire" /f >nul 2>&1
 reg add "HKCR\Directory\shell\runas" /v "NoWorkingDirectory" /t REG_SZ /d "" /f >nul 2>&1
-reg add "HKCR\Directory\shell\runas\command" /ve /t REG_SZ /d "cmd.exe /c takeown /f \"%%1\" /r /d y && icacls \"%%1\" /grant administrators:F /t" /f >nul 2>&1
-reg add "HKCR\Directory\shell\runas" /v "IsolatedCommand" /t REG_SZ /d "cmd.exe /c takeown /f \"%%1\" /r /d y && icacls \"%%1\" /grant administrators:F /t" /f >nul 2>&1
+reg add "HKCR\Directory\shell\runas\command" /ve /t REG_SZ /d "cmd.exe /c takeown /f \"%%1\" /r /d o || takeown /f \"%%1\" /r /d y && icacls \"%%1\" /grant administrators:F /t" /f >nul 2>&1
+reg add "HKCR\Directory\shell\runas" /v "IsolatedCommand" /t REG_SZ /d "cmd.exe /c takeown /f \"%%1\" /r /d o || takeown /f \"%%1\" /r /d y && icacls \"%%1\" /grant administrators:F /t" /f >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Option Devenir Proprietaire ajoutee au menu contextuel.%COLOR_RESET%
 
 REM  Desactivation des Co-installateurs tiers (Razer/Logitech Popup)
@@ -1651,8 +1661,9 @@ if "!PROFIL_USAGE!"=="0" (echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Tel
 REM  4.5 - NVIDIA Low Latency
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Application des reglages NVIDIA pour reduire la latence...%COLOR_RESET%
 if "!PROFIL_USAGE!"=="0" (
-    reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
+    REM MaxFrameLatency est lu par le pilote depuis la cle de classe par carte, pas depuis GraphicsDrivers.
     for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+        reg add "%%K" /v MaxFrameLatency /t REG_DWORD /d 1 /f >nul 2>&1
         reg add "%%K" /v LOWLATENCY /t REG_DWORD /d 1 /f >nul 2>&1
         reg add "%%K" /v Node3DLowLatency /t REG_DWORD /d 1 /f >nul 2>&1
         reg add "%%K" /v D3PCLatency /t REG_DWORD /d 1 /f >nul 2>&1
@@ -1660,8 +1671,8 @@ if "!PROFIL_USAGE!"=="0" (
     )
     echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Reglages NVIDIA de faible latence appliques en mode GAMING%COLOR_RESET%
 ) else (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v MaxFrameLatency /f >nul 2>&1
     for /f "tokens=*" %%K in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}" /f "" /k 2^>nul ^| findstr /r "\\[0-9][0-9][0-9][0-9]$"') do (
+        reg delete "%%K" /v MaxFrameLatency /f >nul 2>&1
         reg delete "%%K" /v LOWLATENCY /f >nul 2>&1
         reg delete "%%K" /v Node3DLowLatency /f >nul 2>&1
         reg delete "%%K" /v D3PCLatency /f >nul 2>&1
@@ -1847,8 +1858,9 @@ if "!PROFIL_USAGE!"=="0" (
 ) else (
     reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v SystemResponsiveness /t REG_DWORD /d 20 /f >nul 2>&1
 )
+REM Valeur stock Windows documentee : bridage MMCSS conserve.
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Multimedia\SystemProfile" /v NetworkThrottlingIndex /t REG_DWORD /d 10 /f >nul 2>&1
-echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Priorite reseau des jeux configuree%COLOR_RESET%
+echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Priorite reseau configuree selon l'usage.%COLOR_RESET%
 
 REM  5.2 - Pile TCP/IP Win11
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Reglage de la connexion pour reduire les delais...%COLOR_RESET%
@@ -2813,10 +2825,11 @@ reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorE
 for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-REM LSA-PPL reste actif sans verrou UEFI : gain de securite documente, aucun gain gaming credible a le couper.
+REM LSA-PPL reste actif sans verrou UEFI : RunAsPPL=1. La valeur 2 pose un verrou
+REM UEFI quasi irreversible (suppression via outil Microsoft en environnement de recuperation).
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 1 /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
 REM Supprime la surcharge BCD ; Windows reprend son comportement par defaut.
 bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
@@ -2853,10 +2866,11 @@ for %%V in (EnableVirtualizationBasedSecurity HypervisorEnforcedCodeIntegrity) d
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v RequirePlatformSecurityFeatures /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /t REG_DWORD /d 0 /f >nul 2>&1
-REM LSA-PPL reste actif sans verrou UEFI : gain de securite documente, aucun gain gaming credible a le couper.
+REM LSA-PPL reste actif sans verrou UEFI : RunAsPPL=1. La valeur 2 pose un verrou
+REM UEFI quasi irreversible (suppression via outil Microsoft en environnement de recuperation).
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 1 /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
 REM Supprime la surcharge BCD ; Windows reprend son comportement par defaut.
 bcdedit /deletevalue hypervisorlaunchtype >nul 2>&1
@@ -2893,8 +2907,9 @@ for %%V in (Enabled Locked WasEnabledBy) do reg delete "HKLM\SYSTEM\CurrentContr
 for %%V in (EnableVirtualizationBasedSecurity RequirePlatformSecurityFeatures HypervisorEnforcedCodeIntegrity LsaCfgFlags) do reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\DeviceGuard" /v "%%V" /f >nul 2>&1
 reg delete "HKLM\SOFTWARE\Policies\Microsoft\Windows\System" /v RunAsPPL /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LsaCfgFlags /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 2 /f >nul 2>&1
-reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /t REG_DWORD /d 2 /f >nul 2>&1
+REM Base stock : PPL actif sans verrou UEFI (RunAsPPL=1) ; RunAsPPLBoot reste supprime.
+reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPL /t REG_DWORD /d 1 /f >nul 2>&1
+reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v RunAsPPLBoot /f >nul 2>&1
 reg delete "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v WHQLSettings /f >nul 2>&1
 reg add "HKLM\SYSTEM\CurrentControlSet\Control\CI\Config" /v VulnerableDriverBlocklistEnable /t REG_DWORD /d 1 /f >nul 2>&1
 bcdedit /deletevalue {current} hypervisorlaunchtype >nul 2>&1
@@ -3730,11 +3745,9 @@ reg delete "HKLM\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run" /v "
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Cles OneDrive nettoyees.%COLOR_RESET%
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Etape 5 sur 7 : suppression des taches planifiees OneDrive...%COLOR_RESET%
-for /f "tokens=1 delims=," %%x in ('schtasks /query /fo csv 2^>nul ^| find "OneDrive"') do (
-    set "TASKNAME=%%~x"
-    set "TASKNAME=!TASKNAME:"=!"
-    schtasks /delete /TN "!TASKNAME!" /f >nul 2>&1
-)
+REM PowerShell plutot que le CSV de schtasks : Windows 10 ajoute une colonne HostName en premiere position,
+REM ce qui faisait echouer la suppression silencieusement.
+powershell -NoProfile -Command "Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -like '*OneDrive*' } | Unregister-ScheduledTask -Confirm:$false -ErrorAction SilentlyContinue" >nul 2>&1
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Taches planifiees OneDrive supprimees.%COLOR_RESET%
 
 echo %COLOR_YELLOW%[EN COURS]%COLOR_RESET% %COLOR_WHITE%Etape 6 sur 7 : nettoyage des dossiers OneDrive restants...%COLOR_RESET%
@@ -3743,19 +3756,19 @@ if exist "%SystemDrive%\OneDriveTemp" rd "%SystemDrive%\OneDriveTemp" /q /s >nul
 REM  Wildcards : rd ne supporte pas les wildcards, il faut une enumeration for /d
 for /d %%C in ("%Temp%\OneDrive*") do rd "%%C" /q /s >nul 2>&1
 if exist "%USERPROFILE%\OneDrive" (
-    takeown /f "%USERPROFILE%\OneDrive" /r /d y >nul 2>&1
+    call :TAKEOWN_RECURSIF "%USERPROFILE%\OneDrive"
     rd "%USERPROFILE%\OneDrive" /s /q >nul 2>&1
 )
 if exist "%LOCALAPPDATA%\Microsoft\OneDrive" (
-    takeown /f "%LOCALAPPDATA%\Microsoft\OneDrive" /r /d y >nul 2>&1
+    call :TAKEOWN_RECURSIF "%LOCALAPPDATA%\Microsoft\OneDrive"
     rd "%LOCALAPPDATA%\Microsoft\OneDrive" /s /q >nul 2>&1
 )
 if exist "%PROGRAMDATA%\Microsoft OneDrive" (
-    takeown /f "%PROGRAMDATA%\Microsoft OneDrive" /r /d y >nul 2>&1
+    call :TAKEOWN_RECURSIF "%PROGRAMDATA%\Microsoft OneDrive"
     rd "%PROGRAMDATA%\Microsoft OneDrive" /s /q >nul 2>&1
 )
 if exist "%SystemDrive%\OneDriveTemp" (
-    takeown /f "%SystemDrive%\OneDriveTemp" /r /d y >nul 2>&1
+    call :TAKEOWN_RECURSIF "%SystemDrive%\OneDriveTemp"
     rd "%SystemDrive%\OneDriveTemp" /s /q >nul 2>&1
 )
 echo %COLOR_GREEN%[FAIT]%COLOR_RESET% %COLOR_WHITE%Dossiers OneDrive restants nettoyes.%COLOR_RESET%
@@ -4138,7 +4151,7 @@ if exist "%SystemDrive%\Windows.old" (
     echo %COLOR_RED%[AVERTISSEMENT]%COLOR_RESET% %COLOR_WHITE%Supprimer Windows.old efface l'ancienne installation.%COLOR_RESET%
     call :ASK_IF_INTERACTIVE "[O] OUI : Supprimer Windows.old   [N] NON : Conserver Windows.old : "
     if !errorlevel! EQU 0 (
-        takeown /f "%SystemDrive%\Windows.old" /r /d y >nul 2>&1
+        call :TAKEOWN_RECURSIF "%SystemDrive%\Windows.old"
         icacls "%SystemDrive%\Windows.old" /grant *S-1-5-32-544:F /t >nul 2>&1
         rd /s /q "%SystemDrive%\Windows.old" >nul 2>&1
     ) else (
@@ -4657,6 +4670,13 @@ REM Suppression best-effort sans query : une valeur absente est deja dans l'etat
 reg delete "%~1" /v "%~2" /f >nul 2>&1
 exit /b 0
 
+:TAKEOWN_RECURSIF
+REM Prise de possession recursive ; la lettre de /d depend de la locale du systeme
+REM (O = Oui sous Windows francais, Y = Yes sous Windows anglais). Les deux sont tentees.
+takeown /f "%~1" /r /d o >nul 2>&1
+if errorlevel 1 takeown /f "%~1" /r /d y >nul 2>&1
+exit /b 0
+
 :SELECT_CLEANMGR_SAGEID
 REM  Choisir un identifiant libre pour ne pas ecraser une configuration cleanmgr existante.
 for /l %%N in (1,1,20) do (
@@ -4922,7 +4942,7 @@ if not defined REMOTE_PS_PROVIDER (
 )
 echo %COLOR_YELLOW%[INFO]%COLOR_RESET% %COLOR_WHITE%Source distante autorisee : !REMOTE_PS_PROVIDER!.%COLOR_RESET%
 set "REMOTE_PS_FILE=%TEMP%\WindowsOptimizer_remote_%RANDOM%_%RANDOM%.ps1"
-powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri '%~1' -OutFile $env:REMOTE_PS_FILE -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $env:REMOTE_PS_FILE).Length -lt 500){exit 2}; exit 0 } catch { exit 1 }" >nul 2>&1
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; try { Invoke-WebRequest -Uri '%~1' -OutFile $env:REMOTE_PS_FILE -UseBasicParsing -ErrorAction Stop; if((Get-Item -LiteralPath $env:REMOTE_PS_FILE).Length -lt 500){exit 2}; $sig=Get-AuthenticodeSignature -LiteralPath $env:REMOTE_PS_FILE; if($sig.SignerCertificate -and $sig.Status.ToString() -ne 'Valid'){exit 4}; $fs=[IO.File]::OpenRead($env:REMOTE_PS_FILE); $b=New-Object byte[] 256; $n=$fs.Read($b,0,256); $fs.Close(); $head=([Text.Encoding]::ASCII.GetString($b,0,$n)).TrimStart(); if($head.StartsWith('<html') -or $head.StartsWith('<?xml') -or ($head.Length -gt 1 -and $head[0] -eq [char]60 -and $head[1] -eq [char]33)){exit 3}; exit 0 } catch { exit 1 }" >nul 2>&1
 if !errorlevel! NEQ 0 (
     if exist "%REMOTE_PS_FILE%" del /f /q "%REMOTE_PS_FILE%" >nul 2>&1
     set "REMOTE_PS_FILE="
